@@ -1,0 +1,247 @@
+/* ============================================================
+   CAMPUS HELPDESK — DESIGN TOKENS
+   Palette:  maroon-900 #3D0C14  maroon-700 #6E1423  maroon-500 #8C1C2B
+             maroon-300 #B24858  maroon-100 #F4E4E7  paper #FBF9F7  ink #241014
+   Type:     Display  "Fraunces"      (headings, institutional weight)
+             Body     "Inter"         (UI text)
+             Utility  "JetBrains Mono"(ticket IDs, timestamps, codes)
+   Signature: the "classification meter" — a segmented maroon ring that
+   visualizes the AI module's confidence whenever content passes through
+   Select Office / Manage Tickets / Auto Ticket Assignment (AI MLC).
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --maroon-900: #3D0C14;
+  --maroon-700: #6E1423;
+  --maroon-600: #7C1826;
+  --maroon-500: #8C1C2B;
+  --maroon-400: #A6323F;
+  --maroon-300: #B24858;
+  --maroon-100: #F4E4E7;
+  --maroon-050: #FBF1F2;
+
+  --paper: #FBF9F7;
+  --white: #FFFFFF;
+  --ink: #241014;
+  --ink-soft: #5B4750;
+  --line: #E7DBDD;
+
+  --success: #2F6B4F;
+  --warning: #A66A1A;
+  --danger: #B23A2E;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(61, 12, 20, 0.06);
+  --shadow-md: 0 6px 20px rgba(61, 12, 20, 0.10);
+  --shadow-lg: 0 16px 40px rgba(61, 12, 20, 0.16);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--maroon-900);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 12px 0; color: var(--ink-soft); line-height: 1.55; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+}
+
+::selection { background: var(--maroon-300); color: var(--white); }
+
+/* ---------- layout shells ---------- */
+.chd-app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.chd-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chd-content {
+  flex: 1;
+  padding: 32px 40px 64px;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--maroon-700);
+  color: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { background: var(--maroon-600); box-shadow: var(--shadow-md); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--maroon-700);
+  border: 1.5px solid var(--maroon-700);
+}
+.btn-ghost:hover { background: var(--maroon-050); }
+
+.btn-outline-white {
+  background: transparent;
+  color: var(--white);
+  border: 1.5px solid rgba(255,255,255,0.55);
+}
+.btn-outline-white:hover { background: rgba(255,255,255,0.12); }
+
+/* ---------- cards ---------- */
+.card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--maroon-500);
+  font-weight: 500;
+}
+
+/* ---------- badges / status ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.badge-open      { background: var(--maroon-100); color: var(--maroon-700); }
+.badge-progress  { background: #FCEED9; color: var(--warning); }
+.badge-resolved  { background: #DCEEE3; color: var(--success); }
+.badge-escalated { background: #F7DAD6; color: var(--danger); }
+
+/* ---------- form elements ---------- */
+.field { margin-bottom: 18px; }
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--maroon-900);
+  margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: var(--white);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--maroon-500);
+}
+
+/* ---------- classification meter (signature element) ---------- */
+.ai-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-meter-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--maroon-700);
+  background:
+    radial-gradient(closest-side, var(--white) 68%, transparent 69% 100%),
+    conic-gradient(var(--maroon-600) calc(var(--pct, 70) * 1%), var(--maroon-100) 0);
+}
+.ai-meter-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.ai-meter-label strong { color: var(--maroon-800, var(--maroon-700)); }
+
+/* ---------- table ---------- */
+.chd-table { width: 100%; border-collapse: collapse; }
+.chd-table th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--maroon-500);
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 1.5px solid var(--line);
+}
+.chd-table td {
+  padding: 14px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+.chd-table tr:last-child td { border-bottom: none; }
+.chd-table tbody tr:hover { background: var(--maroon-050); }
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--maroon-300); border-radius: 8px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+
+@media (max-width: 860px) {
+  .chd-content { padding: 24px 18px 48px; }
+}
