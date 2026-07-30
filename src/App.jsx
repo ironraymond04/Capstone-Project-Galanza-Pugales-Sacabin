@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 
 import Home from "./pages/Home";
-import HowItWorks from "./pages/HowItWorks";
+import HowItWorks from "./pages/Howitworks";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import StudentDashboard from "./pages/StudentDashboard";
