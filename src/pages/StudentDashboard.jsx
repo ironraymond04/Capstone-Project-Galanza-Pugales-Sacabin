@@ -235,21 +235,42 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
 }
 
 function CampusMap() {
-  return (
-    <>
+const CAMPUS_LAT = 8.2318034;
+const CAMPUS_LNG = 124.2364283;
+const mapSrc = `https://www.google.com/maps?q=${CAMPUS_LAT},${CAMPUS_LNG}&z=17&output=embed`;
+const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMPUS_LAT},${CAMPUS_LNG}`;
+
+return (
+  <>
       <PageHeader title="Find your office" subtitle="Retrieved from the Office data store." />
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div
-          style={{
-            height: 320,
-            background:
-              "repeating-linear-gradient(45deg, var(--maroon-050), var(--maroon-050) 12px, var(--white) 12px, var(--white) 24px)",
-            display: "grid",
-            placeItems: "center",
-          }}
-        >
-          <span style={{ color: "var(--maroon-700)", fontWeight: 600 }}>Interactive campus map</span>
+        <div style={{ height: 320, position: "relative" }}>
+          <iframe
+            title="Campus Map"
+            src={mapSrc}
+            width="100%"
+            height="100%"
+            style={{ border: 0, display: "block" }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
+
+        <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--line)" }}>
+          <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            St. Peter's College — main campus
+          </span>
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ fontSize: 13, padding: "6px 14px" }}
+          >
+            Get directions ↗
+          </a>
+        </div>
+
         <div style={{ padding: 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
             {OFFICES.map((o) => (
@@ -262,7 +283,7 @@ function CampusMap() {
         </div>
       </div>
     </>
-  );
+);
 }
 
 function ReceiveResponse() {
