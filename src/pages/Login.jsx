@@ -61,7 +61,6 @@ export default function Login() {
               <input
                 type="email"
                 name="email"
-                placeholder="you@university.edu"
                 value={form.email}
                 onChange={handleChange}
               />
@@ -71,7 +70,6 @@ export default function Login() {
               <input
                 type="password"
                 name="password"
-                placeholder="••••••••"
                 value={form.password}
                 onChange={handleChange}
               />

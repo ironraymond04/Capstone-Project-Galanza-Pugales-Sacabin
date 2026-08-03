@@ -46,11 +46,11 @@ export default function Signup() {
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label>Full name</label>
-              <input name="fullName" placeholder="Juan Dela Cruz" value={form.fullName} onChange={handleChange} />
+              <input name="fullName" value={form.fullName} onChange={handleChange} />
             </div>
             <div className="field">
               <label>Email address</label>
-              <input type="email" name="email" placeholder="you@university.edu" value={form.email} onChange={handleChange} />
+              <input type="email" name="email" value={form.email} onChange={handleChange} />
             </div>
             <div className="field">
               <label>Role</label>
@@ -63,11 +63,11 @@ export default function Signup() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="field">
                 <label>Password</label>
-                <input type="password" name="password" placeholder="••••••••" value={form.password} onChange={handleChange} />
+                <input type="password" name="password" value={form.password} onChange={handleChange} />
               </div>
               <div className="field">
                 <label>Confirm password</label>
-                <input type="password" name="confirmPassword" placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} />
+                <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} />
               </div>
             </div>
 
