@@ -3,14 +3,14 @@ import Sidebar from "../components/Sidebar";
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Dashboard", icon: "🏠" },
-  { id: "reports", label: "View Ticket Reports", icon: "📊" },
-  { id: "logs", label: "View Activity Logs", icon: "🗒️" },
-  { id: "status", label: "Update Ticket Status", icon: "✅" },
-  { id: "routed", label: "Receive Routed Ticket", icon: "📥" },
-  { id: "assignment", label: "Auto Ticket Assignment", icon: "🤖" },
-  { id: "priority", label: "Ticket Priority View", icon: "🚦" },
-  { id: "notifications", label: "Notifications", icon: "🔔" },
+  { id: "overview", label: "Dashboard", icon: "•" },
+  { id: "reports", label: "View Ticket Reports", icon: "•" },
+  { id: "logs", label: "View Activity Logs", icon: "•" },
+  { id: "status", label: "Update Ticket Status", icon: "•" },
+  { id: "routed", label: "Receive Routed Ticket", icon: "•" },
+  { id: "assignment", label: "Auto Ticket Assignment", icon: "•" },
+  { id: "priority", label: "Ticket Priority View", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•" },
 ];
 
 const QUEUE = [
@@ -95,7 +95,7 @@ function Overview({ onSelect }) {
   ];
   return (
     <>
-      <PageHeader title="Good day, [Your Name]" subtitle="Here's your current ticket queue at a glance." />
+      <PageHeader title="Good day, [Your Name]" subtitle="Here's your current ticket queue at the moment." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
         {stats.map((s) => (
           <div key={s.label} className="card">
@@ -154,7 +154,7 @@ function ActivityLogs() {
       <div className="card">
         {ACTIVITY_LOGS.map((l, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < ACTIVITY_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
-            <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> — {l.action}</span>
+            <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> - {l.action}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{l.time}</span>
           </div>
         ))}
@@ -208,7 +208,7 @@ function RoutedTickets() {
               <strong style={{ fontFamily: "var(--font-mono)" }}>{t.id}</strong>
               <PriorityDot level={t.priority} />
             </div>
-            <p style={{ fontSize: 14, margin: "4px 0 0" }}>{t.subject} — from {t.student}</p>
+            <p style={{ fontSize: 14, margin: "4px 0 0" }}>{t.subject} - from {t.student}</p>
           </div>
         ))}
       </div>
@@ -254,7 +254,7 @@ function PriorityView() {
               {g.tickets.length === 0 && <p style={{ fontSize: 13 }}>None right now.</p>}
               {g.tickets.map((t) => (
                 <div key={t.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                  <span style={{ fontFamily: "var(--font-mono)" }}>{t.id}</span> — {t.subject}
+                  <span style={{ fontFamily: "var(--font-mono)" }}>{t.id}</span> - {t.subject}
                 </div>
               ))}
             </div>

@@ -3,14 +3,14 @@ import Sidebar from "../components/Sidebar";
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Dashboard", icon: "🏠" },
-  { id: "logs", label: "View System Logs", icon: "🗒️" },
-  { id: "tickets", label: "Manage Tickets", icon: "🤖" },
-  { id: "users", label: "Manage Users", icon: "👥" },
-  { id: "offices", label: "Manage Offices", icon: "🏢" },
-  { id: "analytics", label: "Generate Analytics Reports", icon: "📈" },
-  { id: "escalation", label: "Ticket Escalation Management", icon: "🚨" },
-  { id: "notifications", label: "Notifications", icon: "🔔" },
+  { id: "overview", label: "Dashboard", icon: "•" },
+  { id: "logs", label: "View System Logs", icon: "•" },
+  { id: "tickets", label: "Manage Tickets", icon: "•" },
+  { id: "users", label: "Manage Users", icon: "•" },
+  { id: "offices", label: "Manage Offices", icon: "•" },
+  { id: "analytics", label: "Generate Analytics Reports", icon: "•" },
+  { id: "escalation", label: "Ticket Escalation Management", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•" },
 ];
 
 const ALL_TICKETS = [
@@ -165,7 +165,7 @@ function SystemLogs() {
       <div className="card">
         {SYSTEM_LOGS.map((l, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < SYSTEM_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
-            <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> — {l.action}</span>
+            <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> - {l.action}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap", marginLeft: 12 }}>{l.time}</span>
           </div>
         ))}
@@ -306,7 +306,7 @@ function Analytics() {
 function Escalation() {
   return (
     <>
-      <PageHeader title="Escalated tickets" subtitle="Saved to the Logs data store; retrieved from the Ticket data store." />
+      <PageHeader title="Escalated tickets" subtitle="Saved to the Logs data store, retrieved from the Ticket data store." />
       <div className="card">
         {ESCALATIONS.map((e) => (
           <div key={e.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
@@ -314,7 +314,7 @@ function Escalation() {
               <strong style={{ fontFamily: "var(--font-mono)" }}>{e.id}</strong>
               <span className="badge badge-escalated">{e.level}</span>
             </div>
-            <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{e.subject} — {e.office}</p>
+            <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{e.subject} - {e.office}</p>
             <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {e.reason}</p>
             <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
               <button className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 12 }}>Reassign</button>

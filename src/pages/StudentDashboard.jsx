@@ -3,14 +3,14 @@ import Sidebar from "../components/Sidebar";
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
-  { id: "overview", label: "Dashboard", icon: "🏠" },
-  { id: "status", label: "Check Ticket Status", icon: "🔎" },
-  { id: "submit", label: "Select Office & Submit", icon: "📝" },
-  { id: "map", label: "Use Campus Map", icon: "🗺️" },
-  { id: "responses", label: "Receive Response", icon: "💬" },
-  { id: "feedback", label: "Submit Feedback & Ratings", icon: "⭐" },
-  { id: "history", label: "View Ticket History", icon: "📜" },
-  { id: "notifications", label: "Notifications", icon: "🔔" },
+  { id: "overview", label: "Dashboard", icon: "•" },
+  { id: "status", label: "Check Ticket Status", icon: "•" },
+  { id: "submit", label: "Select Office & Submit", icon: "•" },
+  { id: "map", label: "Use Campus Map", icon: "•" },
+  { id: "responses", label: "Receive Response", icon: "•" },
+  { id: "feedback", label: "Submit Feedback & Ratings", icon: "•" },
+  { id: "history", label: "View Ticket History", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•" },
 ];
 
 const OFFICES = ["Registrar", "Library", "Guidance Office", "Accounting", "DSA", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS"];
@@ -176,7 +176,7 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
     <>
       <PageHeader
         title="Submit a new concern"
-        subtitle="Describe the issue — the classification module suggests the right office."
+        subtitle="Describe the issue and the classification module will suggests the right office."
       />
       <div className="card" style={{ maxWidth: 640 }}>
         <form onSubmit={handleSubmit}>
@@ -258,7 +258,7 @@ return (
 
         <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--line)" }}>
           <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
-            St. Peter's College — main campus
+            St. Peter's College - Main campus
           </span>
           <a
             href={directionsUrl}
@@ -292,7 +292,7 @@ function ReceiveResponse() {
       <PageHeader title="Staff responses" subtitle="Retrieved from the Survey Response data store." />
       <div className="card">
         {[
-          { office: "IT Services", ticket: "TCK-2201", msg: "We've reset your portal access — please try logging in again.", time: "2h ago" },
+          { office: "IT Services", ticket: "TCK-2201", msg: "We've reset your portal access,R please try logging in again.", time: "2h ago" },
           { office: "Registrar", ticket: "TCK-2198", msg: "Your grade correction is being processed with the professor.", time: "1d ago" },
         ].map((r, i) => (
           <div key={i} style={{ padding: "14px 0", borderBottom: i === 0 ? "1px solid var(--line)" : "none" }}>
@@ -317,7 +317,7 @@ function Feedback() {
       <div className="card" style={{ maxWidth: 480 }}>
         <div className="field">
           <label>Ticket</label>
-          <select><option>TCK-2170 — Lost student ID replacement</option></select>
+          <select><option>TCK-2170 - Lost student ID replacement</option></select>
         </div>
         <div className="field">
           <label>Rating</label>
