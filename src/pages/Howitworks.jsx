@@ -18,7 +18,7 @@ const FLOW = [
   {
     n: "03",
     title: "Classify & route",
-    text: "The multi-label classification module reads the ticket, tags its category and urgency, and assigns it to the office best equipped to resolve it — no manual sorting required.",
+    text: "The multi-label classification module reads the ticket, tags its category and urgency, and assigns it to the office best equipped to resolve it - no manual sorting required.",
   },
   {
     n: "04",
@@ -28,7 +28,7 @@ const FLOW = [
   {
     n: "05",
     title: "Work gets done",
-    text: "Staff update the ticket's status as they work — Open, In Progress, Resolved, or Escalated if it needs to go further.",
+    text: "Staff update the ticket's status as they work - Open, In Progress, Resolved, or Escalated if it needs to go further.",
   },
   {
     n: "06",
@@ -38,7 +38,7 @@ const FLOW = [
   {
     n: "07",
     title: "Close the loop",
-    text: "Once resolved, the student rates the experience — feedback that rolls up into the analytics admins use to spot patterns.",
+    text: "Once resolved, the student rates the experience - feedback that rolls up into the analytics admins use to spot patterns.",
   },
 ];
 
@@ -91,11 +91,8 @@ export default function HowItWorks() {
           textAlign: "center",
         }}
       >
-        <div className="eyebrow" style={{ color: "var(--maroon-300)", marginBottom: 12 }}>
-          How it works
-        </div>
         <h1 style={{ color: "var(--white)", fontSize: 38, maxWidth: 680, margin: "0 auto 16px" }}>
-          From a typed concern to a resolved ticket — automatically routed, every time.
+          From a typed concern to a resolved ticket - automatically routed, every time.
         </h1>
         <p style={{ color: "rgba(255,255,255,0.82)", fontSize: 16, maxWidth: 560, margin: "0 auto" }}>
           One system, three portals, and an AI classification module doing the routing
@@ -161,7 +158,6 @@ export default function HowItWorks() {
       {/* Per-role breakdown */}
       <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 32px 100px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <span className="eyebrow">Same system, different vantage point</span>
           <h2 style={{ fontSize: 28, marginTop: 8 }}>What each portal gives you</h2>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -186,19 +182,6 @@ export default function HowItWorks() {
               </ul>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{ textAlign: "center", padding: "0 32px 100px" }}>
-        <h2 style={{ fontSize: 24, marginBottom: 18 }}>Ready to try it?</h2>
-        <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-          <button className="btn btn-primary" style={{ padding: "13px 26px" }} onClick={() => navigate("/signup")}>
-            Create an account
-          </button>
-          <button className="btn btn-ghost" style={{ padding: "13px 26px" }} onClick={() => navigate("/login")}>
-            Log in
-          </button>
         </div>
       </section>
 

@@ -4,10 +4,9 @@ import "../styles/theme.css";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
+  { id: "submit", label: "Concern", icon: "•" },
   { id: "status", label: "Check Ticket Status", icon: "•" },
-  { id: "submit", label: "Select Office & Submit", icon: "•" },
   { id: "map", label: "Use Campus Map", icon: "•" },
-  { id: "responses", label: "Receive Response", icon: "•" },
   { id: "feedback", label: "Submit Feedback & Ratings", icon: "•" },
   { id: "history", label: "View Ticket History", icon: "•" },
   { id: "notifications", label: "Notifications", icon: "•" },
@@ -56,7 +55,6 @@ export default function StudentDashboard() {
             />
           )}
           {active === "map" && <CampusMap />}
-          {active === "responses" && <ReceiveResponse />}
           {active === "feedback" && <Feedback />}
           {active === "history" && <History />}
           {active === "notifications" && <Notifications />}
@@ -141,7 +139,7 @@ function Overview({ onSelect }) {
 function CheckStatus() {
   return (
     <>
-      <PageHeader title="Your tickets" subtitle="Retrieved from the Ticket data store." />
+      <PageHeader title="Your tickets" subtitle="This section displays the status of your ticket submitted." />
       <div className="card">
         <table className="chd-table">
           <thead>
@@ -212,7 +210,7 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
           )}
 
           <div className="field">
-            <label>Office (edit if needed)</label>
+            <label>Office (please select an office)</label>
             <select value={selectedOffice || suggestedOffice || ""} onChange={(e) => setSelectedOffice(e.target.value)}>
               <option value="">Select an office…</option>
               {OFFICES.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -242,7 +240,7 @@ const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMP
 
 return (
   <>
-      <PageHeader title="Find your office" subtitle="Retrieved from the Office data store." />
+      <PageHeader title="Find your office" subtitle="This map helps you for your destination." />
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ height: 320, position: "relative" }}>
           <iframe
@@ -286,34 +284,12 @@ return (
 );
 }
 
-function ReceiveResponse() {
-  return (
-    <>
-      <PageHeader title="Staff responses" subtitle="Retrieved from the Survey Response data store." />
-      <div className="card">
-        {[
-          { office: "IT Services", ticket: "TCK-2201", msg: "We've reset your portal access,R please try logging in again.", time: "2h ago" },
-          { office: "Registrar", ticket: "TCK-2198", msg: "Your grade correction is being processed with the professor.", time: "1d ago" },
-        ].map((r, i) => (
-          <div key={i} style={{ padding: "14px 0", borderBottom: i === 0 ? "1px solid var(--line)" : "none" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <strong style={{ fontSize: 14 }}>{r.office} · <span style={{ fontFamily: "var(--font-mono)", fontWeight: 400 }}>{r.ticket}</span></strong>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{r.time}</span>
-            </div>
-            <p style={{ fontSize: 14, margin: 0 }}>{r.msg}</p>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function Feedback() {
   const [rating, setRating] = useState(0);
   const [sent, setSent] = useState(false);
   return (
     <>
-      <PageHeader title="Rate your resolution" subtitle="Saved to the Survey Response data store." />
+      <PageHeader title="Rate your resolution" subtitle="Let us know your feedback and help us improve." />
       <div className="card" style={{ maxWidth: 480 }}>
         <div className="field">
           <label>Ticket</label>
@@ -349,7 +325,7 @@ function Feedback() {
 function History() {
   return (
     <>
-      <PageHeader title="Full ticket history" subtitle="Retrieved from the Ticket data store." />
+      <PageHeader title="Full ticket history" subtitle="This section displays all the tickets you have submitted." />
       <div className="card">
         <table className="chd-table">
           <thead>
@@ -375,7 +351,7 @@ function History() {
 function Notifications() {
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Retrieved from the Notification data store." />
+      <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
       <div className="card">
         {NOTIFICATIONS.map((n, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < NOTIFICATIONS.length - 1 ? "1px solid var(--line)" : "none" }}>

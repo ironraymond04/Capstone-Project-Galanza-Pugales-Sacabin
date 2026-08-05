@@ -34,15 +34,13 @@ export default function Home() {
       <section
         style={{
           background:
-            "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-700) 62%, var(--paper) 100%)",
+            "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
           color: "var(--white)",
           padding: "88px 32px 120px",
         }}
       >
         <div style={{ maxWidth: 780, margin: "0 auto", textAlign: "center" }}>
-          <div className="eyebrow" style={{ color: "var(--maroon-300)", marginBottom: 14 }}>
-            SPC Helpdesk
-          </div>
+          
           <h1 style={{ color: "var(--white)", fontSize: 44, lineHeight: 1.1, marginBottom: 18 }}>
             One concern, submitted once - routed to the right office, instantly.
           </h1>
@@ -78,7 +76,6 @@ export default function Home() {
       {/* Roles */}
       <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 32px 100px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <span className="eyebrow">Built for every actor on campus</span>
           <h2 style={{ fontSize: 30, marginTop: 8 }}>A dashboard for how you actually work</h2>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>

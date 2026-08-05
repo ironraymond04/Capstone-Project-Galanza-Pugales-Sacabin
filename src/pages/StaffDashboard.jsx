@@ -127,7 +127,7 @@ function Overview({ onSelect }) {
 function Reports() {
   return (
     <>
-      <PageHeader title="Ticket reports" subtitle="Retrieved from the Ticket data store." />
+      <PageHeader title="Ticket reports" subtitle="This section provides an overview of the submitted ticket reports." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
         {[{ l: "Total handled", v: 132 }, { l: "Avg. resolution time", v: "6.1h" }, { l: "Satisfaction score", v: "4.6/5" }].map((c) => (
           <div key={c.l} className="card"><div style={{ fontSize: 24, fontFamily: "var(--font-display)" }}>{c.v}</div><div style={{ fontSize: 13, color: "var(--ink-soft)" }}>{c.l}</div></div>
@@ -150,7 +150,7 @@ function Reports() {
 function ActivityLogs() {
   return (
     <>
-      <PageHeader title="Activity log" subtitle="Retrieved from the Logs data store." />
+      <PageHeader title="Activity log" subtitle="This section displays all system logs." />
       <div className="card">
         {ACTIVITY_LOGS.map((l, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < ACTIVITY_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
@@ -167,7 +167,7 @@ function UpdateStatus() {
   const [statuses, setStatuses] = useState(Object.fromEntries(QUEUE.map((t) => [t.id, t.status])));
   return (
     <>
-      <PageHeader title="Update ticket status" subtitle="Saved back to the Ticket data store." />
+      <PageHeader title="Update ticket status" subtitle="This is where the ticket you can update the status." />
       <div className="card">
         <table className="chd-table">
           <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th></tr></thead>
@@ -200,7 +200,7 @@ function UpdateStatus() {
 function RoutedTickets() {
   return (
     <>
-      <PageHeader title="Newly routed tickets" subtitle="Retrieved from the Ticket data store." />
+      <PageHeader title="Newly routed tickets" subtitle="This section displays all routed ticket." />
       <div className="card">
         {QUEUE.slice(0, 2).map((t) => (
           <div key={t.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
@@ -219,7 +219,7 @@ function RoutedTickets() {
 function AutoAssignment() {
   return (
     <>
-      <PageHeader title="Assignment confidence" subtitle="How confidently the classifier assigned each ticket to your office." />
+      <PageHeader title="Assignment confidence" subtitle="This section shows the confidence level of each ticket assigned to offices." />
       <div className="card">
         <table className="chd-table">
           <thead><tr><th>Ticket</th><th>Subject</th><th>AI confidence</th></tr></thead>
@@ -245,7 +245,7 @@ function PriorityView() {
   }));
   return (
     <>
-      <PageHeader title="Tickets by priority" subtitle="Retrieved from the Ticket data store." />
+      <PageHeader title="Tickets by priority" subtitle="This section displays the priority level of each submitted ticket." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
         {grouped.map((g) => (
           <div key={g.level} className="card">
@@ -272,7 +272,7 @@ function Notifications() {
   ];
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Retrieved from the Notification data store." />
+      <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
       <div className="card">
         {items.map((n, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < items.length - 1 ? "1px solid var(--line)" : "none" }}>

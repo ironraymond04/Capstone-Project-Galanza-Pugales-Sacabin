@@ -32,8 +32,8 @@
   --warning: #A66A1A;
   --danger: #B23A2E;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-display: "Libre Baskerville",Sans-serif;
+  --font-body: "Montserrat", Sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --radius-sm: 6px;
