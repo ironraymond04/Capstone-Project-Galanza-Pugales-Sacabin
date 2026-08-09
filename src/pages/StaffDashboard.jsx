@@ -167,7 +167,7 @@ function UpdateStatus() {
   const [statuses, setStatuses] = useState(Object.fromEntries(QUEUE.map((t) => [t.id, t.status])));
   return (
     <>
-      <PageHeader title="Update ticket status" subtitle="This is where the ticket you can update the status." />
+      <PageHeader title="Update ticket status" subtitle="This is where the ticket that you can update the status." />
       <div className="card">
         <table className="chd-table">
           <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th></tr></thead>

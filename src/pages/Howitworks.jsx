@@ -92,7 +92,7 @@ export default function HowItWorks() {
         }}
       >
         <h1 style={{ color: "var(--white)", fontSize: 38, maxWidth: 680, margin: "0 auto 16px" }}>
-          From a typed concern to a resolved ticket - automatically routed, every time.
+          From submitting your concern to resolving your ticket, every step is automatically routed to the appropriate office.
         </h1>
         <p style={{ color: "rgba(255,255,255,0.82)", fontSize: 16, maxWidth: 560, margin: "0 auto" }}>
           One system, three portals, and an AI classification module doing the routing
