@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
+import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
@@ -31,9 +32,10 @@ export default function StudentDashboard() {
   const [active, setActive] = useState("overview");
   const [ticketText, setTicketText] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
+  const isMobile = useIsMobile();
 
   return (
-    <div className="chd-app-shell">
+    <div className="chd-app-shell" style={{ flexDirection: isMobile ? "column" : "row" }}>
       <Sidebar
         role="Student"
         userName="[Your Name]"
@@ -42,8 +44,8 @@ export default function StudentDashboard() {
         onSelect={setActive}
         notifCount={3}
       />
-      <div className="chd-main">
-        <div className="chd-content">
+      <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
+        <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && <Overview onSelect={setActive} />}
           {active === "status" && <CheckStatus />}
           {active === "submit" && (
@@ -67,9 +69,10 @@ export default function StudentDashboard() {
 /* ---------------- sections ---------------- */
 
 function PageHeader({ title, subtitle }) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ marginBottom: 26 }}>
-      <h1 style={{ fontSize: 28, marginTop: 6 }}>{title}</h1>
+    <div style={{ marginBottom: isMobile ? 18 : 26 }}>
+      <h1 style={{ fontSize: isMobile ? 22 : 28, marginTop: 6 }}>{title}</h1>
       {subtitle && <p style={{ fontSize: 14 }}>{subtitle}</p>}
     </div>
   );
@@ -96,7 +99,13 @@ function StatusBadge({ status }) {
   return <span className={`badge ${map[status] || "badge-open"}`}>{status}</span>;
 }
 
+/** Wraps any table so it scrolls horizontally instead of blowing out the layout on narrow screens. */
+function TableScroll({ children }) {
+  return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
+}
+
 function Overview({ onSelect }) {
+  const isMobile = useIsMobile();
   const stats = [
     { label: "Open tickets", value: 2 },
     { label: "Resolved this month", value: 6 },
@@ -105,7 +114,7 @@ function Overview({ onSelect }) {
   return (
     <>
       <PageHeader title="Welcome back, [Your Name]" subtitle="Here's where things stand across your helpdesk tickets." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 20 : 28 }}>
         {stats.map((s) => (
           <div key={s.label} className="card">
             <div style={{ fontSize: 28, fontFamily: "var(--font-display)", color: "var(--maroon-800, var(--maroon-700))" }}>{s.value}</div>
@@ -115,21 +124,23 @@ function Overview({ onSelect }) {
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Recent tickets</h3>
-        <table className="chd-table">
-          <thead>
-            <tr><th>Ticket</th><th>Office</th><th>Status</th><th>Updated</th></tr>
-          </thead>
-          <tbody>
-            {MY_TICKETS.slice(0, 3).map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.office}</td>
-                <td><StatusBadge status={t.status} /></td>
-                <td>{t.updated}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead>
+              <tr><th>Ticket</th><th>Office</th><th>Status</th><th>Updated</th></tr>
+            </thead>
+            <tbody>
+              {MY_TICKETS.slice(0, 3).map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.office}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>{t.updated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
       <button className="btn btn-primary" onClick={() => onSelect("submit")}>+ Submit a new ticket</button>
     </>
@@ -141,27 +152,30 @@ function CheckStatus() {
     <>
       <PageHeader title="Your tickets" subtitle="This section displays the status of your ticket submitted." />
       <div className="card">
-        <table className="chd-table">
-          <thead>
-            <tr><th>Ticket</th><th>Subject</th><th>Office</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {MY_TICKETS.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.subject}</td>
-                <td>{t.office}</td>
-                <td><StatusBadge status={t.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead>
+              <tr><th>Ticket</th><th>Subject</th><th>Office</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {MY_TICKETS.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.subject}</td>
+                  <td>{t.office}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
 }
 
 function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOffice }) {
+  const isMobile = useIsMobile();
   const [submitted, setSubmitted] = useState(false);
   const suggestedOffice = ticketText.length > 0 ? OFFICES[ticketText.length % OFFICES.length] : null;
 
@@ -192,8 +206,10 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
             <div
               style={{
                 display: "flex",
+                flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "space-between",
+                gap: 10,
                 background: "var(--maroon-050)",
                 border: "1px dashed var(--maroon-300)",
                 borderRadius: "var(--radius-sm)",
@@ -233,16 +249,17 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
 }
 
 function CampusMap() {
-const CAMPUS_LAT = 8.2318034;
-const CAMPUS_LNG = 124.2364283;
-const mapSrc = `https://www.google.com/maps?q=${CAMPUS_LAT},${CAMPUS_LNG}&z=17&output=embed`;
-const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMPUS_LAT},${CAMPUS_LNG}`;
+  const isMobile = useIsMobile();
+  const CAMPUS_LAT = 8.2318034;
+  const CAMPUS_LNG = 124.2364283;
+  const mapSrc = `https://www.google.com/maps?q=${CAMPUS_LAT},${CAMPUS_LNG}&z=17&output=embed`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMPUS_LAT},${CAMPUS_LNG}`;
 
-return (
-  <>
+  return (
+    <>
       <PageHeader title="Find your office" subtitle="This map helps you for your destination." />
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ height: 320, position: "relative" }}>
+        <div style={{ height: isMobile ? 220 : 320, position: "relative" }}>
           <iframe
             title="Campus Map"
             src={mapSrc}
@@ -254,7 +271,17 @@ return (
           />
         </div>
 
-        <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--line)" }}>
+        <div
+          style={{
+            padding: isMobile ? "12px 14px" : "14px 20px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderBottom: "1px solid var(--line)",
+          }}
+        >
           <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
             St. Peter's College - Main campus
           </span>
@@ -269,8 +296,8 @@ return (
           </a>
         </div>
 
-        <div style={{ padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        <div style={{ padding: isMobile ? 14 : 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 10 }}>
             {OFFICES.map((o) => (
               <div key={o} className="card" style={{ padding: 12 }}>
                 <strong style={{ fontSize: 13 }}>{o}</strong>
@@ -281,7 +308,7 @@ return (
         </div>
       </div>
     </>
-);
+  );
 }
 
 function Feedback() {
@@ -327,22 +354,24 @@ function History() {
     <>
       <PageHeader title="Full ticket history" subtitle="This section displays all the tickets you have submitted." />
       <div className="card">
-        <table className="chd-table">
-          <thead>
-            <tr><th>Ticket</th><th>Subject</th><th>Office</th><th>Status</th><th>AI confidence</th></tr>
-          </thead>
-          <tbody>
-            {MY_TICKETS.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.subject}</td>
-                <td>{t.office}</td>
-                <td><StatusBadge status={t.status} /></td>
-                <td>{t.confidence}%</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead>
+              <tr><th>Ticket</th><th>Subject</th><th>Office</th><th>Status</th><th>AI confidence</th></tr>
+            </thead>
+            <tbody>
+              {MY_TICKETS.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.subject}</td>
+                  <td>{t.office}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>{t.confidence}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
@@ -354,7 +383,7 @@ function Notifications() {
       <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
       <div className="card">
         {NOTIFICATIONS.map((n, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < NOTIFICATIONS.length - 1 ? "1px solid var(--line)" : "none" }}>
+          <div key={i} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < NOTIFICATIONS.length - 1 ? "1px solid var(--line)" : "none" }}>
             <span style={{ fontSize: 14 }}>{n.text}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{n.time}</span>
           </div>

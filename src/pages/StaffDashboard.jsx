@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
+import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
@@ -28,9 +29,10 @@ const ACTIVITY_LOGS = [
 
 export default function StaffDashboard() {
   const [active, setActive] = useState("overview");
+  const isMobile = useIsMobile();
 
   return (
-    <div className="chd-app-shell">
+    <div className="chd-app-shell" style={{ flexDirection: isMobile ? "column" : "row" }}>
       <Sidebar
         role="Faculty & Staff"
         userName="[Your Name]"
@@ -39,8 +41,8 @@ export default function StaffDashboard() {
         onSelect={setActive}
         notifCount={2}
       />
-      <div className="chd-main">
-        <div className="chd-content">
+      <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
+        <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && <Overview onSelect={setActive} />}
           {active === "reports" && <Reports />}
           {active === "logs" && <ActivityLogs />}
@@ -56,9 +58,10 @@ export default function StaffDashboard() {
 }
 
 function PageHeader({ title, subtitle }) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ marginBottom: 26 }}>
-      <h1 style={{ fontSize: 28, marginTop: 6 }}>{title}</h1>
+    <div style={{ marginBottom: isMobile ? 18 : 26 }}>
+      <h1 style={{ fontSize: isMobile ? 22 : 28, marginTop: 6 }}>{title}</h1>
       {subtitle && <p style={{ fontSize: 14 }}>{subtitle}</p>}
     </div>
   );
@@ -87,7 +90,13 @@ function ConfidenceMeter({ pct }) {
   );
 }
 
+/** Wraps any table so it scrolls horizontally instead of blowing out the layout on narrow screens. */
+function TableScroll({ children }) {
+  return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
+}
+
 function Overview({ onSelect }) {
+  const isMobile = useIsMobile();
   const stats = [
     { label: "Assigned to you", value: 4 },
     { label: "High priority", value: 2 },
@@ -96,7 +105,7 @@ function Overview({ onSelect }) {
   return (
     <>
       <PageHeader title="Good day, [Your Name]" subtitle="Here's your current ticket queue at the moment." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 10 : 16, marginBottom: isMobile ? 20 : 28 }}>
         {stats.map((s) => (
           <div key={s.label} className="card">
             <div style={{ fontSize: 28, fontFamily: "var(--font-display)" }}>{s.value}</div>
@@ -106,42 +115,47 @@ function Overview({ onSelect }) {
       </div>
       <div className="card">
         <h3>Your queue</h3>
-        <table className="chd-table">
-          <thead><tr><th>Ticket</th><th>Subject</th><th>Priority</th><th>Status</th></tr></thead>
-          <tbody>
-            {QUEUE.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.subject}</td>
-                <td><PriorityDot level={t.priority} /></td>
-                <td><StatusBadge status={t.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead><tr><th>Ticket</th><th>Subject</th><th>Priority</th><th>Status</th></tr></thead>
+            <tbody>
+              {QUEUE.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.subject}</td>
+                  <td><PriorityDot level={t.priority} /></td>
+                  <td><StatusBadge status={t.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
 }
 
 function Reports() {
+  const isMobile = useIsMobile();
   return (
     <>
       <PageHeader title="Ticket reports" subtitle="This section provides an overview of the submitted ticket reports." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
         {[{ l: "Total handled", v: 132 }, { l: "Avg. resolution time", v: "6.1h" }, { l: "Satisfaction score", v: "4.6/5" }].map((c) => (
           <div key={c.l} className="card"><div style={{ fontSize: 24, fontFamily: "var(--font-display)" }}>{c.v}</div><div style={{ fontSize: 13, color: "var(--ink-soft)" }}>{c.l}</div></div>
         ))}
       </div>
       <div className="card">
-        <table className="chd-table">
-          <thead><tr><th>Ticket</th><th>Student</th><th>Status</th></tr></thead>
-          <tbody>
-            {QUEUE.map((t) => (
-              <tr key={t.id}><td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td><td>{t.student}</td><td><StatusBadge status={t.status} /></td></tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead><tr><th>Ticket</th><th>Student</th><th>Status</th></tr></thead>
+            <tbody>
+              {QUEUE.map((t) => (
+                <tr key={t.id}><td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td><td>{t.student}</td><td><StatusBadge status={t.status} /></td></tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
@@ -153,7 +167,7 @@ function ActivityLogs() {
       <PageHeader title="Activity log" subtitle="This section displays all system logs." />
       <div className="card">
         {ACTIVITY_LOGS.map((l, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < ACTIVITY_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
+          <div key={i} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < ACTIVITY_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
             <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> - {l.action}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{l.time}</span>
           </div>
@@ -169,29 +183,31 @@ function UpdateStatus() {
     <>
       <PageHeader title="Update ticket status" subtitle="This is where the ticket that you can update the status." />
       <div className="card">
-        <table className="chd-table">
-          <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th></tr></thead>
-          <tbody>
-            {QUEUE.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.subject}</td>
-                <td>
-                  <select
-                    value={statuses[t.id]}
-                    onChange={(e) => setStatuses((s) => ({ ...s, [t.id]: e.target.value }))}
-                    style={{ width: 160, padding: "8px 10px", border: "1.5px solid var(--line)", borderRadius: 6 }}
-                  >
-                    <option>Open</option>
-                    <option>In Progress</option>
-                    <option>Resolved</option>
-                    <option>Escalated</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead><tr><th>Ticket</th><th>Subject</th><th>Status</th></tr></thead>
+            <tbody>
+              {QUEUE.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.subject}</td>
+                  <td>
+                    <select
+                      value={statuses[t.id]}
+                      onChange={(e) => setStatuses((s) => ({ ...s, [t.id]: e.target.value }))}
+                      style={{ width: 160, padding: "8px 10px", border: "1.5px solid var(--line)", borderRadius: 6 }}
+                    >
+                      <option>Open</option>
+                      <option>In Progress</option>
+                      <option>Resolved</option>
+                      <option>Escalated</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
@@ -204,7 +220,7 @@ function RoutedTickets() {
       <div className="card">
         {QUEUE.slice(0, 2).map((t) => (
           <div key={t.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
               <strong style={{ fontFamily: "var(--font-mono)" }}>{t.id}</strong>
               <PriorityDot level={t.priority} />
             </div>
@@ -221,24 +237,27 @@ function AutoAssignment() {
     <>
       <PageHeader title="Assignment confidence" subtitle="This section shows the confidence level of each ticket assigned to offices." />
       <div className="card">
-        <table className="chd-table">
-          <thead><tr><th>Ticket</th><th>Subject</th><th>AI confidence</th></tr></thead>
-          <tbody>
-            {QUEUE.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
-                <td>{t.subject}</td>
-                <td><ConfidenceMeter pct={t.confidence} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableScroll>
+          <table className="chd-table">
+            <thead><tr><th>Ticket</th><th>Subject</th><th>AI confidence</th></tr></thead>
+            <tbody>
+              {QUEUE.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.subject}</td>
+                  <td><ConfidenceMeter pct={t.confidence} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </div>
     </>
   );
 }
 
 function PriorityView() {
+  const isMobile = useIsMobile();
   const grouped = ["High", "Medium", "Low"].map((level) => ({
     level,
     tickets: QUEUE.filter((t) => t.priority === level),
@@ -246,7 +265,7 @@ function PriorityView() {
   return (
     <>
       <PageHeader title="Tickets by priority" subtitle="This section displays the priority level of each submitted ticket." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
         {grouped.map((g) => (
           <div key={g.level} className="card">
             <PriorityDot level={g.level} />
@@ -275,7 +294,7 @@ function Notifications() {
       <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
       <div className="card">
         {items.map((n, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < items.length - 1 ? "1px solid var(--line)" : "none" }}>
+          <div key={i} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < items.length - 1 ? "1px solid var(--line)" : "none" }}>
             <span style={{ fontSize: 14 }}>{n.text}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{n.time}</span>
           </div>
