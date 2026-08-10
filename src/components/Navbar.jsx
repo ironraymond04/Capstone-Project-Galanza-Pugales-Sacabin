@@ -37,19 +37,19 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 12,
             fontFamily: "var(--font-display)",
-            fontSize: 20,
-            fontWeight: 600,
+            fontSize: 30,
+            fontWeight: 700,
             color: "var(--white)",
           }}
         >
           <span
             aria-hidden="true"
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 8,
+              width: 50,
+              height: 50,
+              borderRadius: 10,
               background: "rgba(255,255,255,0.14)",
               border: "1.5px solid rgba(255,255,255,0.4)",
               display: "grid",
