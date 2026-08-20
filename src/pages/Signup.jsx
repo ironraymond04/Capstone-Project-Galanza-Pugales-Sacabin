@@ -45,7 +45,7 @@ export default function Signup() {
 
       <div className="auth-stage">
         <section className="brand-panel" aria-hidden="true">
-          <span className="brand-eyebrow">Campus Helpdesk</span>
+          <span className="brand-eyebrow">SPC Helpdesk</span>
           <h1 className="brand-headline">
             Every issue, tracked<br />from report to resolution.
           </h1>
