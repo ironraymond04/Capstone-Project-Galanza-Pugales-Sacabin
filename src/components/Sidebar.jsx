@@ -140,7 +140,7 @@ export default function Sidebar({
                 fontSize: 9.5,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "var(--maroon-300)",
+                color: "white",
                 marginTop: 2,
               }}
             >
@@ -237,7 +237,7 @@ export default function Sidebar({
                     fontSize: 10,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                    color: "var(--maroon-300)",
+                    color: "white",
                     marginTop: 4,
                   }}
                 >
