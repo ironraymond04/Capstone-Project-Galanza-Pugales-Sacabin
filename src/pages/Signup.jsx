@@ -45,11 +45,11 @@ export default function Signup() {
 
       <div className="auth-stage">
         <section className="brand-panel" aria-hidden="true">
-          <span className="brand-eyebrow">SPC Helpdesk</span>
-          <h1 className="brand-headline">
+          <span className="brand-eyebrow page-description page-description--from-left">SPC Helpdesk</span>
+          <h1 className="brand-headline page-description page-description--from-left">
             Every issue, tracked<br />from report to resolution.
           </h1>
-          <p className="brand-sub">
+          <p className="brand-sub page-description page-description--from-left">
             One system for students, faculty, and staff to submit, follow, and
             close support tickets - no more chasing emails.
           </p>
@@ -257,7 +257,7 @@ export default function Signup() {
           flex: 1; padding: 9px 6px; border: none; border-radius: 8px;
           background: transparent; color: var(--muted, #6b5b5e);
           font-size: 12px; font-weight: 600; cursor: pointer;
-          transition: background .15s ease, color .15s ease;
+          transition: transform .18s ease, background .15s ease, color .15s ease;
         }
         .role-btn.active { background: #fff; color: var(--maroon-700, #6d1226); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
@@ -266,7 +266,7 @@ export default function Signup() {
         .submit-btn {
           width: 100%; padding: 12px; border: none; border-radius: 8px;
           background: var(--maroon-600); color: #fff; font-size: 15px; font-weight: 600;
-          cursor: pointer; transition: background .15s ease;
+          cursor: pointer; transition: transform .18s ease, background .15s ease;
         }
         .submit-btn:hover { background: var(--maroon-700, #6d1226); }
 

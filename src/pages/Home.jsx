@@ -41,10 +41,10 @@ export default function Home() {
       >
         <div style={{ maxWidth: 780, margin: "0 auto", textAlign: "center" }}>
           
-          <h1 style={{ color: "var(--white)", fontSize: 44, lineHeight: 1.1, marginBottom: 18 }}>
+          <h1 className="page-description page-description--from-left" style={{ color: "var(--white)", fontSize: 44, lineHeight: 1.1, marginBottom: 18 }}>
             Submit your concern once, and let our AI instantly route it to the right office - faster, smarter, and hassle-free.
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.82)", fontSize: 17, maxWidth: 560, margin: "0 auto 32px" }}>
+          <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", fontSize: 17, maxWidth: 560, margin: "0 auto 32px" }}>
             The Campus Helpdesk uses multi-label text classification to read every ticket
             and send it straight to the office that can resolve it - no more guessing which
             window to line up at.
