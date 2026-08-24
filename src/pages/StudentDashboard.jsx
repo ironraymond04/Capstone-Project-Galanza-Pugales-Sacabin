@@ -15,6 +15,22 @@ const NAV_ITEMS = [
 
 const OFFICES = ["Registrar", "Library", "Guidance Office", "Accounting", "DSA", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS"];
 
+const OFFICE_LOCATIONS = {
+  Registrar: "Admin Bldg., Ground Flr.",
+  Library: "Admin Bldg., 3rd Flr.",
+  "Guidance Office": "Engineering Bldg., Ground Flr.",
+  Accounting: "Admin Bldg., Ground Flr.",
+  DSA: "High School Bldg., Ground Flr.",
+  CAS: "Admin Bldg., Ground Flr.",
+  COE: "Elementary Bldg., Ground Flr.",
+  CED: "High School Bldg., Ground Flr.",
+  CCS: "Admin Bldg., Ground Flr.",
+  COC: "Criminology Bldg., 2nd Flr.",
+  CBA: "Technology Bldg., 2nd Flr.",
+  BED: "High School Bldg., Ground Flr.",
+  GS: "High School Bldg., Ground Flr.",
+};
+
 const MY_TICKETS = [
   { id: "TCK-2201", subject: "Unable to access enrollment portal", office: "IT Services", status: "In Progress", confidence: 92, updated: "2h ago" },
   { id: "TCK-2198", subject: "Missing grade in Physics 101", office: "Registrar", status: "Open", confidence: 87, updated: "1d ago" },
@@ -298,12 +314,12 @@ function CampusMap() {
 
         <div style={{ padding: isMobile ? 14 : 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 10 }}>
-            {OFFICES.map((o) => (
-              <div key={o} className="card" style={{ padding: 12 }}>
-                <strong style={{ fontSize: 13 }}>{o}</strong>
-                <p style={{ fontSize: 12, marginTop: 4 }}>Bldg. {1 + OFFICES.indexOf(o)}, Ground Flr.</p>
-              </div>
-            ))}
+{OFFICES.map((o) => (
+  <div key={o} className="card" style={{ padding: 12 }}>
+    <strong style={{ fontSize: 13 }}>{o}</strong>
+    <p style={{ fontSize: 12, marginTop: 4 }}>{OFFICE_LOCATIONS[o]}</p>
+  </div>
+))}
           </div>
         </div>
       </div>
