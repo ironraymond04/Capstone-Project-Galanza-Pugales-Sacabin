@@ -5,7 +5,7 @@ import "../styles/theme.css";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
-  { id: "reports", label: "View Ticket Reports", icon: "•" },
+  { id: "reports", label: "View Submitted Tickets", icon: "•" },
   { id: "logs", label: "View Activity Logs", icon: "•" },
   { id: "status", label: "Update Ticket Status", icon: "•" },
   { id: "routed", label: "Receive Routed Ticket", icon: "•" },
