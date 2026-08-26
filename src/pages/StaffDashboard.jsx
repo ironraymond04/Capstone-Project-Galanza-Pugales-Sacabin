@@ -139,7 +139,7 @@ function Reports() {
   const isMobile = useIsMobile();
   return (
     <>
-      <PageHeader title="Ticket reports" subtitle="This section provides an overview of the submitted ticket reports." />
+      <PageHeader title="Submitted Tickets" subtitle="This section provides an overview of the submitted tickets." />
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
         {[{ l: "Total handled", v: 132 }, { l: "Avg. resolution time", v: "6.1h" }, { l: "Satisfaction score", v: "4.6/5" }].map((c) => (
           <div key={c.l} className="card"><div style={{ fontSize: 24, fontFamily: "var(--font-display)" }}>{c.v}</div><div style={{ fontSize: 13, color: "var(--ink-soft)" }}>{c.l}</div></div>
