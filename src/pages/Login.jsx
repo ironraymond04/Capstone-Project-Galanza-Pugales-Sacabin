@@ -51,15 +51,15 @@ export default function Login() {
           </p>
 
           <div className="flow-diagram">
-            <div className="flow-node">
+            <div className="flow-node flow-node--submitted">
               <span className="flow-dot" />
               <span className="flow-label">Submitted</span>
             </div>
-            <div className="flow-node">
+            <div className="flow-node flow-node--review">
               <span className="flow-dot" />
               <span className="flow-label">In review</span>
             </div>
-            <div className="flow-node active">
+            <div className="flow-node flow-node--resolved active">
               <span className="flow-dot" />
               <span className="flow-label">Resolved</span>
             </div>
@@ -219,6 +219,28 @@ export default function Login() {
         }
         .flow-label { font-size: 13px; color: rgba(247, 236, 233, 0.75); }
         .flow-node.active .flow-label { color: #f7ece9; font-weight: 600; }
+        .flow-node--submitted .flow-dot,
+        .flow-node--review .flow-dot,
+        .flow-node--resolved .flow-dot { animation: login-flow-pulse 4.5s ease-in-out infinite; }
+        .flow-node--submitted .flow-label,
+        .flow-node--review .flow-label,
+        .flow-node--resolved .flow-label { animation: login-flow-label 4.5s ease-in-out infinite; }
+        .flow-node--review .flow-dot, .flow-node--review .flow-label { animation-delay: 1.5s; }
+        .flow-node--resolved .flow-dot, .flow-node--resolved .flow-label { animation-delay: 3s; }
+        @keyframes login-flow-pulse {
+          0%, 28%, 100% { background: rgba(247, 236, 233, 0.35); box-shadow: none; }
+          10%, 18% { background: var(--lg-gold); box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.2); }
+        }
+        @keyframes login-flow-label {
+          0%, 28%, 100% { color: rgba(247, 236, 233, 0.75); font-weight: 400; }
+          10%, 18% { color: #f7ece9; font-weight: 600; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .flow-node--submitted .flow-dot, .flow-node--review .flow-dot, .flow-node--resolved .flow-dot,
+          .flow-node--submitted .flow-label, .flow-node--review .flow-label, .flow-node--resolved .flow-label {
+            animation: none;
+          }
+        }
 
         .form-panel { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
         .form-card { width: 100%; max-width: 380px; }

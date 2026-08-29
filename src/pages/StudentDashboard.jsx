@@ -38,6 +38,37 @@ const MY_TICKETS = [
   { id: "TCK-2140", subject: "Library book fine dispute", office: "Library", status: "Resolved", confidence: 81, updated: "2w ago" },
 ];
 
+const TICKET_DETAILS = {
+  "TCK-2201": {
+    concern: "Unable to log in to the enrollment portal. An error appears when I try to access it.",
+    priority: "Medium",
+    aiClassification: "Technical Issue",
+    staffResponse: "Your concern is currently being processed.",
+    submitted: "August 27, 2026",
+  },
+  "TCK-2198": {
+    concern: "I was marked absent in Physics 101 but I already submitted my requirement. I need a correction.",
+    priority: "High",
+    aiClassification: "Academic Records",
+    staffResponse: "The registrar is validating your records and will update the status once reviewed.",
+    submitted: "August 24, 2026",
+  },
+  "TCK-2170": {
+    concern: "I lost my student ID and need a replacement request to continue entering the campus facilities.",
+    priority: "Low",
+    aiClassification: "Student Services",
+    staffResponse: "Your replacement request has been completed and is ready for pickup.",
+    submitted: "August 15, 2026",
+  },
+  "TCK-2140": {
+    concern: "I believe the library fine was charged incorrectly for a returned book. I am requesting a review.",
+    priority: "Medium",
+    aiClassification: "Billing Concern",
+    staffResponse: "The library has reviewed your account and resolved the discrepancy.",
+    submitted: "August 01, 2026",
+  },
+};
+
 const NOTIFICATIONS = [
   { text: "Your ticket TCK-2201 was routed to IT Services.", time: "2h ago" },
   { text: "Staff replied to TCK-2198.", time: "1d ago" },
@@ -164,6 +195,8 @@ function Overview({ onSelect }) {
 }
 
 function CheckStatus() {
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
   return (
     <>
       <PageHeader title="Your tickets" subtitle="This section displays the status of your ticket submitted." />
@@ -175,7 +208,7 @@ function CheckStatus() {
             </thead>
             <tbody>
               {MY_TICKETS.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
                   <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
                   <td>{t.subject}</td>
                   <td>{t.office}</td>
@@ -186,7 +219,51 @@ function CheckStatus() {
           </table>
         </TableScroll>
       </div>
+
+      {selectedTicket && (
+        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      )}
     </>
+  );
+}
+
+function TicketDetailModal({ ticket, onClose }) {
+  const details = TICKET_DETAILS[ticket.id] || {
+    concern: "No additional details provided.",
+    priority: "Medium",
+    aiClassification: "General Inquiry",
+    staffResponse: "We are currently reviewing your concern.",
+    submitted: "N/A",
+  };
+
+  return (
+    <div className="ticket-modal-overlay" onClick={onClose}>
+      <div className="ticket-detail-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
+        <div className="ticket-detail-header">TICKET DETAILS</div>
+
+        <div className="ticket-detail-body">
+          <div className="ticket-line"><strong>Ticket ID:</strong> {ticket.id}</div>
+          <div className="ticket-line"><strong>Subject:</strong> {ticket.subject}</div>
+          <div className="ticket-line ticket-line-block"><strong>Concern:</strong>
+            <div>{details.concern}</div>
+          </div>
+          <div className="ticket-line"><strong>Office:</strong> {ticket.office}</div>
+          <div className="ticket-line"><strong>Status:</strong> {ticket.status}</div>
+          <div className="ticket-line"><strong>Priority:</strong> {details.priority}</div>
+          <div className="ticket-line ticket-line-block"><strong>AI Classification:</strong>
+            <div>{details.aiClassification}</div>
+          </div>
+          <div className="ticket-line ticket-line-block"><strong>Staff Response:</strong>
+            <div>{details.staffResponse}</div>
+          </div>
+          <div className="ticket-line"><strong>Submitted:</strong> {details.submitted}</div>
+        </div>
+
+        <div className="ticket-detail-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -242,7 +319,7 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
           )}
 
           <div className="field">
-            <label>Office (please select an office)</label>
+            <label>Designated Office</label>
             <select value={selectedOffice || suggestedOffice || ""} onChange={(e) => setSelectedOffice(e.target.value)}>
               <option value="">Select an office…</option>
               {OFFICES.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -255,7 +332,7 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
 
           {submitted && (
             <p style={{ color: "var(--success)", fontSize: 13, marginTop: 12 }}>
-              Ticket submitted — saved to the Ticket data store and routed for review.
+              Your ticket has been submitted, please wait for the response.
             </p>
           )}
         </form>

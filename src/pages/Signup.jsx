@@ -54,17 +54,17 @@ export default function Signup() {
             close support tickets - no more chasing emails.
           </p>
           <div className="flow-diagram">
-            <div className="flow-node">
+            <div className="flow-node flow-node--submitted">
               <span className="flow-dot" />
-              <span>Submitted</span>
+              <span className="flow-label">Submitted</span>
             </div>
-            <div className="flow-node">
+            <div className="flow-node flow-node--review">
               <span className="flow-dot" />
-              <span>In review</span>
+              <span className="flow-label">In review</span>
             </div>
-            <div className="flow-node active">
+            <div className="flow-node flow-node--resolved active">
               <span className="flow-dot" />
-              <span>Resolved</span>
+              <span className="flow-label">Resolved</span>
             </div>
           </div>
         </section>
@@ -228,6 +228,28 @@ export default function Signup() {
         }
         .flow-node.active { color: #f7ece9; font-weight: 600; }
         .flow-node.active .flow-dot { background: var(--gold-500, #c9a227); }
+        .flow-node--submitted .flow-dot,
+        .flow-node--review .flow-dot,
+        .flow-node--resolved .flow-dot { animation: signup-flow-pulse 4.5s ease-in-out infinite; }
+        .flow-node--submitted .flow-label,
+        .flow-node--review .flow-label,
+        .flow-node--resolved .flow-label { animation: signup-flow-label 4.5s ease-in-out infinite; }
+        .flow-node--review .flow-dot, .flow-node--review .flow-label { animation-delay: 1.5s; }
+        .flow-node--resolved .flow-dot, .flow-node--resolved .flow-label { animation-delay: 3s; }
+        @keyframes signup-flow-pulse {
+          0%, 28%, 100% { background: rgba(247, 236, 233, 0.3); box-shadow: none; }
+          10%, 18% { background: var(--gold-500, #c9a227); box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.2); }
+        }
+        @keyframes signup-flow-label {
+          0%, 28%, 100% { color: rgba(247, 236, 233, 0.7); font-weight: 400; }
+          10%, 18% { color: #f7ece9; font-weight: 600; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .flow-node--submitted .flow-dot, .flow-node--review .flow-dot, .flow-node--resolved .flow-dot,
+          .flow-node--submitted .flow-label, .flow-node--review .flow-label, .flow-node--resolved .flow-label {
+            animation: none;
+          }
+        }
 
         .form-panel { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
         .form-card { width: 100%; max-width: 400px; }
