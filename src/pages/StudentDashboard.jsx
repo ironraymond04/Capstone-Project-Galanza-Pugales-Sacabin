@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
@@ -70,15 +70,52 @@ const TICKET_DETAILS = {
 };
 
 const NOTIFICATIONS = [
-  { text: "Your ticket TCK-2201 was routed to IT Services.", time: "2h ago" },
-  { text: "Staff replied to TCK-2198.", time: "1d ago" },
-  { text: "TCK-2170 has been marked Resolved.", time: "5d ago" },
+  {
+    id: "TCK-2201",
+    text: "Your ticket TCK-2201 was routed to IT Services.",
+    time: "2h ago",
+    subject: "Unable to access enrollment portal",
+    update: "Your ticket has been successfully routed to IT Services.",
+    assignedOffice: "IT Services",
+    status: "In Progress",
+    aiClassification: "Technical Issue",
+    date: "August 27, 2026 • 9:15 AM",
+    type: "routing",
+  },
+  {
+    id: "TCK-2198",
+    text: "Staff replied to TCK-2198.",
+    time: "1d ago",
+    subject: "Missing grade in Physics 101",
+    update: "Staff from the Registrar's Office responded to your ticket.",
+    assignedOffice: "Registrar",
+    status: "In Progress",
+    aiClassification: "Technical Issue",
+    date: "August 24, 2026 • 10:30 AM",
+    staffResponse: "Your concern has been received. We are currently checking your grade record.",
+    type: "staff-response",
+  },
+  {
+    id: "TCK-2170",
+    text: "TCK-2170 has been marked Resolved.",
+    time: "5d ago",
+    subject: "Lost student ID replacement",
+    update: "Your ticket has been resolved.",
+    assignedOffice: "Registrar",
+    status: "Resolved",
+    aiClassification: "Technical Issue",
+    date: "August 15, 2026 • 3:40 PM",
+    resolution: "Your request has been processed successfully.",
+    type: "resolution",
+  },
 ];
 
 export default function StudentDashboard() {
   const [active, setActive] = useState("overview");
   const [ticketText, setTicketText] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [selectedFeedbackTicketId, setSelectedFeedbackTicketId] = useState(null);
   const isMobile = useIsMobile();
 
   return (
@@ -94,7 +131,7 @@ export default function StudentDashboard() {
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && <Overview onSelect={setActive} />}
-          {active === "status" && <CheckStatus />}
+          {active === "status" && <CheckStatus selectedTicketId={selectedTicketId} onTicketSelected={setSelectedTicketId} />}
           {active === "submit" && (
             <SubmitTicket
               ticketText={ticketText}
@@ -104,9 +141,20 @@ export default function StudentDashboard() {
             />
           )}
           {active === "map" && <CampusMap />}
-          {active === "feedback" && <Feedback />}
+          {active === "feedback" && <Feedback selectedTicketId={selectedFeedbackTicketId} onTicketSelected={setSelectedFeedbackTicketId} />}
           {active === "history" && <History />}
-          {active === "notifications" && <Notifications />}
+          {active === "notifications" && (
+            <Notifications
+              onViewFullTicket={(ticketId) => {
+                setSelectedTicketId(ticketId);
+                setActive("status");
+              }}
+              onSubmitFeedback={(ticketId) => {
+                setSelectedFeedbackTicketId(ticketId);
+                setActive("feedback");
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -194,8 +242,18 @@ function Overview({ onSelect }) {
   );
 }
 
-function CheckStatus() {
+function CheckStatus({ selectedTicketId, onTicketSelected }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  useEffect(() => {
+    if (!selectedTicketId) {
+      setSelectedTicket(null);
+      return;
+    }
+
+    const nextTicket = MY_TICKETS.find((ticket) => ticket.id === selectedTicketId) || null;
+    setSelectedTicket(nextTicket);
+  }, [selectedTicketId]);
 
   return (
     <>
@@ -208,7 +266,7 @@ function CheckStatus() {
             </thead>
             <tbody>
               {MY_TICKETS.map((t) => (
-                <tr key={t.id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
+                <tr key={t.id} onClick={() => { setSelectedTicket(t); onTicketSelected?.(t.id); }} style={{ cursor: "pointer" }}>
                   <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
                   <td>{t.subject}</td>
                   <td>{t.office}</td>
@@ -221,7 +279,7 @@ function CheckStatus() {
       </div>
 
       {selectedTicket && (
-        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        <TicketDetailModal ticket={selectedTicket} onClose={() => { setSelectedTicket(null); onTicketSelected?.(null); }} />
       )}
     </>
   );
@@ -239,24 +297,34 @@ function TicketDetailModal({ ticket, onClose }) {
   return (
     <div className="ticket-modal-overlay" onClick={onClose}>
       <div className="ticket-detail-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
-        <div className="ticket-detail-header">TICKET DETAILS</div>
+        <div className="ticket-detail-header">
+          <span>TICKET DETAILS</span>
+          <button type="button" className="ticket-detail-close" onClick={onClose} aria-label="Close ticket details">×</button>
+        </div>
 
         <div className="ticket-detail-body">
-          <div className="ticket-line"><strong>Ticket ID:</strong> {ticket.id}</div>
-          <div className="ticket-line"><strong>Subject:</strong> {ticket.subject}</div>
-          <div className="ticket-line ticket-line-block"><strong>Concern:</strong>
-            <div>{details.concern}</div>
+          <div className="ticket-line"><strong>Ticket ID</strong><span>{ticket.id}</span></div>
+          <div className="ticket-line"><strong>Subject</strong><span>{ticket.subject}</span></div>
+          <div className="ticket-line"><strong>Status</strong><span>{ticket.status}</span></div>
+          <div className="ticket-line"><strong>Office</strong><span>{ticket.office}</span></div>
+          <div className="ticket-line"><strong>Priority</strong><span>{details.priority}</span></div>
+
+          <div className="ticket-line ticket-line-block">
+            <strong>AI Classification</strong>
+            <span>{details.aiClassification}</span>
           </div>
-          <div className="ticket-line"><strong>Office:</strong> {ticket.office}</div>
-          <div className="ticket-line"><strong>Status:</strong> {ticket.status}</div>
-          <div className="ticket-line"><strong>Priority:</strong> {details.priority}</div>
-          <div className="ticket-line ticket-line-block"><strong>AI Classification:</strong>
-            <div>{details.aiClassification}</div>
+
+          <div className="ticket-line ticket-line-block">
+            <strong>Concern</strong>
+            <span>{details.concern}</span>
           </div>
-          <div className="ticket-line ticket-line-block"><strong>Staff Response:</strong>
-            <div>{details.staffResponse}</div>
+
+          <div className="ticket-line ticket-line-block">
+            <strong>Staff Response</strong>
+            <span>{details.staffResponse}</span>
           </div>
-          <div className="ticket-line"><strong>Submitted:</strong> {details.submitted}</div>
+
+          <div className="ticket-line"><strong>Submitted</strong><span>{details.submitted}</span></div>
         </div>
 
         <div className="ticket-detail-actions">
@@ -317,14 +385,6 @@ function SubmitTicket({ ticketText, setTicketText, selectedOffice, setSelectedOf
               <ConfidenceMeter pct={Math.min(96, 60 + (ticketText.length % 35))} />
             </div>
           )}
-
-          <div className="field">
-            <label>Designated Office</label>
-            <select value={selectedOffice || suggestedOffice || ""} onChange={(e) => setSelectedOffice(e.target.value)}>
-              <option value="">Select an office…</option>
-              {OFFICES.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
 
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
             Submit ticket
@@ -404,16 +464,40 @@ function CampusMap() {
   );
 }
 
-function Feedback() {
+function Feedback({ selectedTicketId, onTicketSelected }) {
   const [rating, setRating] = useState(0);
   const [sent, setSent] = useState(false);
+  const [ticketId, setTicketId] = useState(selectedTicketId || "TCK-2170");
+
+  useEffect(() => {
+    if (selectedTicketId) {
+      setTicketId(selectedTicketId);
+    }
+  }, [selectedTicketId]);
+
+  const options = MY_TICKETS.map((ticket) => ({
+    value: ticket.id,
+    label: `${ticket.id} - ${ticket.subject}`,
+  }));
+
   return (
     <>
       <PageHeader title="Rate your resolution" subtitle="Let us know your feedback and help us improve." />
       <div className="card" style={{ maxWidth: 480 }}>
         <div className="field">
           <label>Ticket</label>
-          <select><option>TCK-2170 - Lost student ID replacement</option></select>
+          <select
+            value={ticketId}
+            onChange={(event) => {
+              const nextTicketId = event.target.value;
+              setTicketId(nextTicketId);
+              onTicketSelected?.(nextTicketId);
+            }}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <label>Rating</label>
@@ -443,6 +527,8 @@ function Feedback() {
 }
 
 function History() {
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
   return (
     <>
       <PageHeader title="Full ticket history" subtitle="This section displays all the tickets you have submitted." />
@@ -454,7 +540,7 @@ function History() {
             </thead>
             <tbody>
               {MY_TICKETS.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
                   <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
                   <td>{t.subject}</td>
                   <td>{t.office}</td>
@@ -466,22 +552,108 @@ function History() {
           </table>
         </TableScroll>
       </div>
+
+      {selectedTicket && (
+        <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      )}
     </>
   );
 }
 
-function Notifications() {
+function Notifications({ onViewFullTicket, onSubmitFeedback }) {
+  const [selectedNotification, setSelectedNotification] = useState(null);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && selectedNotification) {
+        setSelectedNotification(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedNotification]);
+
   return (
     <>
       <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
       <div className="card">
         {NOTIFICATIONS.map((n, i) => (
-          <div key={i} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < NOTIFICATIONS.length - 1 ? "1px solid var(--line)" : "none" }}>
+          <button
+            key={n.id}
+            type="button"
+            onClick={() => setSelectedNotification(n)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              background: "transparent",
+              padding: "12px 0",
+              borderBottom: i < NOTIFICATIONS.length - 1 ? "1px solid var(--line)" : "none",
+              color: "var(--ink)",
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+              gap: 6,
+            }}
+          >
             <span style={{ fontSize: 14 }}>{n.text}</span>
             <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{n.time}</span>
-          </div>
+          </button>
         ))}
       </div>
+
+      {selectedNotification && (
+        <NotificationDetailModal
+          notification={selectedNotification}
+          onClose={() => setSelectedNotification(null)}
+          onViewFullTicket={() => {
+            setSelectedNotification(null);
+            onViewFullTicket?.(selectedNotification.id);
+          }}
+          onSubmitFeedback={() => {
+            setSelectedNotification(null);
+            onSubmitFeedback?.(selectedNotification.id);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function NotificationDetailModal({ notification, onClose, onViewFullTicket, onSubmitFeedback }) {
+  const isResolved = notification.status === "Resolved";
+
+  return (
+    <div className="ticket-modal-overlay" onClick={onClose}>
+      <div className="ticket-detail-box notification-modal-box" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket notification details">
+        <div className="ticket-detail-header">
+          <span>TICKET NOTIFICATION</span>
+        </div>
+
+        <div className="ticket-detail-body notification-modal-body">
+          <div className="ticket-line notification-row"><strong>Ticket ID</strong><span>{notification.id}</span></div>
+          <div className="ticket-line notification-row"><strong>Subject</strong><span>{notification.subject}</span></div>
+          <div className="ticket-line notification-row"><strong>Update</strong><span>{notification.update}</span></div>
+          <div className="ticket-line notification-row"><strong>Assigned Office</strong><span>{notification.assignedOffice}</span></div>
+          <div className="ticket-line notification-row"><strong>Status</strong><span><StatusBadge status={notification.status} /></span></div>
+          {notification.staffResponse && (
+            <div className="ticket-line ticket-line-block notification-row"><strong>Staff Response</strong><span>&ldquo;{notification.staffResponse}&rdquo;</span></div>
+          )}
+          {notification.resolution && (
+            <div className="ticket-line ticket-line-block notification-row"><strong>Resolution</strong><span>{notification.resolution}</span></div>
+          )}
+          <div className="ticket-line notification-row"><strong>AI Classification</strong><span>{notification.aiClassification}</span></div>
+          <div className="ticket-line notification-row"><strong>Date</strong><span>{notification.date}</span></div>
+        </div>
+
+        <div className="ticket-detail-actions notification-modal-actions">
+          {isResolved && (
+            <button type="button" className="btn btn-primary" onClick={onSubmitFeedback}>Submit Feedback</button>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={onViewFullTicket}>View Full Ticket</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
