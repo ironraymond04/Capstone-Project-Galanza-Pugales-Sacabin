@@ -23,10 +23,10 @@ const ALL_TICKETS = [
 ];
 
 const USERS = [
-  { name: "[Your Name]", email: "name@example.com", role: "Student", status: "Active" },
-  { name: "[Your Name]", email: "name@example.com", role: "Faculty & Staff", status: "Active" },
-  { name: "[Your Name]", email: "name@example.com", role: "Student", status: "Suspended" },
-  { name: "[Your Name]", email: "name@example.com", role: "Faculty & Staff", status: "Active" },
+  { id: "u1", name: "[Your Name]", email: "name@example.com", role: "Student", status: "Active" },
+  { id: "u2", name: "[Your Name]", email: "name@example.com", role: "Faculty & Staff", status: "Active" },
+  { id: "u3", name: "[Your Name]", email: "name@example.com", role: "Student", status: "Active" },
+  { id: "u4", name: "[Your Name]", email: "name@example.com", role: "Faculty & Staff", status: "Active" },
 ];
 
 const OFFICES = [
@@ -244,9 +244,9 @@ function ManageTickets() {
 
 function ManageUsers() {
   const [users, setUsers] = useState(USERS);
-  const toggleStatus = (email) =>
+  const toggleStatus = (id) =>
     setUsers((list) =>
-      list.map((u) => (u.email === email ? { ...u, status: u.status === "Active" ? "Suspended" : "Active" } : u))
+      list.map((u) => (u.id === id ? { ...u, status: u.status === "Active" ? "Suspended" : "Active" } : u))
     );
   return (
     <>
@@ -257,7 +257,7 @@ function ManageUsers() {
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.email}>
+                <tr key={u.id}>
                   <td>{u.name}</td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
                   <td>{u.role}</td>
@@ -267,7 +267,7 @@ function ManageUsers() {
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }} onClick={() => toggleStatus(u.email)}>
+                    <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }} onClick={() => toggleStatus(u.id)}>
                       {u.status === "Active" ? "Suspend" : "Reactivate"}
                     </button>
                   </td>
