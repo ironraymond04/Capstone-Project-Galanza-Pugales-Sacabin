@@ -137,6 +137,8 @@ function Overview({ onSelect }) {
 
 function Reports() {
   const isMobile = useIsMobile();
+  const [modalTicket, setModalTicket] = useState(null);
+
   return (
     <>
       <PageHeader title="Submitted Tickets" subtitle="This section provides an overview of the submitted tickets." />
@@ -148,16 +150,126 @@ function Reports() {
       <div className="card">
         <TableScroll>
           <table className="chd-table">
-            <thead><tr><th>Ticket</th><th>Student</th><th>Status</th></tr></thead>
+            <thead><tr><th>Ticket</th><th>Student</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {QUEUE.map((t) => (
-                <tr key={t.id}><td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td><td>{t.student}</td><td><StatusBadge status={t.status} /></td></tr>
+                <tr
+                  key={t.id}
+                  onClick={() => setModalTicket(t)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td style={{ fontFamily: "var(--font-mono)" }}>{t.id}</td>
+                  <td>{t.student}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setModalTicket(t);
+                      }}
+                      style={{
+                        padding: "5px 12px",
+                        fontSize: 12.5,
+                        borderRadius: 6,
+                        border: "1.5px solid var(--line)",
+                        background: "transparent",
+                        cursor: "pointer",
+                      }}
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         </TableScroll>
       </div>
+
+      {modalTicket && (
+        <TicketDetailModal ticket={modalTicket} onClose={() => setModalTicket(null)} />
+      )}
     </>
+  );
+}
+
+function TicketDetailModal({ ticket, onClose }) {
+  const rows = [
+    { label: "Ticket ID", value: ticket.id },
+    { label: "Submitted by", value: ticket.student },
+    { label: "Priority", value: <PriorityDot level={ticket.priority} /> },
+    { label: "Status", value: <StatusBadge status={ticket.status} /> },
+    { label: "AI confidence", value: `${ticket.confidence}%` },
+  ];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{
+          width: "100%",
+          maxWidth: 480,
+          background: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-soft)" }}>{ticket.id}</div>
+            <h3 style={{ margin: "2px 0 0" }}>{ticket.subject}</h3>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          {rows.map((r, i) => (
+            <div
+              key={r.label}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "10px 0",
+                borderBottom: i < rows.length - 1 ? "1px solid var(--line)" : "none",
+              }}
+            >
+              <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>{r.label}</span>
+              <span style={{ fontSize: 14 }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              fontSize: 13,
+              borderRadius: 6,
+              border: "none",
+              background: "var(--primary, #6b1d2c)",
+              color: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -214,21 +326,213 @@ function UpdateStatus() {
 }
 
 function RoutedTickets() {
+  const [feedbackMap, setFeedbackMap] = useState({});
+  const [modalTicket, setModalTicket] = useState(null);
+  const [draft, setDraft] = useState("");
+
+  const openModal = (ticket) => {
+    setModalTicket(ticket);
+    setDraft(feedbackMap[ticket.id]?.text || "");
+  };
+
+  const closeModal = () => {
+    setModalTicket(null);
+    setDraft("");
+  };
+
+  const submitFeedback = () => {
+    if (!draft.trim() || !modalTicket) return;
+    setFeedbackMap((prev) => ({
+      ...prev,
+      [modalTicket.id]: {
+        text: draft.trim(),
+        time: new Date().toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      },
+    }));
+    closeModal();
+  };
+
   return (
     <>
       <PageHeader title="Newly routed tickets" subtitle="This section displays all routed ticket." />
       <div className="card">
-        {QUEUE.slice(0, 2).map((t) => (
-          <div key={t.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-              <strong style={{ fontFamily: "var(--font-mono)" }}>{t.id}</strong>
-              <PriorityDot level={t.priority} />
+        {QUEUE.slice(0, 2).map((t) => {
+          const sent = feedbackMap[t.id];
+          return (
+            <div key={t.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>{t.id}</strong>
+                <PriorityDot level={t.priority} />
+              </div>
+              <p style={{ fontSize: 14, margin: "4px 0 8px" }}>{t.subject} - from {t.student}</p>
+
+              {sent && (
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: "var(--ink-soft)",
+                    background: "var(--surface, #f6f4f1)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 6,
+                    padding: "8px 10px",
+                    marginBottom: 8,
+                  }}
+                >
+                  <strong style={{ color: "var(--success)" }}>Feedback sent</strong> · {sent.time}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => openModal(t)}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    borderRadius: 6,
+                    border: "1.5px solid var(--line)",
+                    background: sent ? "transparent" : "var(--primary, #6b1d2c)",
+                    color: sent ? "var(--ink)" : "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  {sent ? "Edit feedback" : "Respond"}
+                </button>
+                {sent && (
+                  <button
+                    onClick={() => openModal(t)}
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: 13,
+                      borderRadius: 6,
+                      border: "1.5px solid var(--line)",
+                      background: "transparent",
+                      cursor: "pointer",
+                    }}
+                  >
+                    View
+                  </button>
+                )}
+              </div>
             </div>
-            <p style={{ fontSize: 14, margin: "4px 0 0" }}>{t.subject} - from {t.student}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {modalTicket && (
+        <FeedbackModal
+          ticket={modalTicket}
+          draft={draft}
+          setDraft={setDraft}
+          onCancel={closeModal}
+          onSubmit={submitFeedback}
+          alreadySent={feedbackMap[modalTicket.id]}
+        />
+      )}
     </>
+  );
+}
+
+function FeedbackModal({ ticket, draft, setDraft, onCancel, onSubmit, alreadySent }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{
+          width: "100%",
+          maxWidth: 460,
+          background: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-soft)" }}>{ticket.id}</div>
+            <h3 style={{ margin: "2px 0 4px" }}>{ticket.subject}</h3>
+            <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>From: {ticket.student}</div>
+          </div>
+          <button
+            onClick={onCancel}
+            aria-label="Close"
+            style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
+            Your feedback
+          </label>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Let the student know the status, resolution steps, or next actions..."
+            rows={5}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              border: "1.5px solid var(--line)",
+              borderRadius: 6,
+              fontFamily: "inherit",
+              fontSize: 14,
+              resize: "vertical",
+              boxSizing: "border-box",
+            }}
+          />
+          {alreadySent && (
+            <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 6 }}>
+              Last sent {alreadySent.time}. Submitting will update it.
+            </p>
+          )}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "8px 16px",
+              fontSize: 13,
+              borderRadius: 6,
+              border: "1.5px solid var(--line)",
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={!draft.trim()}
+            style={{
+              padding: "8px 16px",
+              fontSize: 13,
+              borderRadius: 6,
+              border: "none",
+              background: "var(--primary, #6b1d2c)",
+              color: "#fff",
+              cursor: draft.trim() ? "pointer" : "not-allowed",
+              opacity: draft.trim() ? 1 : 0.6,
+            }}
+          >
+            Send to student
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -286,7 +590,7 @@ function PriorityView() {
 
 function Notifications() {
   const items = [
-    { text: "New ticket routed to your queue: TCK-2207.", time: "3h ago" },
+    { text: "New ticket routed to your queue: TCK-2201.", time: "3h ago" },
     { text: "TCK-2199 was escalated to Facilities.", time: "6h ago" },
   ];
   return (
