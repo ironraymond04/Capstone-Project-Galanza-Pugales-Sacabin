@@ -29,7 +29,7 @@ const USERS = [
   { id: "u4", name: "[Your Name]", email: "name@example.com", role: "Faculty & Staff", status: "Active" },
 ];
 
-const OFFICES = [
+const INITIAL_OFFICES = [
   { name: "Registrar", head: "[Your Name]", openTickets: 3 },
   { name: "IT Services", head: "[Your Name]", openTickets: 5 },
   { name: "Library", head: "[Your Name]", openTickets: 1 },
@@ -45,7 +45,7 @@ const SYSTEM_LOGS = [
   { actor: "System", action: "Escalated TCK-2199 to Facilities after SLA breach", time: "6h ago" },
 ];
 
-const ESCALATIONS = [
+const INITIAL_ESCALATIONS = [
   { id: "TCK-2199", subject: "Broken projector in Rm 204", office: "Facilities", reason: "SLA breached (48h)", level: "Level 2" },
   { id: "TCK-2183", subject: "Repeated login failures", office: "IT Services", reason: "Student reported unresolved twice", level: "Level 1" },
 ];
@@ -119,6 +119,55 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+/** Generic centered modal shell — dim backdrop, card, close on backdrop click. */
+function Modal({ title, onClose, children, width = 420 }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(20, 10, 10, 0.45)",
+        display: "grid",
+        placeItems: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{ width: "100%", maxWidth: width, background: "var(--paper, #fff)" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 18 }}>{title}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="btn btn-ghost"
+            style={{ padding: "4px 10px", fontSize: 14, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 8,
+  border: "1px solid var(--line)",
+  fontSize: 14,
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
+
+const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 };
+
 /* ---------------- sections ---------------- */
 
 function Overview({ onSelect }) {
@@ -135,9 +184,9 @@ function Overview({ onSelect }) {
         }}
       >
         <StatCard label="Total tickets" value={ALL_TICKETS.length} />
-        <StatCard label="Escalated" value={ESCALATIONS.length} />
+        <StatCard label="Escalated" value={INITIAL_ESCALATIONS.length} />
         <StatCard label="Active users" value={USERS.filter((u) => u.status === "Active").length} />
-        <StatCard label="Offices" value={OFFICES.length} />
+        <StatCard label="Offices" value={INITIAL_OFFICES.length} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 20 }}>
@@ -164,7 +213,7 @@ function Overview({ onSelect }) {
 
         <div className="card">
           <h3>Offices at a glance</h3>
-          {OFFICES.map((o) => (
+          {INITIAL_OFFICES.map((o) => (
             <div key={o.name} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}>
               <span>{o.name}</span>
               <strong style={{ color: o.openTickets > 3 ? "var(--danger)" : "var(--ink)" }}>{o.openTickets} open</strong>
@@ -281,13 +330,95 @@ function ManageUsers() {
   );
 }
 
+/** Modal body for creating a new office: name input + head dropdown restricted to Faculty & Staff. */
+function AddOfficeForm({ staff, onCancel, onSubmit }) {
+  const [name, setName] = useState("");
+  const [headId, setHeadId] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Office name is required.");
+      return;
+    }
+    if (!headId) {
+      setError("Please select a head for this office.");
+      return;
+    }
+    const head = staff.find((u) => u.id === headId);
+    onSubmit({ name: name.trim(), head: head.name, headId: head.id, headEmail: head.email, openTickets: 0 });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle} htmlFor="office-name">Office name</label>
+        <input
+          id="office-name"
+          style={inputStyle}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Student Affairs"
+          autoFocus
+        />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle} htmlFor="office-head">Office head</label>
+        {staff.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            No Faculty & Staff accounts available. Add one under Manage Users first.
+          </p>
+        ) : (
+          <select
+            id="office-head"
+            style={inputStyle}
+            value={headId}
+            onChange={(e) => setHeadId(e.target.value)}
+          >
+            <option value="">Select a staff member…</option>
+            {staff.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} — {u.email}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {error && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error}</p>}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn-primary" disabled={staff.length === 0}>
+          Add office
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function ManageOffices() {
   const isMobile = useIsMobile();
+  const [offices, setOffices] = useState(INITIAL_OFFICES);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Only Faculty & Staff (and Active ones) can be assigned as an office head.
+  const staffOptions = USERS.filter((u) => u.role === "Faculty & Staff" && u.status === "Active");
+
+  const handleAddOffice = (newOffice) => {
+    setOffices((list) => [...list, newOffice]);
+    setModalOpen(false);
+  };
+
   return (
     <>
       <PageHeader title="Offices" subtitle="Saved to and retrieved from the Offices data store." />
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
-        {OFFICES.map((o) => (
+        {offices.map((o) => (
           <div key={o.name} className="card">
             <h3 style={{ fontSize: 16 }}>{o.name}</h3>
             <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head}</p>
@@ -295,16 +426,26 @@ function ManageOffices() {
           </div>
         ))}
         <div className="card" style={{ display: "grid", placeItems: "center", border: "1.5px dashed var(--line)" }}>
-          <button className="btn btn-ghost">+ Add office</button>
+          <button className="btn btn-ghost" onClick={() => setModalOpen(true)}>+ Add office</button>
         </div>
       </div>
+
+      {modalOpen && (
+        <Modal title="Add office" onClose={() => setModalOpen(false)}>
+          <AddOfficeForm
+            staff={staffOptions}
+            onCancel={() => setModalOpen(false)}
+            onSubmit={handleAddOffice}
+          />
+        </Modal>
+      )}
     </>
   );
 }
 
 function Analytics() {
   const isMobile = useIsMobile();
-  const byOffice = OFFICES.map((o) => ({ name: o.name, count: o.openTickets }));
+  const byOffice = INITIAL_OFFICES.map((o) => ({ name: o.name, count: o.openTickets }));
   const max = Math.max(...byOffice.map((o) => o.count), 1);
   return (
     <>
@@ -337,26 +478,119 @@ function Analytics() {
   );
 }
 
+/** Modal body for reassigning an escalated ticket to a different office. */
+function ReassignForm({ ticket, offices, onCancel, onSubmit }) {
+  const [office, setOffice] = useState(ticket.office);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!office) {
+      setError("Please select an office.");
+      return;
+    }
+    onSubmit(office);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 0, marginBottom: 14 }}>
+        <strong style={{ fontFamily: "var(--font-mono)" }}>{ticket.id}</strong> — {ticket.subject}
+      </p>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle} htmlFor="reassign-office">Assign to office</label>
+        <select
+          id="reassign-office"
+          style={inputStyle}
+          value={office}
+          onChange={(e) => setOffice(e.target.value)}
+        >
+          {offices.map((o) => (
+            <option key={o.name} value={o.name}>{o.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {error && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error}</p>}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn-primary">
+          Reassign
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function Escalation() {
+  const [escalations, setEscalations] = useState(INITIAL_ESCALATIONS);
+  const [reassignId, setReassignId] = useState(null);
+
+  const reassignTicket = escalations.find((e) => e.id === reassignId) || null;
+
+  const handleReassign = (newOffice) => {
+    setEscalations((list) =>
+      list.map((e) => (e.id === reassignId ? { ...e, office: newOffice } : e))
+    );
+    setReassignId(null);
+  };
+
+  const handleResolve = (id) => {
+    setEscalations((list) => list.filter((e) => e.id !== id));
+  };
+
   return (
     <>
       <PageHeader title="Escalated tickets" subtitle="Saved to the Logs data store, retrieved from the Ticket data store." />
       <div className="card">
-        {ESCALATIONS.map((e) => (
-          <div key={e.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-              <strong style={{ fontFamily: "var(--font-mono)" }}>{e.id}</strong>
-              <span className="badge badge-escalated">{e.level}</span>
+        {escalations.length === 0 ? (
+          <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "8px 0" }}>
+            No escalated tickets right now.
+          </p>
+        ) : (
+          escalations.map((e, i) => (
+            <div key={e.id} style={{ padding: "14px 0", borderBottom: i < escalations.length - 1 ? "1px solid var(--line)" : "none" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>{e.id}</strong>
+                <span className="badge badge-escalated">{e.level}</span>
+              </div>
+              <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{e.subject} - {e.office}</p>
+              <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {e.reason}</p>
+              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: "7px 14px", fontSize: 12 }}
+                  onClick={() => setReassignId(e.id)}
+                >
+                  Reassign
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: "7px 14px", fontSize: 12 }}
+                  onClick={() => handleResolve(e.id)}
+                >
+                  Mark resolved
+                </button>
+              </div>
             </div>
-            <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{e.subject} - {e.office}</p>
-            <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {e.reason}</p>
-            <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 12 }}>Reassign</button>
-              <button className="btn btn-ghost" style={{ padding: "7px 14px", fontSize: 12 }}>Mark resolved</button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
+
+      {reassignTicket && (
+        <Modal title="Reassign ticket" onClose={() => setReassignId(null)}>
+          <ReassignForm
+            ticket={reassignTicket}
+            offices={INITIAL_OFFICES}
+            onCancel={() => setReassignId(null)}
+            onSubmit={handleReassign}
+          />
+        </Modal>
+      )}
     </>
   );
 }
@@ -364,7 +598,7 @@ function Escalation() {
 function Notifications() {
   const items = [
     { text: "TCK-2199 breached SLA and was escalated.", time: "6h ago" },
-    { text: "New user Mark Santos registered.", time: "9h ago" },
+    { text: "New user [Your Name] registered.", time: "9h ago" },
     { text: "Weekly analytics report generated.", time: "1d ago" },
   ];
   return (
