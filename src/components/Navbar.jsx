@@ -73,19 +73,6 @@ export default function Navbar() {
         <nav style={{ display: "flex", alignItems: "center", gap: 28 }}>
           <Link className="nav-link" to="/" style={navLinkStyle}>Home</Link>
           <Link className="nav-link" to="/how-it-works" style={navLinkStyle}>How it works</Link>
-          <button
-            className="btn btn-outline-white"
-            onClick={() => navigate("/login")}
-          >
-            Log in
-          </button>
-          <button
-            className="btn btn-primary"
-            style={{ background: "var(--white)", color: "var(--maroon-700)" }}
-            onClick={() => navigate("/signup")}
-          >
-            Sign up
-          </button>
         </nav>
       </div>
     </header>
