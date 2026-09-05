@@ -45,7 +45,7 @@ export default function Home() {
             Submit your concern once, and let our AI instantly route it to the right office - faster, smarter, and hassle-free.
           </h1>
           <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", fontSize: 17, maxWidth: 560, margin: "0 auto 32px" }}>
-            The Campus Helpdesk uses multi-label text classification to read every ticket
+            The St. Peter's College Helpdesk uses multi-label text classification to read every ticket
             and send it straight to the office that can resolve it - no more guessing which
             window to line up at.
           </p>

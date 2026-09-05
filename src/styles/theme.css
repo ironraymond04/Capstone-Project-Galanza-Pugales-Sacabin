@@ -1,7 +1,7 @@
 /* ============================================================
    CAMPUS HELPDESK — DESIGN TOKENS
-   Palette:  maroon-900 #3D0C14  maroon-700 #6E1423  maroon-500 #8C1C2B
-             maroon-300 #B24858  maroon-100 #F4E4E7  paper #FBF9F7  ink #241014
+   Palette:  maroon-900 #470606  maroon-700 #660809  maroon-500 #85393A
+             maroon-300 #BA9090  maroon-100 #EDE1E2  paper #FBF9F7  ink #241014
    Type:     Display  "Fraunces"      (headings, institutional weight)
              Body     "Inter"         (UI text)
              Utility  "JetBrains Mono"(ticket IDs, timestamps, codes)
@@ -13,14 +13,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --maroon-900: #3D0C14;
-  --maroon-700: #6E1423;
-  --maroon-600: #7C1826;
-  --maroon-500: #8C1C2B;
-  --maroon-400: #A6323F;
-  --maroon-300: #B24858;
-  --maroon-100: #F4E4E7;
-  --maroon-050: #FBF1F2;
+  --maroon-900: #470606;
+  --maroon-700: #660809;
+  --maroon-600: #752122;
+  --maroon-500: #85393A;
+  --maroon-400: #9C5E5F;
+  --maroon-300: #BA9090;
+  --maroon-100: #EDE1E2;
+  --maroon-050: #F3EBEB;
 
   --paper: #FBF9F7;
   --white: #FFFFFF;
@@ -40,9 +40,9 @@
   --radius-md: 10px;
   --radius-lg: 16px;
 
-  --shadow-sm: 0 1px 2px rgba(61, 12, 20, 0.06);
-  --shadow-md: 0 6px 20px rgba(61, 12, 20, 0.10);
-  --shadow-lg: 0 16px 40px rgba(61, 12, 20, 0.16);
+  --shadow-sm: 0 1px 2px rgba(71, 6, 6, 0.06);
+  --shadow-md: 0 6px 20px rgba(71, 6, 6, 0.10);
+  --shadow-lg: 0 16px 40px rgba(71, 6, 6, 0.16);
 }
 
 * { box-sizing: border-box; }
