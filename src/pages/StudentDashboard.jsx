@@ -189,7 +189,7 @@ function StatusBadge({ status }) {
     Open: "badge-open",
     "In Progress": "badge-progress",
     Resolved: "badge-resolved",
-    Escalated: "badge-escalated",
+    Transferred: "badge-transferred",
   };
   return <span className={`badge ${map[status] || "badge-open"}`}>{status}</span>;
 }

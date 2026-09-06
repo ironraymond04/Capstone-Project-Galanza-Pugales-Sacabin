@@ -28,12 +28,12 @@ const FLOW = [
   {
     n: "05",
     title: "Work gets done",
-    text: "Staff update the ticket's status as they work - Open, In Progress, Resolved, or Escalated if it needs to go further.",
+    text: "Staff update the ticket's status as they work - Open, In Progress, Resolved, or Transferred to another office if it needs to go further.",
   },
   {
     n: "06",
     title: "Everyone stays in the loop",
-    text: "Notifications alert the student the moment there's a reply, and admins can see escalations the moment they happen.",
+    text: "Notifications alert the student the moment there's a reply, and admins can see transferred tickets the moment they happen.",
   },
   {
     n: "07",
@@ -68,7 +68,7 @@ const ROLE_DETAIL = [
     color: "var(--maroon-700)",
     points: [
       "Oversee every ticket, user, and office from one place",
-      "Manage escalations before they become a pattern",
+      "Manage transfers before they become a pattern",
       "Generate analytics across offices and time periods",
       "Review system logs for a full audit trail",
     ],

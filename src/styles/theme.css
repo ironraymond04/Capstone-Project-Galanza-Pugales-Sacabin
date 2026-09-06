@@ -214,7 +214,7 @@ button:active { transform: none; }
 .badge-open      { background: var(--maroon-100); color: var(--maroon-700); }
 .badge-progress  { background: #FCEED9; color: var(--warning); }
 .badge-resolved  { background: #DCEEE3; color: var(--success); }
-.badge-escalated { background: #F7DAD6; color: var(--danger); }
+.badge-transferred { background: #F7DAD6; color: var(--danger); }
 
 /* ---------- form elements ---------- */
 .field { margin-bottom: 18px; }

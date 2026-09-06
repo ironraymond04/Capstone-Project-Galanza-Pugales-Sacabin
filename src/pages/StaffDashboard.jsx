@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
@@ -18,18 +18,101 @@ const QUEUE = [
   { id: "TCK-2201", subject: "Unable to access enrollment portal", student: "[Your Name]", priority: "High", status: "In Progress", confidence: 94 },
   { id: "TCK-2205", subject: "Wi-Fi not working in dorm 3", student: "[Your Name]", priority: "Medium", status: "Open", confidence: 88 },
   { id: "TCK-2207", subject: "Password reset needed for LMS", student: "[Your Name]", priority: "Low", status: "Open", confidence: 91 },
-  { id: "TCK-2199", subject: "Broken projector in Rm 204", student: "[Your Name]", priority: "High", status: "Escalated", confidence: 79 },
+  { id: "TCK-2199", subject: "Broken projector in Rm 204", student: "[Your Name]", priority: "High", status: "Transferred", confidence: 79 },
 ];
 
 const ACTIVITY_LOGS = [
-  { actor: "You", action: "Updated status of TCK-2198 to Resolved", time: "1h ago" },
-  { actor: "System", action: "Auto-assigned TCK-2207 to your queue", time: "3h ago" },
-  { actor: "You", action: "Escalated TCK-2199 to Facilities", time: "6h ago" },
+  {
+    id: 1,
+    type: "Ticket Updated",
+    ticketId: "TCK-2198",
+    subject: "Missing grade in Physics 101",
+    action: "Updated status to Resolved",
+    previousValue: "In Progress",
+    newValue: "Resolved",
+    performedBy: "You",
+    timestamp: "August 27, 2026 • 4:35 PM",
+    timeLabel: "1h ago",
+  },
+  {
+    id: 2,
+    type: "AI Routing",
+    ticketId: "TCK-2207",
+    subject: "Unable to access student portal",
+    action: "Automatically routed to IT Services",
+    classification: "Technical Issue",
+    office: "IT Services",
+    confidence: 92,
+    performedBy: "System",
+    timestamp: "August 27, 2026 • 1:20 PM",
+    timeLabel: "3h ago",
+  },
+  {
+    id: 3,
+    type: "Ticket Transferred",
+    ticketId: "TCK-2199",
+    subject: "Broken projector in Rm 204",
+    action: "Transferred to Facilities",
+    previousValue: "IT Services",
+    newValue: "Facilities",
+    performedBy: "You",
+    timestamp: "August 26, 2026 • 6:42 PM",
+    timeLabel: "6h ago",
+  },
+  {
+    id: 4,
+    type: "AI Routing",
+    ticketId: "TCK-2210",
+    subject: "Unable to access LMS",
+    action: "AI classified as Technical Issue and routed to IT Services",
+    classification: "Technical Issue",
+    office: "IT Services",
+    confidence: 90,
+    performedBy: "System",
+    timestamp: "August 25, 2026 • 2:10 PM",
+    timeLabel: "8h ago",
+  },
+  {
+    id: 5,
+    type: "Staff Response",
+    ticketId: "TCK-2212",
+    subject: "Library fine discrepancy",
+    action: "Responded to student",
+    performedBy: "You",
+    timestamp: "August 24, 2026 • 9:05 AM",
+    timeLabel: "1d ago",
+  },
+  {
+    id: 6,
+    type: "Ticket Assigned",
+    ticketId: "TCK-2201",
+    subject: "Unable to access enrollment portal",
+    action: "Assigned to your queue",
+    performedBy: "System",
+    timestamp: "August 23, 2026 • 11:15 AM",
+    timeLabel: "2d ago",
+  },
+];
+
+const ACTIVITY_TYPES = [
+  "All Activities",
+  "Ticket Assigned",
+  "Ticket Updated",
+  "Ticket Transferred",
+  "Ticket Resolved",
+  "AI Routing",
+  "Staff Response",
 ];
 
 export default function StaffDashboard() {
   const [active, setActive] = useState("overview");
+  const [focusTicketId, setFocusTicketId] = useState(null);
   const isMobile = useIsMobile();
+
+  const handleViewTicket = (ticketId) => {
+    setFocusTicketId(ticketId);
+    setActive("reports");
+  };
 
   return (
     <div className="chd-app-shell" style={{ flexDirection: isMobile ? "column" : "row" }}>
@@ -44,8 +127,8 @@ export default function StaffDashboard() {
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && <Overview onSelect={setActive} />}
-          {active === "reports" && <Reports />}
-          {active === "logs" && <ActivityLogs />}
+          {active === "reports" && <Reports focusTicketId={focusTicketId} />}
+          {active === "logs" && <ActivityLogs onViewTicket={handleViewTicket} />}
           {active === "status" && <UpdateStatus />}
           {active === "routed" && <RoutedTickets />}
           {active === "assignment" && <AutoAssignment />}
@@ -68,7 +151,7 @@ function PageHeader({ title, subtitle }) {
 }
 
 function StatusBadge({ status }) {
-  const map = { Open: "badge-open", "In Progress": "badge-progress", Resolved: "badge-resolved", Escalated: "badge-escalated" };
+  const map = { Open: "badge-open", "In Progress": "badge-progress", Resolved: "badge-resolved", Transferred: "badge-transferred" };
   return <span className={`badge ${map[status] || "badge-open"}`}>{status}</span>;
 }
 
@@ -135,9 +218,15 @@ function Overview({ onSelect }) {
   );
 }
 
-function Reports() {
+function Reports({ focusTicketId }) {
   const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
+
+  useEffect(() => {
+    if (!focusTicketId) return;
+    const match = QUEUE.find((ticket) => ticket.id === focusTicketId);
+    if (match) setModalTicket(match);
+  }, [focusTicketId]);
 
   return (
     <>
@@ -273,19 +362,205 @@ function TicketDetailModal({ ticket, onClose }) {
   );
 }
 
-function ActivityLogs() {
+function ActivityLogs({ onViewTicket }) {
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [activityFilter, setActivityFilter] = useState("All Activities");
+  const [ticketFilter, setTicketFilter] = useState("All Tickets");
+  const [dateFilter, setDateFilter] = useState("Newest");
+
+  const tickets = ["All Tickets", ...new Set(ACTIVITY_LOGS.map((entry) => entry.ticketId))];
+
+  const filteredActivities = ACTIVITY_LOGS.filter((entry) => {
+    const matchesType = activityFilter === "All Activities" || entry.type === activityFilter;
+    const matchesTicket = ticketFilter === "All Tickets" || entry.ticketId === ticketFilter;
+    return matchesType && matchesTicket;
+  }).sort((a, b) => {
+    const aTime = new Date(a.timestamp).getTime();
+    const bTime = new Date(b.timestamp).getTime();
+    return dateFilter === "Oldest" ? aTime - bTime : bTime - aTime;
+  });
+
   return (
     <>
-      <PageHeader title="Activity log" subtitle="This section displays all system logs." />
-      <div className="card">
-        {ACTIVITY_LOGS.map((l, i) => (
-          <div key={i} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < ACTIVITY_LOGS.length - 1 ? "1px solid var(--line)" : "none" }}>
-            <span style={{ fontSize: 14 }}><strong>{l.actor}</strong> - {l.action}</span>
-            <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{l.time}</span>
-          </div>
-        ))}
+      <PageHeader title="Activity log" subtitle="This section displays your recent ticket and system activities." />
+
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <select
+            value={activityFilter}
+            onChange={(e) => setActivityFilter(e.target.value)}
+            style={{ minWidth: 180, padding: "8px 12px", border: "1.5px solid var(--line)", borderRadius: 6, background: "#fff" }}
+          >
+            {ACTIVITY_TYPES.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+
+          <select
+            value={ticketFilter}
+            onChange={(e) => setTicketFilter(e.target.value)}
+            style={{ minWidth: 150, padding: "8px 12px", border: "1.5px solid var(--line)", borderRadius: 6, background: "#fff" }}
+          >
+            {tickets.map((ticketId) => (
+              <option key={ticketId} value={ticketId}>{ticketId === "All Tickets" ? "All Tickets" : ticketId}</option>
+            ))}
+          </select>
+
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            style={{ minWidth: 140, padding: "8px 12px", border: "1.5px solid var(--line)", borderRadius: 6, background: "#fff" }}
+          >
+            <option value="Newest">Newest</option>
+            <option value="Oldest">Oldest</option>
+          </select>
+        </div>
       </div>
+
+      <div className="card">
+        {filteredActivities.length === 0 ? (
+          <p style={{ fontSize: 14, margin: 0, color: "var(--ink-soft)" }}>No activity matches the selected filters.</p>
+        ) : (
+          filteredActivities.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setSelectedActivity(entry)}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                background: "transparent",
+                border: "none",
+                borderBottom: "1px solid var(--line)",
+                padding: "12px 0",
+                cursor: "pointer",
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                gap: 6,
+                color: "inherit",
+              }}
+            >
+              <span style={{ fontSize: 14 }}>
+                <strong>{entry.performedBy}</strong> - {entry.action}
+              </span>
+              <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{entry.timeLabel}</span>
+            </button>
+          ))
+        )}
+      </div>
+
+      {selectedActivity && (
+        <ActivityDetailModal
+          activity={selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+          onViewTicket={() => {
+            onViewTicket?.(selectedActivity.ticketId);
+            setSelectedActivity(null);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function ActivityDetailModal({ activity, onClose, onViewTicket }) {
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  const rows = [
+    { label: "Activity type", value: activity.type },
+    { label: "Ticket ID", value: activity.ticketId },
+    { label: "Subject", value: activity.subject },
+    { label: "Action", value: activity.action },
+    ...(activity.previousValue ? [{ label: "Previous value", value: activity.previousValue }] : []),
+    ...(activity.newValue ? [{ label: "New value", value: activity.newValue }] : []),
+    ...(activity.classification ? [{ label: "AI Classification", value: activity.classification }] : []),
+    ...(activity.office ? [{ label: "Assigned Office", value: activity.office }] : []),
+    ...(typeof activity.confidence === "number" ? [{ label: "AI Confidence", value: `${activity.confidence}%` }] : []),
+    { label: "Performed by", value: activity.performedBy },
+    { label: "Date & Time", value: activity.timestamp },
+  ];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15, 15, 20, 0.45)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          background: "#fff",
+          boxShadow: "0 18px 44px rgba(54, 20, 28, 0.14)",
+          border: "1px solid var(--line)",
+          borderRadius: 14,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-soft)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Activity Details
+            </div>
+            <h3 style={{ margin: "6px 0 0", fontSize: 18 }}>{activity.type}</h3>
+          </div>
+          <button
+            type="button"
+            aria-label="Close activity details"
+            onClick={onClose}
+            style={{ background: "transparent", border: "none", fontSize: 22, cursor: "pointer", color: "var(--ink)", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+
+        <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+          {rows.map((row) => (
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: row.label === rows[rows.length - 1].label ? "none" : "1px solid var(--line)" }}>
+              <span style={{ fontSize: 12.5, color: "var(--ink-soft)", fontWeight: 600 }}>{row.label}:</span>
+              <span style={{ fontSize: 13.5, textAlign: "right", maxWidth: 260 }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={onViewTicket}
+            className="btn btn-primary"
+            style={{ padding: "8px 16px", fontSize: 13 }}
+          >
+            View Ticket
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost"
+            style={{ padding: "8px 16px", fontSize: 13 }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -312,7 +587,7 @@ function UpdateStatus() {
                       <option>Open</option>
                       <option>In Progress</option>
                       <option>Resolved</option>
-                      <option>Escalated</option>
+                      <option>Transferred</option>
                     </select>
                   </td>
                 </tr>
@@ -591,7 +866,7 @@ function PriorityView() {
 function Notifications() {
   const items = [
     { text: "New ticket routed to your queue: TCK-2201.", time: "3h ago" },
-    { text: "TCK-2199 was escalated to Facilities.", time: "6h ago" },
+    { text: "TCK-2199 was transferred to Facilities.", time: "6h ago" },
   ];
   return (
     <>

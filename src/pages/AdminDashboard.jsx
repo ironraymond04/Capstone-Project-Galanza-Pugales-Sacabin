@@ -10,14 +10,14 @@ const NAV_ITEMS = [
   { id: "users", label: "Manage Users", icon: "•" },
   { id: "offices", label: "Manage Offices", icon: "•" },
   { id: "analytics", label: "Generate Analytics Reports", icon: "•" },
-  { id: "escalation", label: "Ticket Escalation Management", icon: "•" },
+  { id: "transfer", label: "Ticket Transfer Management", icon: "•" },
   { id: "notifications", label: "Notifications", icon: "•" },
 ];
 
 const ALL_TICKETS = [
   { id: "TCK-2201", subject: "Unable to access enrollment portal", office: "IT Services", status: "In Progress", confidence: 94 },
   { id: "TCK-2205", subject: "Wi-Fi not working in dorm 3", office: "IT Services", status: "Open", confidence: 88 },
-  { id: "TCK-2199", subject: "Broken projector in Rm 204", office: "Facilities", status: "Escalated", confidence: 79 },
+  { id: "TCK-2199", subject: "Broken projector in Rm 204", office: "Facilities", status: "Transferred", confidence: 79 },
   { id: "TCK-2170", subject: "Lost student ID replacement", office: "Registrar", status: "Resolved", confidence: 95 },
   { id: "TCK-2140", subject: "Library book fine dispute", office: "Library", status: "Resolved", confidence: 81 },
 ];
@@ -42,10 +42,10 @@ const SYSTEM_LOGS = [
   { actor: "[Your Name]", action: "Updated TCK-2198 status to Resolved", time: "1h ago" },
   { actor: "System (AI MLC)", action: "Classified and routed TCK-2207 to IT Services", time: "3h ago" },
   { actor: "Admin", action: "Suspended user Mark Santos", time: "5h ago" },
-  { actor: "System", action: "Escalated TCK-2199 to Facilities after SLA breach", time: "6h ago" },
+  { actor: "System", action: "Transferred TCK-2199 to Facilities after SLA breach", time: "6h ago" },
 ];
 
-const INITIAL_ESCALATIONS = [
+const INITIAL_TRANSFERS = [
   { id: "TCK-2199", subject: "Broken projector in Rm 204", office: "Facilities", reason: "SLA breached (48h)", level: "Level 2" },
   { id: "TCK-2183", subject: "Repeated login failures", office: "IT Services", reason: "Student reported unresolved twice", level: "Level 1" },
 ];
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
           {active === "users" && <ManageUsers />}
           {active === "offices" && <ManageOffices />}
           {active === "analytics" && <Analytics />}
-          {active === "escalation" && <Escalation />}
+          {active === "transfer" && <Transfers />}
           {active === "notifications" && <Notifications />}
         </div>
       </div>
@@ -93,7 +93,7 @@ function PageHeader({ title, subtitle }) {
 }
 
 function StatusBadge({ status }) {
-  const map = { Open: "badge-open", "In Progress": "badge-progress", Resolved: "badge-resolved", Escalated: "badge-escalated" };
+  const map = { Open: "badge-open", "In Progress": "badge-progress", Resolved: "badge-resolved", Transferred: "badge-transferred" };
   return <span className={`badge ${map[status] || "badge-open"}`}>{status}</span>;
 }
 
@@ -184,7 +184,7 @@ function Overview({ onSelect }) {
         }}
       >
         <StatCard label="Total tickets" value={ALL_TICKETS.length} />
-        <StatCard label="Escalated" value={INITIAL_ESCALATIONS.length} />
+        <StatCard label="Transferred" value={INITIAL_TRANSFERS.length} />
         <StatCard label="Active users" value={USERS.filter((u) => u.status === "Active").length} />
         <StatCard label="Offices" value={INITIAL_OFFICES.length} />
       </div>
@@ -258,7 +258,7 @@ function ManageTickets() {
     <>
       <PageHeader title="All tickets" subtitle="Saved to and retrieved from the Ticket data store." />
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-        {["All", "Open", "In Progress", "Resolved", "Escalated"].map((f) => (
+        {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -311,7 +311,7 @@ function ManageUsers() {
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
                   <td>{u.role}</td>
                   <td>
-                    <span className={u.status === "Active" ? "badge badge-resolved" : "badge badge-escalated"}>
+                    <span className={u.status === "Active" ? "badge badge-resolved" : "badge badge-transferred"}>
                       {u.status}
                     </span>
                   </td>
@@ -478,7 +478,7 @@ function Analytics() {
   );
 }
 
-/** Modal body for reassigning an escalated ticket to a different office. */
+/** Modal body for reassigning a transferred ticket to a different office. */
 function ReassignForm({ ticket, offices, onCancel, onSubmit }) {
   const [office, setOffice] = useState(ticket.office);
   const [error, setError] = useState("");
@@ -526,37 +526,37 @@ function ReassignForm({ ticket, offices, onCancel, onSubmit }) {
   );
 }
 
-function Escalation() {
-  const [escalations, setEscalations] = useState(INITIAL_ESCALATIONS);
+function Transfers() {
+  const [transfers, setTransfers] = useState(INITIAL_TRANSFERS);
   const [reassignId, setReassignId] = useState(null);
 
-  const reassignTicket = escalations.find((e) => e.id === reassignId) || null;
+  const reassignTicket = transfers.find((e) => e.id === reassignId) || null;
 
   const handleReassign = (newOffice) => {
-    setEscalations((list) =>
+    setTransfers((list) =>
       list.map((e) => (e.id === reassignId ? { ...e, office: newOffice } : e))
     );
     setReassignId(null);
   };
 
   const handleResolve = (id) => {
-    setEscalations((list) => list.filter((e) => e.id !== id));
+    setTransfers((list) => list.filter((e) => e.id !== id));
   };
 
   return (
     <>
-      <PageHeader title="Escalated tickets" subtitle="Saved to the Logs data store, retrieved from the Ticket data store." />
+      <PageHeader title="Transferred tickets" subtitle="Saved to the Logs data store, retrieved from the Ticket data store." />
       <div className="card">
-        {escalations.length === 0 ? (
+        {transfers.length === 0 ? (
           <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "8px 0" }}>
-            No escalated tickets right now.
+            No transferred tickets right now.
           </p>
         ) : (
-          escalations.map((e, i) => (
-            <div key={e.id} style={{ padding: "14px 0", borderBottom: i < escalations.length - 1 ? "1px solid var(--line)" : "none" }}>
+          transfers.map((e, i) => (
+            <div key={e.id} style={{ padding: "14px 0", borderBottom: i < transfers.length - 1 ? "1px solid var(--line)" : "none" }}>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
                 <strong style={{ fontFamily: "var(--font-mono)" }}>{e.id}</strong>
-                <span className="badge badge-escalated">{e.level}</span>
+                <span className="badge badge-transferred">{e.level}</span>
               </div>
               <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{e.subject} - {e.office}</p>
               <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {e.reason}</p>
@@ -597,7 +597,7 @@ function Escalation() {
 
 function Notifications() {
   const items = [
-    { text: "TCK-2199 breached SLA and was escalated.", time: "6h ago" },
+    { text: "TCK-2199 breached SLA and was transferred.", time: "6h ago" },
     { text: "New user [Your Name] registered.", time: "9h ago" },
     { text: "Weekly analytics report generated.", time: "1d ago" },
   ];
