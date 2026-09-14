@@ -415,3 +415,40 @@ button:active { transform: none; }
   .chd-content { padding: 24px 18px 48px; }
   .ticket-detail-box { width: min(100%, 92vw); }
 }
+
+/* How It Works — role breakdown grid */
+.how-it-works-hero {
+  padding: clamp(40px, 8vw, 72px) clamp(20px, 5vw, 32px) clamp(56px, 10vw, 88px);
+}
+
+.how-it-works-hero h1 {
+  font-size: clamp(24px, 5vw, 38px) !important;
+}
+
+.how-it-works-hero p {
+  font-size: clamp(14px, 3vw, 16px) !important;
+}
+
+.flow-timeline {
+  padding: clamp(24px, 6vw, 36px) clamp(20px, 5vw, 40px) !important;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .role-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .role-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

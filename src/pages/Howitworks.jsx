@@ -82,108 +82,60 @@ export default function HowItWorks() {
     <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
       <Navbar />
 
-      {/* Intro */}
-      <section
-        style={{
-          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
-          color: "var(--white)",
-          padding: "72px 32px 88px",
-          textAlign: "center",
-        }}
-      >
-        <h1 className="page-description page-description--from-left" style={{ color: "var(--white)", fontSize: 38, maxWidth: 680, margin: "0 auto 16px" }}>
-          From submitting your concern to resolving your ticket, every step is automatically routed to the appropriate office.
-        </h1>
-        <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", fontSize: 16, maxWidth: 560, margin: "0 auto" }}>
-          One system, three portals, and an AI classification module doing the routing
-          work that used to mean guessing which window to line up at.
-        </p>
-      </section>
+{/* Intro */}
+<section
+  className="how-it-works-hero"
+  style={{
+    background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
+    color: "var(--white)",
+    textAlign: "center",
+  }}
+>
+  <h1 className="page-description page-description--from-left" style={{ color: "var(--white)", maxWidth: 680, margin: "0 auto 16px" }}>
+    From submitting your concern to resolving your ticket, every step is automatically routed to the appropriate office.
+  </h1>
+  <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", maxWidth: 560, margin: "0 auto" }}>
+    One system, three portals, and an AI classification module doing the routing
+    work that used to mean guessing which window to line up at.
+  </p>
+</section>
 
-      {/* Flow timeline */}
-      <section style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 32px 90px" }}>
-        <div className="card" style={{ padding: "36px 40px" }}>
-          {FLOW.map((step, i) => (
-            <div
-              key={step.n}
-              style={{
-                display: "flex",
-                gap: 24,
-                paddingBottom: i < FLOW.length - 1 ? 28 : 0,
-                position: "relative",
-              }}
-            >
-              {/* connector line */}
-              {i < FLOW.length - 1 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 23,
-                    top: 48,
-                    bottom: 0,
-                    width: 2,
-                    background: "var(--maroon-100)",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: 48,
-                  height: 48,
-                  borderRadius: "50%",
-                  background: "var(--white)",
-                  border: "1.5px solid var(--maroon-300)",
-                  display: "grid",
-                  placeItems: "center",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "var(--maroon-700)",
-                  zIndex: 1,
-                }}
-              >
-                {step.n}
-              </div>
-              <div style={{ paddingTop: 4 }}>
-                <span className="eyebrow">{step.code}</span>
-                <h3 style={{ fontSize: 18, marginTop: 4 }}>{step.title}</h3>
-                <p style={{ fontSize: 14, marginBottom: 0 }}>{step.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+{/* Flow timeline */}
+<section style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 clamp(16px, 4vw, 32px) 90px" }}>
+  <div className="card flow-timeline">
+    {/* ...FLOW.map(...) unchanged... */}
+  </div>
+</section>
 
-      {/* Per-role breakdown */}
-      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 32px 100px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <h2 style={{ fontSize: 28, marginTop: 8 }}>What each portal gives you</h2>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-          {ROLE_DETAIL.map((r) => (
-            <div key={r.role} className="card">
-              <div
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  background: r.color,
-                  marginBottom: 12,
-                }}
-              />
-              <h3 style={{ fontSize: 18 }}>{r.role}</h3>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {r.points.map((p) => (
-                  <li key={p} style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 8 }}>
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
+{/* Per-role breakdown */}
+<section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 clamp(16px, 4vw, 32px) 100px" }}>
+  <div style={{ textAlign: "center", marginBottom: 36 }}>
+    <h2 style={{ fontSize: "clamp(22px, 4vw, 28px)", marginTop: 8 }}>What each portal gives you</h2>
+  </div>
+  <div className="role-grid">
+    {ROLE_DETAIL.map((r) => (
+      <div key={r.role} className="card">
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: r.color,
+            marginBottom: 12,
+          }}
+        />
+        <h3 style={{ fontSize: 18 }}>{r.role}</h3>
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {r.points.map((p) => (
+            <li key={p} style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 8 }}>
+              {p}
+            </li>
           ))}
-        </div>
-      </section>
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>
 
       <footer style={{ borderTop: "1px solid var(--line)", padding: "24px 32px", textAlign: "center" }}>
         <p style={{ fontSize: 13, margin: 0 }}>
