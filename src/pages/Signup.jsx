@@ -1,7 +1,41 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
+
+const [loading, setLoading] = useState(false);
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!form.fullName || !form.email || !form.password) {
+    setError("Fill in all required fields.");
+    return;
+  }
+  if (form.password !== form.confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+  setError("");
+  setLoading(true);
+
+  const { error: signUpError } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+    options: {
+      data: { name: form.fullName, role: form.role },
+    },
+  });
+
+  setLoading(false);
+
+  if (signUpError) {
+    setError(signUpError.message);
+    return;
+  }
+
+  navigate("/login");
+};
 
 const ROLES = [
   { value: "student", label: "Student" },
@@ -145,8 +179,8 @@ export default function Signup() {
 
               {error && <p className="form-error">{error}</p>}
 
-              <button type="submit" className="submit-btn">
-                Create account
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
 

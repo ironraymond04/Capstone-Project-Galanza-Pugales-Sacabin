@@ -1,7 +1,53 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
+
+const [loading, setLoading] = useState(false);
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!form.email || !form.password) {
+    setError("Enter both your email and password to continue.");
+    return;
+  }
+  setError("");
+  setLoading(true);
+
+  const { data, error: signInError } = await supabase.auth.signInWithPassword({
+    email: form.email,
+    password: form.password,
+  });
+
+  if (signInError) {
+    setLoading(false);
+    setError(signInError.message);
+    return;
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", data.user.id)
+    .single();
+
+  setLoading(false);
+
+  if (profileError) {
+    setError("Couldn't load your account details. Please try again.");
+    return;
+  }
+
+  if (profile.role !== role) {
+    setError(
+      `This account is registered as "${profile.role}", not "${role}". Switch the tab above and try again.`
+    );
+    return;
+  }
+
+  navigate(ROLE_ROUTES[profile.role]);
+};
 
 const ROLE_ROUTES = {
   student: "/student",
@@ -132,8 +178,8 @@ export default function Login() {
                 </p>
               )}
 
-              <button type="submit" className="submit-btn">
-                Log in
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? "Logging in..." : "Log in"}
               </button>
             </form>
 

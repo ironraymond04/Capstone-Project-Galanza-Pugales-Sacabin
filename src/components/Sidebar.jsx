@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 import "../styles/theme.css";
 import spcLogo from "../assets/spc.jpg";
 
@@ -32,6 +33,7 @@ export default function Sidebar({
   notifCount = 0,
 }) {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 900 : false
   );
@@ -367,7 +369,10 @@ export default function Sidebar({
             </div>
           </div>
           <button
-            onClick={() => navigate("/login")}
+            onClick={async () => {
+            await signOut();
+            navigate("/login");
+          }}
             className="btn btn-outline-white"
             style={{ width: "100%", justifyContent: "center" }}
           >
