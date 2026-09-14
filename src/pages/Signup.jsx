@@ -4,7 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
 
-const [loading, setLoading] = useState(false);
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -53,6 +52,7 @@ export default function Signup() {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));

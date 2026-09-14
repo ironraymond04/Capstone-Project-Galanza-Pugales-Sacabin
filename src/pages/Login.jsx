@@ -4,8 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
 
-const [loading, setLoading] = useState(false);
-
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (!form.email || !form.password) {
@@ -66,6 +64,7 @@ export default function Login() {
   const [role, setRole] = useState("student");
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
