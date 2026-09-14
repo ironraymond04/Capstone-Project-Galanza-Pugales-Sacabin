@@ -174,7 +174,7 @@ export default function Signup() {
         }
 
         .brand-panel {
-          background: var(--maroon-700, #7c1826);
+          background: var(--maroon-700, #660809);
           color: #f7ece9;
           padding: 72px 56px;
           display: flex;
@@ -265,7 +265,7 @@ export default function Signup() {
         .field input:focus {
           outline: none;
           border-color: var(--maroon-600);
-          box-shadow: 0 0 0 3px rgba(139,25,45,.12);
+          box-shadow: 0 0 0 3px rgba(133,57,58,.12);
         }
 
         .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -281,7 +281,7 @@ export default function Signup() {
           font-size: 12px; font-weight: 600; cursor: pointer;
           transition: transform .18s ease, background .15s ease, color .15s ease;
         }
-        .role-btn.active { background: #fff; color: var(--maroon-700, #6d1226); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        .role-btn.active { background: #fff; color: var(--maroon-700, #660809); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
         .form-error { color: var(--danger, #b3261e); font-size: 13px; margin: -6px 0 14px; }
 
@@ -290,7 +290,7 @@ export default function Signup() {
           background: var(--maroon-600); color: #fff; font-size: 15px; font-weight: 600;
           cursor: pointer; transition: transform .18s ease, background .15s ease;
         }
-        .submit-btn:hover { background: var(--maroon-700, #6d1226); }
+        .submit-btn:hover { background: var(--maroon-700, #660809); }
 
         .form-footer { text-align: center; font-size: 13px; margin-top: 20px; }
         .form-footer a { color: var(--maroon-600); font-weight: 600; text-decoration: none; }

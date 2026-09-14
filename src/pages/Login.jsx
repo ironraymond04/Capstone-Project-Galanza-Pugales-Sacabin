@@ -146,8 +146,8 @@ export default function Login() {
 
       <style>{`
         .login-shell {
-          --lg-maroon-700: var(--maroon-700, #6d1226);
-          --lg-maroon-900: var(--maroon-900, #3a0a14);
+          --lg-maroon-700: var(--maroon-700, #660809);
+          --lg-maroon-900: var(--maroon-900, #470606);
           --lg-gold: var(--gold-500, #c9a227);
           --lg-ink: var(--ink, #241014);
           --lg-muted: var(--muted, #6b5b5e);
@@ -183,7 +183,7 @@ export default function Login() {
         }
 
         .brand-panel {
-          background: linear-gradient(160deg, var(--lg-maroon-700), #7c1826);
+          background: linear-gradient(160deg, var(--lg-maroon-700), #752122);
           color: #f7ece9;
           padding: 72px 56px;
           display: flex;
@@ -285,7 +285,7 @@ export default function Login() {
           transition: border-color .15s ease, box-shadow .15s ease;
         }
         .input-wrap svg { flex-shrink: 0; color: var(--lg-muted); }
-        .input-wrap:focus-within { border-color: var(--maroon-600); box-shadow: 0 0 0 3px rgba(139,25,45,.12); }
+        .input-wrap:focus-within { border-color: var(--maroon-600); box-shadow: 0 0 0 3px rgba(133,57,58,.12); }
         .input-wrap input { flex: 1; border: none; outline: none; background: transparent; padding: 11px 0; font-size: 14px; }
 
         .form-error { display: flex; align-items: center; gap: 6px; color: var(--danger, #b3261e); font-size: 13px; margin: -6px 0 16px; }
