@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
-import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
 
 // The end-to-end flow, in order — this genuinely is a sequence,
@@ -29,12 +28,12 @@ const FLOW = [
   {
     n: "05",
     title: "Work gets done",
-    text: "Staff update the ticket's status as they work - Open, In Progress, Resolved, or Escalated if it needs to go further.",
+    text: "Staff update the ticket's status as they work - Open, In Progress, Resolved, or Transferred to another office if it needs to go further.",
   },
   {
     n: "06",
     title: "Everyone stays in the loop",
-    text: "Notifications alert the student the moment there's a reply, and admins can see escalations the moment they happen.",
+    text: "Notifications alert the student the moment there's a reply, and admins can see transferred tickets the moment they happen.",
   },
   {
     n: "07",
@@ -69,7 +68,7 @@ const ROLE_DETAIL = [
     color: "var(--maroon-700)",
     points: [
       "Oversee every ticket, user, and office from one place",
-      "Manage escalations before they become a pattern",
+      "Manage transfers before they become a pattern",
       "Generate analytics across offices and time periods",
       "Review system logs for a full audit trail",
     ],
@@ -78,7 +77,6 @@ const ROLE_DETAIL = [
 
 export default function HowItWorks() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   return (
     <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
@@ -87,53 +85,31 @@ export default function HowItWorks() {
       {/* Intro */}
       <section
         style={{
-          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
+          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-700) 100%)",
           color: "var(--white)",
-          padding: isMobile ? "56px 20px 64px" : "72px 32px 88px",
+          padding: "72px 32px 88px",
           textAlign: "center",
         }}
       >
-        <h1
-          className="page-description page-description--from-left"
-          style={{
-            color: "var(--white)",
-            fontSize: isMobile ? 26 : 38,
-            maxWidth: 680,
-            margin: isMobile ? "0 auto 12px" : "0 auto 16px",
-          }}
-        >
+        <h1 className="page-description page-description--from-left" style={{ color: "var(--white)", fontSize: 38, maxWidth: 680, margin: "0 auto 16px" }}>
           From submitting your concern to resolving your ticket, every step is automatically routed to the appropriate office.
         </h1>
-        <p
-          className="page-description page-description--from-left"
-          style={{
-            color: "rgba(255,255,255,0.82)",
-            fontSize: isMobile ? 14 : 16,
-            maxWidth: 560,
-            margin: "0 auto",
-          }}
-        >
+        <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", fontSize: 16, maxWidth: 560, margin: "0 auto" }}>
           One system, three portals, and an AI classification module doing the routing
           work that used to mean guessing which window to line up at.
         </p>
       </section>
 
       {/* Flow timeline */}
-      <section
-        style={{
-          maxWidth: 860,
-          margin: isMobile ? "-32px auto 0" : "-48px auto 0",
-          padding: isMobile ? "0 16px 56px" : "0 32px 90px",
-        }}
-      >
-        <div className="card" style={{ padding: isMobile ? "24px 20px" : "36px 40px" }}>
+      <section style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 32px 90px" }}>
+        <div className="card" style={{ padding: "36px 40px" }}>
           {FLOW.map((step, i) => (
             <div
               key={step.n}
               style={{
                 display: "flex",
-                gap: isMobile ? 14 : 24,
-                paddingBottom: i < FLOW.length - 1 ? (isMobile ? 20 : 28) : 0,
+                gap: 24,
+                paddingBottom: i < FLOW.length - 1 ? 28 : 0,
                 position: "relative",
               }}
             >
@@ -142,8 +118,8 @@ export default function HowItWorks() {
                 <div
                   style={{
                     position: "absolute",
-                    left: isMobile ? 19 : 23,
-                    top: isMobile ? 40 : 48,
+                    left: 23,
+                    top: 48,
                     bottom: 0,
                     width: 2,
                     background: "var(--maroon-100)",
@@ -153,15 +129,15 @@ export default function HowItWorks() {
               <div
                 style={{
                   flexShrink: 0,
-                  width: isMobile ? 40 : 48,
-                  height: isMobile ? 40 : 48,
+                  width: 48,
+                  height: 48,
                   borderRadius: "50%",
                   background: "var(--white)",
                   border: "1.5px solid var(--maroon-300)",
                   display: "grid",
                   placeItems: "center",
                   fontFamily: "var(--font-mono)",
-                  fontSize: isMobile ? 12 : 13,
+                  fontSize: 13,
                   fontWeight: 600,
                   color: "var(--maroon-700)",
                   zIndex: 1,
@@ -170,8 +146,9 @@ export default function HowItWorks() {
                 {step.n}
               </div>
               <div style={{ paddingTop: 4 }}>
-                <h3 style={{ fontSize: isMobile ? 16 : 18, marginTop: 4 }}>{step.title}</h3>
-                <p style={{ fontSize: isMobile ? 13 : 14, marginBottom: 0 }}>{step.text}</p>
+                <span className="eyebrow">{step.code}</span>
+                <h3 style={{ fontSize: 18, marginTop: 4 }}>{step.title}</h3>
+                <p style={{ fontSize: 14, marginBottom: 0 }}>{step.text}</p>
               </div>
             </div>
           ))}
@@ -179,23 +156,11 @@ export default function HowItWorks() {
       </section>
 
       {/* Per-role breakdown */}
-      <section
-        style={{
-          maxWidth: 1180,
-          margin: "0 auto",
-          padding: isMobile ? "0 20px 64px" : "0 32px 100px",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 36 }}>
-          <h2 style={{ fontSize: isMobile ? 22 : 28, marginTop: 8 }}>What each portal gives you</h2>
+      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 32px 100px" }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <h2 style={{ fontSize: 28, marginTop: 8 }}>What each portal gives you</h2>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-            gap: isMobile ? 16 : 20,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
           {ROLE_DETAIL.map((r) => (
             <div key={r.role} className="card">
               <div
@@ -220,7 +185,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      <footer style={{ borderTop: "1px solid var(--line)", padding: isMobile ? "20px" : "24px 32px", textAlign: "center" }}>
+      <footer style={{ borderTop: "1px solid var(--line)", padding: "24px 32px", textAlign: "center" }}>
         <p style={{ fontSize: 13, margin: 0 }}>
           © {new Date().getFullYear()} Developed by: Galanza, Pugales, Sacabin. All rights reserved.
         </p>

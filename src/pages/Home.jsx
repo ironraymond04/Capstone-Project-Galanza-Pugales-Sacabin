@@ -21,7 +21,7 @@ const STEPS = [
 const ROLES = [
   { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login" },
   { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login" },
-  { name: "Admin", detail: "Oversee users, offices, escalations, and system-wide analytics.", path: "/login" },
+  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login" },
 ];
 
 export default function Home() {
@@ -50,7 +50,7 @@ export default function Home() {
               marginBottom: isMobile ? 14 : 18,
             }}
           >
-            Submit your concern once, and let our AI instantly route it to the right office - faster, smarter, and hassle-free.
+             A campus where every concern is heard, every student is valued, and every step forward matters.
           </h1>
           <p
             className="page-description page-description--from-left"
