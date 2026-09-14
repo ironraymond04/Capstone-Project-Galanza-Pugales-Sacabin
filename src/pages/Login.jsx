@@ -4,49 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!form.email || !form.password) {
-    setError("Enter both your email and password to continue.");
-    return;
-  }
-  setError("");
-  setLoading(true);
-
-  const { data, error: signInError } = await supabase.auth.signInWithPassword({
-    email: form.email,
-    password: form.password,
-  });
-
-  if (signInError) {
-    setLoading(false);
-    setError(signInError.message);
-    return;
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", data.user.id)
-    .single();
-
-  setLoading(false);
-
-  if (profileError) {
-    setError("Couldn't load your account details. Please try again.");
-    return;
-  }
-
-  if (profile.role !== role) {
-    setError(
-      `This account is registered as "${profile.role}", not "${role}". Switch the tab above and try again.`
-    );
-    return;
-  }
-
-  navigate(ROLE_ROUTES[profile.role]);
-};
-
 const ROLE_ROUTES = {
   student: "/student",
   staff: "/staff",
@@ -69,14 +26,47 @@ export default function Login() {
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.email || !form.password) {
       setError("Enter both your email and password to continue.");
       return;
     }
     setError("");
-    navigate(ROLE_ROUTES[role]);
+    setLoading(true);
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+
+    if (signInError) {
+      setLoading(false);
+      setError(signInError.message);
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .single();
+
+    setLoading(false);
+
+    if (profileError) {
+      setError("Couldn't load your account details. Please try again.");
+      return;
+    }
+
+    if (profile.role !== role) {
+      setError(
+        `This account is registered as "${profile.role}", not "${role}". Switch the tab above and try again.`
+      );
+      return;
+    }
+
+    navigate(ROLE_ROUTES[profile.role]);
   };
 
   return (
@@ -86,7 +76,9 @@ export default function Login() {
       <div className="login-stage">
         {/* Brand panel — hidden on mobile */}
         <section className="brand-panel" aria-hidden="true">
-          <span className="brand-eyebrow page-description page-description--from-left">SPC Helpdesk</span>
+          <span className="brand-eyebrow page-description page-description--from-left">
+            SPC Helpdesk
+          </span>
           <h1 className="brand-headline page-description page-description--from-left">
             Every issue, tracked<br />from report to resolution.
           </h1>
@@ -205,21 +197,6 @@ export default function Login() {
           display: grid;
           grid-template-columns: 1.05fr 1fr;
           min-height: calc(100vh - 72px);
-
-        /* --- Small-phone refinements --- */
-        @media (max-width: 480px) {
-          .form-panel { padding: 32px 16px; }
-          .form-card { max-width: 100%; }
-          .role-toggle { gap: 4px; }
-          .role-btn { font-size: 11px; padding: 9px 4px; }
-          .brand-headline { font-size: 30px; }
-        }
-
-        /* Prevent iOS Safari auto-zoom on input focus */
-        .input-wrap input { font-size: 16px; }
-        @media (min-width: 481px) {
-          .input-wrap input { font-size: 14px; }
-        }
         }
 
         @media (max-width: 880px) {
@@ -331,7 +308,10 @@ export default function Login() {
         }
         .input-wrap svg { flex-shrink: 0; color: var(--lg-muted); }
         .input-wrap:focus-within { border-color: var(--maroon-600); box-shadow: 0 0 0 3px rgba(133,57,58,.12); }
-        .input-wrap input { flex: 1; border: none; outline: none; background: transparent; padding: 11px 0; font-size: 14px; }
+        .input-wrap input { flex: 1; border: none; outline: none; background: transparent; padding: 11px 0; font-size: 16px; }
+        @media (min-width: 481px) {
+          .input-wrap input { font-size: 14px; }
+        }
 
         .form-error { display: flex; align-items: center; gap: 6px; color: var(--danger, #b3261e); font-size: 13px; margin: -6px 0 16px; }
 
@@ -347,6 +327,15 @@ export default function Login() {
         .form-footer { text-align: center; font-size: 13px; margin-top: 22px; color: var(--lg-muted); }
         .form-footer a { color: var(--maroon-600); font-weight: 600; text-decoration: none; }
         .form-footer a:hover { text-decoration: underline; }
+
+        /* --- Small-phone refinements --- */
+        @media (max-width: 480px) {
+          .form-panel { padding: 32px 16px; }
+          .form-card { max-width: 100%; }
+          .role-toggle { gap: 4px; }
+          .role-btn { font-size: 11px; padding: 9px 4px; }
+          .brand-headline { font-size: 30px; }
+        }
       `}</style>
     </div>
   );

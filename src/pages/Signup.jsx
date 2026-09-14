@@ -4,38 +4,6 @@ import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
 
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!form.fullName || !form.email || !form.password) {
-    setError("Fill in all required fields.");
-    return;
-  }
-  if (form.password !== form.confirmPassword) {
-    setError("Passwords do not match.");
-    return;
-  }
-  setError("");
-  setLoading(true);
-
-  const { error: signUpError } = await supabase.auth.signUp({
-    email: form.email,
-    password: form.password,
-    options: {
-      data: { name: form.fullName, role: form.role },
-    },
-  });
-
-  setLoading(false);
-
-  if (signUpError) {
-    setError(signUpError.message);
-    return;
-  }
-
-  navigate("/login");
-};
-
 const ROLES = [
   { value: "student", label: "Student" },
   { value: "staff", label: "Faculty & Staff" },
@@ -59,8 +27,9 @@ export default function Signup() {
 
   const setRole = (role) => setForm((f) => ({ ...f, role }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.fullName || !form.email || !form.password) {
       setError("Fill in all required fields.");
       return;
@@ -69,7 +38,25 @@ export default function Signup() {
       setError("Passwords do not match.");
       return;
     }
+
     setError("");
+    setLoading(true);
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: { name: form.fullName, role: form.role },
+      },
+    });
+
+    setLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+
     navigate("/login");
   };
 
@@ -79,7 +66,9 @@ export default function Signup() {
 
       <div className="auth-stage">
         <section className="brand-panel" aria-hidden="true">
-          <span className="brand-eyebrow page-description page-description--from-left">SPC Helpdesk</span>
+          <span className="brand-eyebrow page-description page-description--from-left">
+            SPC Helpdesk
+          </span>
           <h1 className="brand-headline page-description page-description--from-left">
             Every issue, tracked<br />from report to resolution.
           </h1>
@@ -136,14 +125,20 @@ export default function Signup() {
 
               <div className="field">
                 <label>I am signing up as</label>
-                <div className="role-toggle" role="radiogroup" aria-label="I am signing up as">
+                <div
+                  className="role-toggle"
+                  role="radiogroup"
+                  aria-label="I am signing up as"
+                >
                   {ROLES.map((r) => (
                     <button
                       type="button"
                       key={r.value}
                       role="radio"
                       aria-checked={form.role === r.value}
-                      className={`role-btn${form.role === r.value ? " active" : ""}`}
+                      className={`role-btn${
+                        form.role === r.value ? " active" : ""
+                      }`}
                       onClick={() => setRole(r.value)}
                     >
                       {r.label}
@@ -179,7 +174,11 @@ export default function Signup() {
 
               {error && <p className="form-error">{error}</p>}
 
-              <button type="submit" className="submit-btn" disabled={loading}>
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={loading}
+              >
                 {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
@@ -292,9 +291,12 @@ export default function Signup() {
         .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
         .field input {
-          width: 100%; padding: 11px 12px; font-size: 14px;
+          width: 100%; padding: 11px 12px; font-size: 16px;
           border: 1px solid var(--border, #e5dede); border-radius: 8px;
           transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        @media (min-width: 481px) {
+          .field input { font-size: 14px; }
         }
         .field input:focus {
           outline: none;
@@ -338,12 +340,6 @@ export default function Signup() {
           .role-toggle { flex-wrap: wrap; gap: 4px; }
           .role-btn { font-size: 11px; padding: 8px 4px; }
           .brand-headline { font-size: 30px; }
-        }
-
-        /* Prevent iOS Safari auto-zoom on input focus */
-        .field input { font-size: 16px; }
-        @media (min-width: 481px) {
-          .field input { font-size: 14px; }
         }
       `}</style>
     </div>
