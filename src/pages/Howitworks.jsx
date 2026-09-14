@@ -85,7 +85,7 @@ export default function HowItWorks() {
       {/* Intro */}
       <section
         style={{
-          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-700) 100%)",
+          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
           color: "var(--white)",
           padding: "72px 32px 88px",
           textAlign: "center",
