@@ -103,7 +103,57 @@ export default function HowItWorks() {
 {/* Flow timeline */}
 <section style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 clamp(16px, 4vw, 32px) 90px" }}>
   <div className="card flow-timeline">
-    {/* ...FLOW.map(...) unchanged... */}
+        <div className="card" style={{ padding: "36px 40px" }}>
+          {FLOW.map((step, i) => (
+            <div
+              key={step.n}
+              style={{
+                display: "flex",
+                gap: 24,
+                paddingBottom: i < FLOW.length - 1 ? 28 : 0,
+                position: "relative",
+              }}
+            >
+              {/* connector line */}
+              {i < FLOW.length - 1 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 23,
+                    top: 48,
+                    bottom: 0,
+                    width: 2,
+                    background: "var(--maroon-100)",
+                  }}
+                />
+              )}
+              <div
+                style={{
+                  flexShrink: 0,
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: "var(--white)",
+                  border: "1.5px solid var(--maroon-300)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--maroon-700)",
+                  zIndex: 1,
+                }}
+              >
+                {step.n}
+              </div>
+              <div style={{ paddingTop: 4 }}>
+                <span className="eyebrow">{step.code}</span>
+                <h3 style={{ fontSize: 18, marginTop: 4 }}>{step.title}</h3>
+                <p style={{ fontSize: 14, marginBottom: 0 }}>{step.text}</p>
+              </div>
+            </div>
+          ))}
+  </div>
   </div>
 </section>
 
