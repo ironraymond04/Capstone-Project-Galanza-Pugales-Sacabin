@@ -39,7 +39,7 @@ export default function Navbar() {
             alignItems: "center",
             gap: 12,
             fontFamily: "var(--font-display)",
-            fontSize: 30,
+            fontSize: 20,
             fontWeight: 700,
             color: "var(--white)",
           }}
