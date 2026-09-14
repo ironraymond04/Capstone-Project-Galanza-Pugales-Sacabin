@@ -295,6 +295,22 @@ export default function Signup() {
         .form-footer { text-align: center; font-size: 13px; margin-top: 20px; }
         .form-footer a { color: var(--maroon-600); font-weight: 600; text-decoration: none; }
         .form-footer a:hover { text-decoration: underline; }
+
+        /* --- Small-phone refinements --- */
+        @media (max-width: 480px) {
+          .form-panel { padding: 32px 16px; }
+          .form-card { max-width: 100%; }
+          .field-row { grid-template-columns: 1fr; gap: 0; }
+          .role-toggle { flex-wrap: wrap; gap: 4px; }
+          .role-btn { font-size: 11px; padding: 8px 4px; }
+          .brand-headline { font-size: 30px; }
+        }
+
+        /* Prevent iOS Safari auto-zoom on input focus */
+        .field input { font-size: 16px; }
+        @media (min-width: 481px) {
+          .field input { font-size: 14px; }
+        }
       `}</style>
     </div>
   );

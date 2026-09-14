@@ -160,6 +160,21 @@ export default function Login() {
           display: grid;
           grid-template-columns: 1.05fr 1fr;
           min-height: calc(100vh - 72px);
+
+        /* --- Small-phone refinements --- */
+        @media (max-width: 480px) {
+          .form-panel { padding: 32px 16px; }
+          .form-card { max-width: 100%; }
+          .role-toggle { gap: 4px; }
+          .role-btn { font-size: 11px; padding: 9px 4px; }
+          .brand-headline { font-size: 30px; }
+        }
+
+        /* Prevent iOS Safari auto-zoom on input focus */
+        .input-wrap input { font-size: 16px; }
+        @media (min-width: 481px) {
+          .input-wrap input { font-size: 14px; }
+        }
         }
 
         @media (max-width: 880px) {

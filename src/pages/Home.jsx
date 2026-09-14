@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
+import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
 
 const STEPS = [
@@ -20,11 +21,12 @@ const STEPS = [
 const ROLES = [
   { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login" },
   { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login" },
-  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login" },
+  { name: "Admin", detail: "Oversee users, offices, escalations, and system-wide analytics.", path: "/login" },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   return (
     <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
@@ -33,27 +35,68 @@ export default function Home() {
       {/* Hero */}
       <section
         style={{
-          background:
-            "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
+          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
           color: "var(--white)",
-          padding: "88px 32px 120px",
+          padding: isMobile ? "56px 20px 88px" : "88px 32px 120px",
         }}
       >
         <div style={{ maxWidth: 780, margin: "0 auto", textAlign: "center" }}>
-          
-          <h1 className="page-description page-description--from-left" style={{ color: "var(--white)", fontSize: 44, lineHeight: 1.1, marginBottom: 18 }}>
-            A campus where every concern is heard, every student is valued, and every step forward matters.
+          <h1
+            className="page-description page-description--from-left"
+            style={{
+              color: "var(--white)",
+              fontSize: isMobile ? 28 : 44,
+              lineHeight: 1.2,
+              marginBottom: isMobile ? 14 : 18,
+            }}
+          >
+            Submit your concern once, and let our AI instantly route it to the right office - faster, smarter, and hassle-free.
           </h1>
-          <p className="page-description page-description--from-left" style={{ color: "rgba(255,255,255,0.82)", fontSize: 17, maxWidth: 560, margin: "0 auto 32px" }}>
+          <p
+            className="page-description page-description--from-left"
+            style={{
+              color: "rgba(255,255,255,0.82)",
+              fontSize: isMobile ? 15 : 17,
+              maxWidth: 560,
+              margin: isMobile ? "0 auto 24px" : "0 auto 32px",
+            }}
+          >
             The St. Peter's College Helpdesk uses multi-label text classification to read every ticket
             and send it straight to the office that can resolve it - no more guessing which
             window to line up at.
           </p>
-          <div style={{ display: "flex", gap: 14, justifyContent: "center" }}>
-            <button className="btn btn-primary" style={{ background: "var(--white)", color: "var(--maroon-700)", padding: "13px 26px" }} onClick={() => navigate("/signup")}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 14,
+              justifyContent: "center",
+            }}
+          >
+            <button
+              className="btn btn-primary"
+              style={{
+                background: "var(--white)",
+                color: "var(--maroon-700)",
+                padding: "13px 26px",
+                width: isMobile ? "100%" : "auto",
+                textAlign: "center",
+                justifyContent: "center",
+              }}
+              onClick={() => navigate("/signup")}
+            >
               Get started
             </button>
-            <button className="btn btn-outline-white" style={{ padding: "13px 26px" }} onClick={() => navigate("/login")}>
+            <button
+              className="btn btn-outline-white"
+              style={{
+                padding: "13px 26px",
+                width: isMobile ? "100%" : "auto",
+                textAlign: "center",
+                justifyContent: "center",
+              }}
+              onClick={() => navigate("/login")}
+            >
               I already have an account
             </button>
           </div>
@@ -61,11 +104,23 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" style={{ maxWidth: 1180, margin: "-64px auto 0", padding: "0 32px 80px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+      <section
+        id="how-it-works"
+        style={{
+          maxWidth: 1180,
+          margin: isMobile ? "-40px auto 0" : "-64px auto 0",
+          padding: isMobile ? "0 20px 56px" : "0 32px 80px",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: isMobile ? 16 : 20,
+          }}
+        >
           {STEPS.map((s) => (
-            <div key={s.code} className="card">
-              <span className="eyebrow">{s.code}</span>
+            <div key={s.title} className="card">
               <h3 style={{ marginTop: 10, fontSize: 19 }}>{s.title}</h3>
               <p style={{ fontSize: 14 }}>{s.text}</p>
             </div>
@@ -74,11 +129,23 @@ export default function Home() {
       </section>
 
       {/* Roles */}
-      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "0 32px 100px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <h2 style={{ fontSize: 30, marginTop: 8 }}>A dashboard for how you actually work</h2>
+      <section
+        style={{
+          maxWidth: 1180,
+          margin: "0 auto",
+          padding: isMobile ? "0 20px 64px" : "0 32px 100px",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 36 }}>
+          <h2 style={{ fontSize: isMobile ? 22 : 30, marginTop: 8 }}>A dashboard for how you actually work</h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: isMobile ? 16 : 20,
+          }}
+        >
           {ROLES.map((r) => (
             <div
               key={r.name}
@@ -96,7 +163,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer style={{ borderTop: "1px solid var(--line)", padding: "24px 32px", textAlign: "center" }}>
+      <footer style={{ borderTop: "1px solid var(--line)", padding: isMobile ? "20px" : "24px 32px", textAlign: "center" }}>
         <p style={{ fontSize: 13, margin: 0 }}>
           © {new Date().getFullYear()} Developed by: Galanza, Pugales, Sacabin. All rights reserved.
         </p>
