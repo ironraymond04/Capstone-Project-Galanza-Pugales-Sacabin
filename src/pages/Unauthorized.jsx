@@ -1,103 +1,143 @@
-import React from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
+import Navbar from "../components/Navbar";
+import "../styles/theme.css";
 
-const styles = {
-  wrapper: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
-    padding: "24px",
-    fontFamily: "Arial, sans-serif",
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: "16px",
-    boxShadow: "0 12px 30px rgba(15, 23, 42, 0.12)",
-    padding: "40px 32px",
-    maxWidth: "480px",
-    width: "100%",
-    textAlign: "center",
-  },
-  badge: {
-    display: "inline-block",
-    backgroundColor: "#fee2e2",
-    color: "#b91c1c",
-    fontWeight: 700,
-    borderRadius: "999px",
-    padding: "8px 14px",
-    fontSize: "12px",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    marginBottom: "18px",
-  },
-  title: {
-    margin: "0 0 12px",
-    color: "#0f172a",
-    fontSize: "2rem",
-  },
-  message: {
-    margin: "0 0 24px",
-    color: "#475569",
-    fontSize: "1rem",
-    lineHeight: 1.6,
-  },
-  buttonGroup: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  button: {
-    border: "none",
-    borderRadius: "10px",
-    padding: "12px 18px",
-    fontSize: "0.95rem",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "transform 0.2s ease, opacity 0.2s ease",
-  },
-  primaryButton: {
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-  },
-  secondaryButton: {
-    backgroundColor: "#e2e8f0",
-    color: "#0f172a",
-  },
+const ROLE_ROUTES = {
+  student: "/student",
+  staff: "/staff",
+  admin: "/admin",
 };
 
 export default function Unauthorized() {
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
-  return (
-    <div style={styles.wrapper}>
-      <div style={styles.card}>
-        <div style={styles.badge}>Access denied</div>
-        <h1 style={styles.title}>Unauthorized</h1>
-        <p style={styles.message}>
-          You do not have permission to view this page. Please sign in with an
-          authorized account or return to the homepage.
-        </p>
+  const homeRoute = profile?.role ? ROLE_ROUTES[profile.role] : "/login";
 
-        <div style={styles.buttonGroup}>
-          <button
-            type="button"
-            style={{ ...styles.button, ...styles.primaryButton }}
-            onClick={() => navigate("/")}
-          >
-            Go Home
-          </button>
-          <button
-            type="button"
-            style={{ ...styles.button, ...styles.secondaryButton }}
-            onClick={() => navigate(-1)}
-          >
-            Go Back
-          </button>
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  return (
+    <div className="unauth-shell">
+      <Navbar />
+
+      <div className="unauth-stage">
+        <div className="unauth-card">
+          <span className="unauth-code">403</span>
+          <h1>Access restricted</h1>
+          <p>
+            {profile?.role
+              ? `Your account is registered as "${profile.role}", which doesn't have access to this page.`
+              : "You don't have permission to view this page."}
+          </p>
+
+          <div className="unauth-actions">
+            <Link to={homeRoute} className="btn-primary-link">
+              Go to my dashboard
+            </Link>
+            <button onClick={handleLogout} className="unauth-logout">
+              Log out
+            </button>
+          </div>
         </div>
       </div>
+
+      <style>{`
+        .unauth-shell {
+          background: var(--paper, #faf7f2);
+          min-height: 100vh;
+        }
+
+        .unauth-stage {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: calc(100vh - 72px);
+          padding: 24px;
+        }
+
+        .unauth-card {
+          width: 100%;
+          max-width: 420px;
+          text-align: center;
+          background: #fff;
+          border: 1px solid var(--border, #e5dede);
+          border-radius: 14px;
+          padding: 48px 36px;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+        }
+
+        .unauth-code {
+          display: inline-block;
+          font-family: "Libre Baskerville", serif;
+          font-size: 14px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          color: var(--gold-500, #c9a227);
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+
+        .unauth-card h1 {
+          font-family: "Libre Baskerville", serif;
+          font-size: 26px;
+          color: var(--ink, #241014);
+          margin: 4px 0 14px;
+        }
+
+        .unauth-card p {
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--muted, #6b5b5e);
+          margin: 0 0 32px;
+        }
+
+        .unauth-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .btn-primary-link {
+          display: block;
+          width: 100%;
+          padding: 12px;
+          border-radius: 8px;
+          background: var(--maroon-600);
+          color: #fff;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          box-sizing: border-box;
+          transition: background 0.15s ease;
+        }
+        .btn-primary-link:hover {
+          background: var(--maroon-700, #660809);
+        }
+
+        .unauth-logout {
+          width: 100%;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid var(--border, #e5dede);
+          background: transparent;
+          color: var(--ink, #241014);
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .unauth-logout:hover {
+          background: var(--paper-alt, #f1ece4);
+        }
+
+        @media (max-width: 480px) {
+          .unauth-card { padding: 36px 24px; }
+        }
+      `}</style>
     </div>
   );
 }

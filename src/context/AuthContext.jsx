@@ -17,8 +17,10 @@ export function AuthProvider({ children }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
+      if (session) {
+        setLoading(true);      // <-- key fix: block ProtectedRoute until profile is ready
+        fetchProfile(session.user.id);
+      } else {
         setProfile(null);
         setLoading(false);
       }
