@@ -9,11 +9,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*, offices(office_name)")
-      .eq("user_id", userId)
-      .single();
+const { data, error } = await supabase
+  .from("profiles")
+  .select("*, offices!profiles_office_id_fkey(office_name)")
+  .eq("user_id", userId)
+  .single(); 
 
     if (error) {
       console.error("fetchProfile failed:", error.message);

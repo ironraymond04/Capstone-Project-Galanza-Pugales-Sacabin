@@ -62,15 +62,15 @@ export default function AdminDashboard() {
     setTicketsLoading(false);
   }
 
-  async function loadUsers() {
-    setUsersLoading(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*, offices(office_name)")
-      .order("name");
-    if (!error) setUsers(data || []);
-    setUsersLoading(false);
-  }
+async function loadUsers() {
+  setUsersLoading(true);
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*, offices!profiles_office_id_fkey(office_name)")
+    .order("name");
+  if (!error) setUsers(data || []);
+  setUsersLoading(false);
+}
 
   async function loadOffices() {
     setOfficesLoading(true);
