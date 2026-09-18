@@ -4,6 +4,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/theme.css";
+import { classifyTicket } from "../lib/ai";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -367,29 +368,61 @@ function SubmitTicket({ session, ticketText, setTicketText, selectedOffice, setS
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     if (!ticketText.trim()) return;
     setSubmitting(true);
     setErrorMsg("");
 
-    const { error } = await supabase.from("tickets").insert({
-      user_id: session.user.id,
-      concern_text: ticketText,
-    });
+    // 1. Ask the AI model to classify + route the concern
+    const classification = await classifyTicket(ticketText);
 
-    setSubmitting(false);
+    // 2. Resolve the office name the AI returned into an office_id
+    let assignedOfficeId = null;
+    if (classification?.office) {
+      const { data: officeRow } = await supabase
+        .from("offices")
+        .select("office_id")
+        .eq("office_name", classification.office)
+        .maybeSingle();
+      assignedOfficeId = officeRow?.office_id ?? null;
+    }
+
+    // 3. Insert the ticket with the AI-assigned fields (falls back safely if AI failed)
+    const { data: inserted, error } = await supabase
+      .from("tickets")
+      .insert({
+        user_id: session.user.id,
+        concern_text: ticketText,
+        assigned_office: assignedOfficeId,
+        priority: classification?.priority || "medium",
+        classification_confidence: classification?.confidence ?? null,
+      })
+      .select()
+      .single();
 
     if (error) {
+      setSubmitting(false);
       setErrorMsg("Something went wrong submitting your ticket. Please try again.");
       return;
     }
 
+    // 4. Log the AI routing decision for the office's activity log
+    if (assignedOfficeId) {
+      await supabase.from("logs").insert({
+        ticket_id: inserted.ticket_id,
+        office_id: assignedOfficeId,
+        action: `AI routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
+        module: "AI Routing",
+      });
+    }
+
+    setSubmitting(false);
     setSubmitted(true);
     setTicketText("");
     setSelectedOffice("");
     onSubmitted?.();
-  };
+};
 
   return (
     <>
@@ -408,7 +441,7 @@ function SubmitTicket({ session, ticketText, setTicketText, selectedOffice, setS
               onChange={(e) => { setTicketText(e.target.value); setSubmitted(false); }}
             />
           </div>
-
+          
           {errorMsg && <p style={{ color: "var(--danger, #b3261e)", fontSize: 13, marginBottom: 12 }}>{errorMsg}</p>}
 
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} disabled={submitting}>

@@ -37,7 +37,7 @@ function timeAgo(dateStr) {
 }
 
 export default function AdminDashboard() {
-  const { profile } = useAuth();
+  const { session, profile } = useAuth();
   const [active, setActive] = useState("overview");
   const isMobile = useIsMobile();
 
@@ -58,19 +58,21 @@ export default function AdminDashboard() {
       .from("tickets")
       .select("*, offices:offices!tickets_assigned_office_fkey(office_id, office_name), profiles:profiles!tickets_user_id_fkey(name)")
       .order("created_at", { ascending: false });
+    if (error) console.error("loadTickets error:", error);
     if (!error) setTickets(data || []);
     setTicketsLoading(false);
   }
 
-async function loadUsers() {
-  setUsersLoading(true);
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*, offices!profiles_office_id_fkey(office_name)")
-    .order("name");
-  if (!error) setUsers(data || []);
-  setUsersLoading(false);
-}
+  async function loadUsers() {
+    setUsersLoading(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*, offices!profiles_office_id_fkey(office_name)")
+      .order("name");
+    if (error) console.error("loadUsers error:", error);
+    if (!error) setUsers(data || []);
+    setUsersLoading(false);
+  }
 
   async function loadOffices() {
     setOfficesLoading(true);
@@ -78,6 +80,7 @@ async function loadUsers() {
       .from("offices")
       .select("*, head:profiles!offices_head_user_id_fkey(name, email)")
       .order("office_name");
+    if (error) console.error("loadOffices error:", error);
     if (!error) setOffices(data || []);
     setOfficesLoading(false);
   }
@@ -89,16 +92,20 @@ async function loadUsers() {
       .select("*, profiles(name)")
       .order("created_at", { ascending: false })
       .limit(50);
+    if (error) console.error("loadLogs error:", error);
     if (!error) setLogs(data || []);
     setLogsLoading(false);
   }
 
   async function loadNotifications() {
+    if (!session?.user?.id) return;
     setNotifLoading(true);
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
+    if (error) console.error("loadNotifications error:", error);
     if (!error) setNotifications(data || []);
     setNotifLoading(false);
   }
@@ -109,7 +116,8 @@ async function loadUsers() {
     loadOffices();
     loadLogs();
     loadNotifications();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -129,10 +137,10 @@ async function loadUsers() {
             <Overview tickets={tickets} users={users} offices={offices} loading={ticketsLoading || usersLoading || officesLoading} onSelect={setActive} />
           )}
           {active === "logs" && <SystemLogs logs={logs} loading={logsLoading} />}
-          {active === "tickets" && <ManageTickets tickets={tickets} loading={ticketsLoading} />}
+          {active === "tickets" && (<ManageTickets tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />)}
           {active === "users" && <ManageUsers users={users} loading={usersLoading} onUpdated={loadUsers} />}
           {active === "offices" && (
-            <ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={loadOffices} />
+            <ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={() => { loadOffices(); loadUsers(); }} />
           )}
           {active === "analytics" && <Analytics tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} />}
           {active === "transfer" && (
@@ -287,14 +295,47 @@ function SystemLogs({ logs, loading }) {
   );
 }
 
-function ManageTickets({ tickets, loading }) {
+function ManageTickets({ tickets, offices, loading, onUpdated }) {
   const [filter, setFilter] = useState("All");
+  const [reassignId, setReassignId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const filterMap = { Open: "pending", "In Progress": "in_progress", Resolved: "resolved", Transferred: "transferred" };
   const filtered = filter === "All" ? tickets : tickets.filter((t) => t.status === filterMap[filter]);
 
+  const reassignTicket = tickets.find((t) => t.ticket_id === reassignId) || null;
+
+  const handleReassign = async (newOfficeId) => {
+    setSubmitting(true);
+    const previousOfficeName = reassignTicket?.offices?.office_name || "Unassigned";
+
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        assigned_office: newOfficeId,
+        status: reassignTicket.status === "pending" ? "in_progress" : reassignTicket.status,
+      })
+      .eq("ticket_id", reassignId);
+
+    if (error) {
+      console.error("Reassign failed:", error);
+    } else {
+      const newOffice = offices.find((o) => o.office_id === newOfficeId);
+      await supabase.from("logs").insert({
+        ticket_id: reassignId,
+        office_id: newOfficeId,
+        action: `Admin reassigned ${formatTicketCode(reassignId)} from ${previousOfficeName} to ${newOffice?.office_name || "Unassigned"}`,
+        module: "Ticket Transferred",
+      });
+    }
+
+    setSubmitting(false);
+    setReassignId(null);
+    onUpdated?.();
+  };
+
   return (
     <>
-      <PageHeader title="All tickets" subtitle="Saved to and retrieved from the Ticket data store." />
+      <PageHeader title="All tickets" subtitle="Saved to and retrieved from the Ticket data store. Click a ticket to reassign its office." />
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
         {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={filter === f ? "btn btn-primary" : "btn btn-ghost"} style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -305,18 +346,28 @@ function ManageTickets({ tickets, loading }) {
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match this filter.</p>
         ) : (
           <TableScroll>
             <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Concern</th><th>Office</th><th>AI confidence</th><th>Status</th></tr></thead>
+              <thead><tr><th>Ticket</th><th>Concern</th><th>Office</th><th>AI confidence</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={t.ticket_id}>
+                  <tr key={t.ticket_id} onClick={() => setReassignId(t.ticket_id)} style={{ cursor: "pointer" }}>
                     <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                     <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
                     <td>{t.offices?.office_name || "Unassigned"}</td>
                     <td><ConfidenceMeter pct={t.classification_confidence} /></td>
                     <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                    <td>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setReassignId(t.ticket_id); }}
+                        style={{ padding: "5px 12px", fontSize: 12.5, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer" }}
+                      >
+                        Reassign
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -324,6 +375,12 @@ function ManageTickets({ tickets, loading }) {
           </TableScroll>
         )}
       </div>
+
+      {reassignTicket && (
+        <Modal title="Reassign ticket" onClose={() => setReassignId(null)}>
+          <ReassignForm ticket={reassignTicket} offices={offices} onCancel={() => setReassignId(null)} onSubmit={handleReassign} submitting={submitting} />
+        </Modal>
+      )}
     </>
   );
 }
@@ -423,15 +480,36 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
 
   const staffOptions = users.filter((u) => u.role === "staff" && u.is_active);
 
-  const handleAddOffice = async (payload) => {
+const handleAddOffice = async (payload) => {
     setSubmitting(true);
-    const { error } = await supabase.from("offices").insert(payload);
-    setSubmitting(false);
-    if (!error) {
-      onUpdated?.();
-      setModalOpen(false);
+
+    // 1. Create the office and get its generated office_id back
+    const { data: newOffice, error: officeError } = await supabase
+      .from("offices")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (officeError) {
+      console.error("Add office failed:", officeError);
+      setSubmitting(false);
+      return;
     }
-  };
+
+    // 2. Point the selected staff member's profile at this new office
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ office_id: newOffice.office_id })
+      .eq("user_id", payload.head_user_id);
+
+    if (profileError) {
+      console.error("Linking head to office failed:", profileError);
+    }
+
+    setSubmitting(false);
+    onUpdated?.();
+    setModalOpen(false);
+};
 
   return (
     <>

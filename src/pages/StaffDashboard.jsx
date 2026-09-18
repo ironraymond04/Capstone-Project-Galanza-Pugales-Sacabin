@@ -67,6 +67,7 @@ export default function StaffDashboard() {
       .select("*, profiles:profiles!tickets_user_id_fkey(name)")
       .eq("assigned_office", officeId)
       .order("created_at", { ascending: false });
+    if (error) console.error("loadQueue error:", error);
     if (!error) setQueue(data || []);
     setQueueLoading(false);
   }
@@ -79,6 +80,7 @@ export default function StaffDashboard() {
       .select("*, tickets(ticket_id, concern_text)")
       .eq("office_id", officeId)
       .order("created_at", { ascending: false });
+    if (error) console.error("loadLogs error:", error);
     if (!error) setLogs(data || []);
     setLogsLoading(false);
   }
@@ -91,6 +93,7 @@ export default function StaffDashboard() {
       .select("*")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
+    if (error) console.error("loadNotifications error:", error);
     if (!error) setNotifications(data || []);
     setNotifLoading(false);
   }
@@ -125,9 +128,7 @@ export default function StaffDashboard() {
           {active === "reports" && <Reports queue={queue} loading={queueLoading} focusTicketId={focusTicketId} />}
           {active === "logs" && <ActivityLogs logs={logs} loading={logsLoading} onViewTicket={handleViewTicket} />}
           {active === "status" && <UpdateStatus queue={queue} loading={queueLoading} onUpdated={loadQueue} />}
-          {active === "routed" && (
-            <RoutedTickets queue={queue} loading={queueLoading} staffUserId={session?.user?.id} officeId={officeId} onLogged={loadLogs} />
-          )}
+          {active === "routed" && (<RoutedTickets queue={queue} logs={logs} loading={queueLoading} staffUserId={session?.user?.id} officeId={officeId} onLogged={loadLogs}/>)}
           {active === "assignment" && <AutoAssignment queue={queue} loading={queueLoading} />}
           {active === "priority" && <PriorityView queue={queue} loading={queueLoading} />}
           {active === "notifications" && <Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} />}
@@ -181,6 +182,20 @@ function TableScroll({ children }) {
 
 function Overview({ queue, loading, profile }) {
   const isMobile = useIsMobile();
+
+  if (!profile?.office_id) {
+    return (
+      <>
+        <PageHeader title={`Good day, ${profile?.name || "there"}`} subtitle="Your account isn't linked to an office yet." />
+        <div className="card">
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            No office is assigned to your profile, so no tickets can be routed to you. Ask an admin to set your office in Manage Users.
+          </p>
+        </div>
+      </>
+    );
+  }
+
   const now = new Date();
   const weekAgo = new Date(now - 7 * 864e5);
 
@@ -431,7 +446,8 @@ function UpdateStatus({ queue, loading, onUpdated }) {
     setUpdatingId(ticketId);
     const payload = { status: newStatus };
     if (newStatus === "resolved") payload.resolved_at = new Date().toISOString();
-    await supabase.from("tickets").update(payload).eq("ticket_id", ticketId);
+    const { error } = await supabase.from("tickets").update(payload).eq("ticket_id", ticketId);
+    if (error) console.error("UpdateStatus error:", error);
     setUpdatingId(null);
     onUpdated?.();
   };
@@ -475,8 +491,14 @@ function UpdateStatus({ queue, loading, onUpdated }) {
   );
 }
 
-function RoutedTickets({ queue, loading, staffUserId, officeId, onLogged }) {
-  const recentlyRouted = queue.slice(0, 5);
+function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }) {
+  const respondedTicketIds = new Set(
+    logs.filter((l) => l.module === "Staff Response" && l.ticket_id).map((l) => l.ticket_id)
+  );
+  const recentlyRouted = queue
+    .filter((t) => !respondedTicketIds.has(t.ticket_id))
+    .slice(0, 5);
+
   const [modalTicket, setModalTicket] = useState(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -488,22 +510,24 @@ function RoutedTickets({ queue, loading, staffUserId, officeId, onLogged }) {
     if (!draft.trim() || !modalTicket) return;
     setSending(true);
 
-    await supabase.from("notifications").insert({
+    const { error: notifError } = await supabase.from("notifications").insert({
       ticket_id: modalTicket.ticket_id,
       user_id: modalTicket.user_id,
       message: draft.trim(),
     });
+    if (notifError) console.error("submitFeedback notification error:", notifError);
 
-    await supabase.from("logs").insert({
+    const { error: logError } = await supabase.from("logs").insert({
       user_id: staffUserId,
       office_id: officeId,
       ticket_id: modalTicket.ticket_id,
       action: `Responded to student on ${formatTicketCode(modalTicket.ticket_id)}`,
       module: "Staff Response",
     });
+    if (logError) console.error("submitFeedback log error:", logError);
 
     setSending(false);
-    onLogged?.();
+    onLogged?.(); // this reloads logs, which now removes the ticket from view
     closeModal();
   };
 
@@ -635,7 +659,8 @@ function PriorityView({ queue, loading }) {
 function Notifications({ notifications, loading, onRead }) {
   const markRead = async (n) => {
     if (n.is_read) return;
-    await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
+    const { error } = await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
+    if (error) console.error("markRead error:", error);
     onRead?.();
   };
 
