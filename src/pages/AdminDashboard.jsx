@@ -147,7 +147,7 @@ export default function AdminDashboard() {
             <Transfers tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />
           )}
           {active === "notifications" && (
-            <Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} />
+            <Notifications tickets={tickets} loading={ticketsLoading} />
           )}
         </div>
       </div>
@@ -274,6 +274,8 @@ function Overview({ tickets, users, offices, loading, onSelect }) {
 }
 
 function SystemLogs({ logs, loading }) {
+  const [selectedLog, setSelectedLog] = useState(null);
+
   return (
     <>
       <PageHeader title="System logs" subtitle="Retrieved from the Logs data store." />
@@ -284,13 +286,53 @@ function SystemLogs({ logs, loading }) {
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No log entries yet.</p>
         ) : (
           logs.map((l) => (
-            <div key={l.log_id} style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
+            <button
+              key={l.log_id}
+              type="button"
+              onClick={() => setSelectedLog(l)}
+              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: "1px solid var(--line)", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+            >
               <span style={{ fontSize: 14 }}><strong>{l.profiles?.name || "System"}</strong> - {l.action}</span>
               <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{timeAgo(l.created_at)}</span>
-            </div>
+            </button>
           ))
         )}
       </div>
+
+      {selectedLog && (
+        <Modal title="System log details" onClose={() => setSelectedLog(null)} width={520}>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Performed by</span>
+              <strong style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.profiles?.name || "System"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Module</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.module || "—"}</span>
+            </div>
+            {selectedLog.ticket_id && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
+                <span style={{ fontSize: 14, fontFamily: "var(--font-mono)", textAlign: "right" }}>{formatTicketCode(selectedLog.ticket_id)}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Action</span>
+              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>{selectedLog.action}</span>
+            </div>
+            {selectedLog.description && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Description</span>
+                <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>{selectedLog.description}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Date & time</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(selectedLog.created_at).toLocaleString()}</span>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
@@ -623,8 +665,9 @@ function ReassignForm({ ticket, offices, onCancel, onSubmit, submitting }) {
 }
 
 function Transfers({ tickets, offices, loading, onUpdated }) {
-  const transfers = tickets.filter((t) => t.status === "transferred");
+  const transfers = tickets.filter((t) => t.status === "transferred" || t.transfer_reason || t.escalation_level);
   const [reassignId, setReassignId] = useState(null);
+  const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const reassignTicket = transfers.find((t) => t.ticket_id === reassignId) || null;
@@ -653,15 +696,23 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
         ) : (
           transfers.map((t, i) => (
             <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: i < transfers.length - 1 ? "1px solid var(--line)" : "none" }}>
+              <button
+                type="button"
+                onClick={() => setSelectedTransfer(t)}
+                style={{ width: "100%", padding: 0, border: "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+              >
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
                 <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
                 {t.escalation_level && <span className="badge badge-transferred">{t.escalation_level}</span>}
               </div>
               <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{t.concern_text.slice(0, 60)} - {t.offices?.office_name || "Unassigned"}</p>
               {t.transfer_reason && <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {t.transfer_reason}</p>}
+              </button>
               <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => setReassignId(t.ticket_id)}>Reassign</button>
-                <button className="btn btn-ghost" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => handleResolve(t.ticket_id)}>Mark resolved</button>
+                {(t.status !== "resolved" && t.status !== "closed") && (
+                  <button className="btn btn-ghost" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => handleResolve(t.ticket_id)}>Mark resolved</button>
+                )}
               </div>
             </div>
           ))
@@ -673,38 +724,105 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
           <ReassignForm ticket={reassignTicket} offices={offices} onCancel={() => setReassignId(null)} onSubmit={handleReassign} submitting={submitting} />
         </Modal>
       )}
+      {selectedTransfer && (
+        <TicketStatusModal ticket={selectedTransfer} onClose={() => setSelectedTransfer(null)} />
+      )}
     </>
   );
 }
 
-function Notifications({ notifications, loading, onRead }) {
-  const markRead = async (n) => {
-    if (n.is_read) return;
-    await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
-    onRead?.();
-  };
+function Notifications({ tickets, loading }) {
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Retrieved from the Notification data store." />
+      <PageHeader title="Notifications" subtitle="All submitted tickets, including resolved tickets." />
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
-        ) : notifications.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
+        ) : tickets.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No submitted tickets yet.</p>
         ) : (
-          notifications.map((n, i) => (
-            <div
-              key={n.notif_id}
-              onClick={() => markRead(n)}
-              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none", cursor: "pointer", fontWeight: n.is_read ? 400 : 700 }}
+          tickets.map((ticket, i) => (
+            <button
+              key={ticket.ticket_id}
+              type="button"
+              onClick={() => setSelectedTicket(ticket)}
+              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 0", border: "none", borderBottom: i < tickets.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
             >
-              <span style={{ fontSize: 14 }}>{n.message}</span>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
-            </div>
+              <span style={{ minWidth: 0, fontSize: 14 }}>
+                <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(ticket.ticket_id)}</strong>
+                <span> - {ticket.concern_text}</span>
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <StatusBadge status={toDisplayStatus(ticket.status)} />
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(ticket.created_at)}</span>
+              </span>
+            </button>
           ))
         )}
       </div>
+      {selectedTicket && (
+        <TicketStatusModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      )}
     </>
   );
+}
+
+function TicketStatusModal({ ticket, onClose }) {
+  const status = ticket?.status || "unknown";
+  const isResolved = status === "resolved" || status === "closed";
+  const statusLabel = ticket ? toDisplayStatus(status) : "Ticket details unavailable";
+
+  return ticket ? (
+    <Modal title="Ticket details" onClose={onClose} width={560}>
+      <div style={{ display: "grid", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
+          <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(ticket.ticket_id)}</strong>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted by</span>
+          <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.profiles?.name || "Unknown user"}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Status</span>
+          <StatusBadge status={statusLabel} />
+        </div>
+        <p style={{ margin: 0, fontSize: 14, color: isResolved ? "var(--success)" : "var(--ink-soft)" }}>
+          {isResolved ? "This ticket is resolved." : "This ticket is not resolved yet."}
+        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Office</span>
+          <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.offices?.office_name || "Unassigned"}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Concern</span>
+          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.concern_text}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted</span>
+          <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.created_at).toLocaleString()}</span>
+        </div>
+        {ticket.resolved_at && (
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Resolved</span>
+            <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.resolved_at).toLocaleString()}</span>
+          </div>
+        )}
+        {ticket.classification_confidence != null && (
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
+            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+          </div>
+        )}
+        {ticket.transfer_reason && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Transfer reason</span>
+            <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
+          </div>
+        )}
+      </div>
+    </Modal>
+  ) : null;
 }
