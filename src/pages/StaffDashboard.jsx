@@ -57,7 +57,17 @@ export default function StaffDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(true);
 
-  const officeId = profile?.office_id;
+  // Active office (overrides profile.office_id once the staff member switches)
+  const [activeOfficeId, setActiveOfficeId] = useState(profile?.office_id ?? null);
+  const [assignedOffices, setAssignedOffices] = useState([]);
+  const [switchingOffice, setSwitchingOffice] = useState(false);
+
+  const officeId = activeOfficeId;
+
+  // Keep in sync if the auth context's profile loads/changes after mount
+  useEffect(() => {
+    setActiveOfficeId(profile?.office_id ?? null);
+  }, [profile?.office_id]);
 
   async function loadQueue() {
     if (!officeId) return;
@@ -98,12 +108,42 @@ export default function StaffDashboard() {
     setNotifLoading(false);
   }
 
+async function loadAssignedOffices() {
+  if (!session?.user?.id) return;
+  const { data, error } = await supabase
+    .from("offices")
+    .select("office_id, office_name")
+    .eq("head_user_id", session.user.id);
+  if (error) console.error("loadAssignedOffices error:", error);
+  if (!error) setAssignedOffices(data || []);
+}
+
+async function handleSwitchOffice(newOfficeId) {
+  if (!session?.user?.id || newOfficeId === activeOfficeId) return;
+  setSwitchingOffice(true);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ office_id: newOfficeId })
+    .eq("user_id", session.user.id);
+  if (error) {
+    console.error("handleSwitchOffice error:", error);
+  } else {
+    setActiveOfficeId(newOfficeId);
+  }
+  setSwitchingOffice(false);
+}
+
   useEffect(() => {
     loadQueue();
     loadLogs();
     loadNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [officeId, session?.user?.id]);
+
+  useEffect(() => {
+    loadAssignedOffices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   const handleViewTicket = (ticketId) => {
     setFocusTicketId(ticketId);
@@ -123,8 +163,16 @@ export default function StaffDashboard() {
         notifCount={unreadCount}
       />
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: isMobile ? "14px 14px 0" : "20px 26px 0" }}>
+          <OfficeSwitcher
+            offices={assignedOffices}
+            activeOfficeId={activeOfficeId}
+            onSwitch={handleSwitchOffice}
+            switching={switchingOffice}
+          />
+        </div>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
-          {active === "overview" && <Overview queue={queue} loading={queueLoading} profile={profile} />}
+          {active === "overview" && <Overview queue={queue} loading={queueLoading} profile={profile} officeId={officeId} />}
           {active === "reports" && <Reports queue={queue} loading={queueLoading} focusTicketId={focusTicketId} />}
           {active === "logs" && <ActivityLogs logs={logs} loading={logsLoading} onViewTicket={handleViewTicket} />}
           {active === "status" && <UpdateStatus queue={queue} loading={queueLoading} onUpdated={loadQueue} />}
@@ -134,6 +182,88 @@ export default function StaffDashboard() {
           {active === "notifications" && <Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------------- office switcher ---------------- */
+
+function OfficeSwitcher({ offices, activeOfficeId, onSwitch, switching }) {
+  const [open, setOpen] = useState(false);
+  const activeOffice = offices.find((o) => o.office_id === activeOfficeId);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={switching}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 14px",
+          fontSize: 13,
+          fontWeight: 600,
+          borderRadius: 8,
+          border: "1.5px solid var(--line)",
+          background: "#fff",
+          cursor: switching ? "not-allowed" : "pointer",
+          opacity: switching ? 0.7 : 1,
+        }}
+      >
+        Your Office: [{activeOffice?.code || activeOffice?.office_name || "—"}]
+        <span style={{ fontSize: 10 }}>▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 999 }} />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              right: 0,
+              zIndex: 1000,
+              background: "#fff",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              minWidth: 200,
+              overflow: "hidden",
+            }}
+          >
+            {offices.length === 0 ? (
+              <div style={{ padding: "12px 14px", fontSize: 13, color: "var(--ink-soft)" }}>
+                No offices assigned yet.
+              </div>
+            ) : (
+              offices.map((o) => (
+                <button
+                  key={o.office_id}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    if (o.office_id !== activeOfficeId) onSwitch(o.office_id);
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    border: "none",
+                    background: o.office_id === activeOfficeId ? "var(--surface, #f5f0ec)" : "transparent",
+                    cursor: "pointer",
+                  }}
+                >
+                  {o.code ? `[${o.code}] ` : ""}{o.office_name}
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -180,10 +310,10 @@ function TableScroll({ children }) {
 
 /* ---------------- sections ---------------- */
 
-function Overview({ queue, loading, profile }) {
+function Overview({ queue, loading, profile, officeId }) {
   const isMobile = useIsMobile();
 
-  if (!profile?.office_id) {
+  if (!officeId) {
     return (
       <>
         <PageHeader title={`Good day, ${profile?.name || "there"}`} subtitle="Your account isn't linked to an office yet." />
