@@ -46,7 +46,9 @@ function timeAgo(dateStr) {
 
 export default function StaffDashboard() {
   const { session, profile } = useAuth();
-  const [active, setActive] = useState("overview");
+  const [active, setActive] = useState(
+  () => sessionStorage.getItem("chd-staff-active-tab") || "overview"
+  );
   const [focusTicketId, setFocusTicketId] = useState(null);
   const isMobile = useIsMobile();
 
@@ -67,7 +69,8 @@ export default function StaffDashboard() {
   // Keep in sync if the auth context's profile loads/changes after mount
   useEffect(() => {
     setActiveOfficeId(profile?.office_id ?? null);
-  }, [profile?.office_id]);
+    sessionStorage.setItem("chd-staff-active-tab", active);
+  }, [active]);
 
   async function loadQueue() {
     if (!officeId) return;

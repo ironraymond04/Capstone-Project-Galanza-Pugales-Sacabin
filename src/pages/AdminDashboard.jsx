@@ -38,7 +38,9 @@ function timeAgo(dateStr) {
 
 export default function AdminDashboard() {
   const { session, profile } = useAuth();
-  const [active, setActive] = useState("overview");
+  const [active, setActive] = useState(
+    () => sessionStorage.getItem("chd-admin-active-tab") || "overview"
+  );
   const isMobile = useIsMobile();
 
   const [tickets, setTickets] = useState([]);
@@ -116,8 +118,8 @@ export default function AdminDashboard() {
     loadOffices();
     loadLogs();
     loadNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+      sessionStorage.setItem("chd-admin-active-tab", active);
+  }, [active]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

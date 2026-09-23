@@ -72,7 +72,9 @@ function formatDate(dateStr) {
 
 export default function StudentDashboard() {
   const { session, profile } = useAuth();
-  const [active, setActive] = useState("overview");
+  const [active, setActive] = useState(
+  () => sessionStorage.getItem("chd-student-active-tab") || "overview"
+  );
   const [ticketText, setTicketText] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
   const [selectedTicketId, setSelectedTicketId] = useState(null);
@@ -111,8 +113,8 @@ export default function StudentDashboard() {
   useEffect(() => {
     loadTickets();
     loadNotifications();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+    sessionStorage.setItem("chd-student-active-tab", active);
+  }, [active]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
