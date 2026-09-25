@@ -19,9 +19,9 @@ const STEPS = [
 ];
 
 const ROLES = [
-  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login" },
-  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login" },
-  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login" },
+  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login?role=student" },
+  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login?role=staff" },
+  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login?role=admin" },
 ];
 
 export default function Home() {
@@ -74,7 +74,7 @@ export default function Home() {
             }}
           >
             <button
-              className="btn btn-primary"
+              className="btn btn-primary home-hero-action home-hero-action--primary"
               style={{
                 background: "var(--white)",
                 color: "var(--maroon-700)",
@@ -88,7 +88,7 @@ export default function Home() {
               Get started
             </button>
             <button
-              className="btn btn-outline-white"
+              className="btn btn-outline-white home-hero-action home-hero-action--secondary"
               style={{
                 padding: "13px 26px",
                 width: isMobile ? "100%" : "auto",
@@ -150,14 +150,24 @@ export default function Home() {
             <div
               key={r.name}
               className="card"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate(r.path)}
             >
               <h3 style={{ fontSize: 18 }}>{r.name}</h3>
               <p style={{ fontSize: 14 }}>{r.detail}</p>
-              <span style={{ color: "var(--maroon-600)", fontWeight: 600, fontSize: 13 }}>
+              <button
+                type="button"
+                onClick={() => navigate(r.path)}
+                style={{
+                  color: "var(--maroon-600)",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  background: "none",
+                  border: 0,
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+              >
                 Continue →
-              </span>
+              </button>
             </div>
           ))}
         </div>

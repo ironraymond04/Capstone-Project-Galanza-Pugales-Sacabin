@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
@@ -12,10 +12,12 @@ const ROLES = [
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedRole = searchParams.get("role");
   const [form, setForm] = useState({
     fullName: "",
     email: "",
-    role: "student",
+    role: ROLES.some((option) => option.value === requestedRole) ? requestedRole : "student",
     password: "",
     confirmPassword: "",
   });

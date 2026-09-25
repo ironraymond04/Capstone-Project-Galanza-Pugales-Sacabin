@@ -95,6 +95,34 @@ a { color: inherit; text-decoration: none; }
   animation-delay: 0.12s;
 }
 
+.home-hero-action {
+  animation: hero-action-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+.home-hero-action--primary {
+  animation-delay: 0.28s;
+}
+
+.home-hero-action--secondary {
+  animation-delay: 0.4s;
+}
+
+.home-hero-action:hover,
+.home-hero-action:focus-visible {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+@keyframes hero-action-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes description-enter {
   from {
     opacity: 0;
@@ -121,7 +149,11 @@ button:active { transform: none; }
     animation: none;
     transition: none;
   }
-  button:hover, button:active, .nav-link:hover, .nav-link:focus-visible { transform: none; }
+  button:hover, button:active, .nav-link:hover, .nav-link:focus-visible,
+  .home-hero-action:hover, .home-hero-action:focus-visible {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 ::selection { background: var(--maroon-300); color: var(--white); }
