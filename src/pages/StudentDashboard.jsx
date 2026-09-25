@@ -381,13 +381,28 @@ const handleSubmit = async (e) => {
 
     // 2. Resolve the office name the AI returned into an office_id
     let assignedOfficeId = null;
-    if (classification?.office) {
+    const candidateOffices = [
+      classification?.office,
+      ...(classification?.labels || []),
+    ].filter(Boolean);
+
+    for (const officeName of candidateOffices) {
       const { data: officeRow } = await supabase
         .from("offices")
         .select("office_id")
-        .eq("office_name", classification.office)
+        .eq("office_name", officeName)
         .maybeSingle();
-      assignedOfficeId = officeRow?.office_id ?? null;
+      if (officeRow?.office_id) {
+        assignedOfficeId = officeRow.office_id;
+        break;
+      }
+    }
+
+    if (!assignedOfficeId) {
+      console.warn(
+        "Ticket could not be matched to an office row. AI classification:",
+        classification
+      );
     }
 
     // 3. Insert the ticket with the AI-assigned fields (falls back safely if AI failed)
