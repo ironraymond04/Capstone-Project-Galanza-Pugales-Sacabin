@@ -472,16 +472,16 @@ function ManageUsers({ users, loading, onUpdated }) {
   );
 }
 
-function AddOfficeForm({ staff, onCancel, onSubmit, submitting }) {
-  const [name, setName] = useState("");
-  const [headId, setHeadId] = useState("");
+function OfficeForm({ staff, office, onCancel, onSubmit, submitting, submitError }) {
+  const [name, setName] = useState(office?.office_name || "");
+  const [headId, setHeadId] = useState(office?.head_user_id || "");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) { setError("Office name is required."); return; }
     if (!headId) { setError("Please select a head for this office."); return; }
-    onSubmit({ office_name: name.trim(), head_user_id: headId });
+    await onSubmit({ office_name: name.trim(), head_user_id: headId });
   };
 
   return (
@@ -505,12 +505,12 @@ function AddOfficeForm({ staff, onCancel, onSubmit, submitting }) {
         )}
       </div>
 
-      {error && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error}</p>}
+      {(error || submitError) && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error || submitError}</p>}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
         <button type="submit" className="btn btn-primary" disabled={staff.length === 0 || submitting}>
-          {submitting ? "Adding..." : "Add office"}
+          {submitting ? "Saving..." : office ? "Save changes" : "Add office"}
         </button>
       </div>
     </form>
@@ -520,14 +520,16 @@ function AddOfficeForm({ staff, onCancel, onSubmit, submitting }) {
 function ManageOffices({ offices, loading, users, onUpdated }) {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingOffice, setEditingOffice] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const staffOptions = users.filter((u) => u.role === "staff" && u.is_active);
+  const staffOptions = users.filter((u) => u.role === "staff" && (u.is_active || u.user_id === editingOffice?.head_user_id));
 
 const handleAddOffice = async (payload) => {
     setSubmitting(true);
+    setSubmitError("");
 
-    // 1. Create the office and get its generated office_id back
     const { data: newOffice, error: officeError } = await supabase
       .from("offices")
       .insert(payload)
@@ -536,11 +538,11 @@ const handleAddOffice = async (payload) => {
 
     if (officeError) {
       console.error("Add office failed:", officeError);
+      setSubmitError(officeError.message || "Could not add this office.");
       setSubmitting(false);
       return;
     }
 
-    // 2. Point the selected staff member's profile at this new office
     const { error: profileError } = await supabase
       .from("profiles")
       .update({ office_id: newOffice.office_id })
@@ -555,6 +557,49 @@ const handleAddOffice = async (payload) => {
     setModalOpen(false);
 };
 
+  const handleEditOffice = async (payload) => {
+    setSubmitting(true);
+    setSubmitError("");
+    const { error: officeError } = await supabase
+      .from("offices")
+      .update(payload)
+      .eq("office_id", editingOffice.office_id);
+
+    if (officeError) {
+      console.error("Update office failed:", officeError);
+      setSubmitError(officeError.message || "Could not update this office.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (payload.head_user_id !== editingOffice.head_user_id) {
+      if (editingOffice.head_user_id) {
+        const { error: previousHeadError } = await supabase
+          .from("profiles")
+          .update({ office_id: null })
+          .eq("user_id", editingOffice.head_user_id)
+          .eq("office_id", editingOffice.office_id);
+        if (previousHeadError) console.error("Unlinking previous office head failed:", previousHeadError);
+      }
+
+      const { error: newHeadError } = await supabase
+        .from("profiles")
+        .update({ office_id: editingOffice.office_id })
+        .eq("user_id", payload.head_user_id);
+      if (newHeadError) {
+        console.error("Linking new office head failed:", newHeadError);
+        setSubmitError(newHeadError.message || "Office saved, but the new head could not be linked.");
+        setSubmitting(false);
+        onUpdated?.();
+        return;
+      }
+    }
+
+    setSubmitting(false);
+    onUpdated?.();
+    setModalOpen(false);
+  };
+
   return (
     <>
       <PageHeader title="Offices" subtitle="Saved to and retrieved from the Offices data store." />
@@ -566,17 +611,33 @@ const handleAddOffice = async (payload) => {
             <div key={o.office_id} className="card">
               <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
               <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ padding: "6px 12px", fontSize: 12, marginTop: 10 }}
+                onClick={() => { setEditingOffice(o); setSubmitError(""); setModalOpen(true); }}
+              >
+                Edit office
+              </button>
             </div>
           ))}
           <div className="card" style={{ display: "grid", placeItems: "center", border: "1.5px dashed var(--line)" }}>
-            <button className="btn btn-ghost" onClick={() => setModalOpen(true)}>+ Add office</button>
+            <button className="btn btn-primary" onClick={() => { setEditingOffice(null); setSubmitError(""); setModalOpen(true); }}>+ Add office</button>
           </div>
         </div>
       )}
 
       {modalOpen && (
-        <Modal title="Add office" onClose={() => setModalOpen(false)}>
-          <AddOfficeForm staff={staffOptions} onCancel={() => setModalOpen(false)} onSubmit={handleAddOffice} submitting={submitting} />
+        <Modal title={editingOffice ? "Edit office" : "Add office"} onClose={() => setModalOpen(false)}>
+          <OfficeForm
+            key={editingOffice?.office_id || "new-office"}
+            staff={staffOptions}
+            office={editingOffice}
+            onCancel={() => setModalOpen(false)}
+            onSubmit={editingOffice ? handleEditOffice : handleAddOffice}
+            submitting={submitting}
+            submitError={submitError}
+          />
         </Modal>
       )}
     </>
