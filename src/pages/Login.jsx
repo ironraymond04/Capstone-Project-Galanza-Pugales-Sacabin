@@ -144,7 +144,6 @@ export default function Login() {
                     id="email"
                     type="email"
                     name="email"
-                    placeholder="you@school.edu"
                     value={form.email}
                     onChange={handleChange}
                   />
@@ -159,7 +158,6 @@ export default function Login() {
                     id="password"
                     type="password"
                     name="password"
-                    placeholder="••••••••"
                     value={form.password}
                     onChange={handleChange}
                   />

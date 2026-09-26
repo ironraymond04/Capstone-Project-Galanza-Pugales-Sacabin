@@ -58,6 +58,8 @@ export default function StaffDashboard() {
   const [logsLoading, setLogsLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(true);
+  const [surveys, setSurveys] = useState([]);
+  const [surveysLoading, setSurveysLoading] = useState(true);
 
   // Active office (overrides profile.office_id once the staff member switches)
   const [activeOfficeId, setActiveOfficeId] = useState(profile?.office_id ?? null);
@@ -111,6 +113,19 @@ export default function StaffDashboard() {
     setNotifLoading(false);
   }
 
+  async function loadSurveys() {
+    if (!officeId) return;
+    setSurveysLoading(true);
+    const { data, error } = await supabase
+      .from("survey_responses")
+      .select("*, tickets!inner(ticket_id, concern_text, assigned_office), profiles:profiles!survey_responses_user_id_fkey(name)")
+      .eq("tickets.assigned_office", officeId)
+      .order("submitted_at", { ascending: false });
+    if (error) console.error("loadSurveys error:", error);
+    if (!error) setSurveys(data || []);
+    setSurveysLoading(false);
+  }
+
 async function loadAssignedOffices() {
   if (!session?.user?.id) return;
   const { data, error } = await supabase
@@ -140,6 +155,7 @@ async function handleSwitchOffice(newOfficeId) {
     loadQueue();
     loadLogs();
     loadNotifications();
+    loadSurveys();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [officeId, session?.user?.id]);
 
@@ -182,7 +198,7 @@ async function handleSwitchOffice(newOfficeId) {
           {active === "routed" && (<RoutedTickets queue={queue} logs={logs} loading={queueLoading} staffUserId={session?.user?.id} officeId={officeId} onLogged={loadLogs}/>)}
           {active === "assignment" && <AutoAssignment queue={queue} loading={queueLoading} />}
           {active === "priority" && <PriorityView queue={queue} loading={queueLoading} />}
-          {active === "notifications" && <Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} />}
+          {active === "notifications" && (<Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} surveys={surveys} surveysLoading={surveysLoading}/>)}
         </div>
       </div>
     </div>
@@ -215,7 +231,7 @@ function OfficeSwitcher({ offices, activeOfficeId, onSwitch, switching }) {
           opacity: switching ? 0.7 : 1,
         }}
       >
-        Your Office: [{activeOffice?.code || activeOffice?.office_name || "—"}]
+        Your Office: {activeOffice?.code || activeOffice?.office_name || "—"}
         <span style={{ fontSize: 10 }}>▾</span>
       </button>
 
@@ -304,6 +320,14 @@ function ConfidenceMeter({ pct }) {
     <div className="ai-meter">
       <div className="ai-meter-ring" style={{ "--pct": pct }}>{pct}%</div>
     </div>
+  );
+}
+
+function StarRating({ rating }) {
+  return (
+    <span style={{ color: "var(--warning, #b8860b)", fontSize: 14, letterSpacing: 1 }}>
+      {"★".repeat(rating)}{"☆".repeat(5 - rating)}
+    </span>
   );
 }
 
@@ -789,7 +813,7 @@ function PriorityView({ queue, loading }) {
   );
 }
 
-function Notifications({ notifications, loading, onRead }) {
+function Notifications({ notifications, loading, onRead, surveys, surveysLoading }) {
   const markRead = async (n) => {
     if (n.is_read) return;
     const { error } = await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
@@ -800,7 +824,7 @@ function Notifications({ notifications, loading, onRead }) {
   return (
     <>
       <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : notifications.length === 0 ? (
@@ -814,6 +838,31 @@ function Notifications({ notifications, loading, onRead }) {
             >
               <span style={{ fontSize: 14 }}>{n.message}</span>
               <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      <h3 style={{ marginBottom: 10 }}>Student feedback</h3>
+      <div className="card">
+        {surveysLoading ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+        ) : surveys.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No survey responses yet.</p>
+        ) : (
+          surveys.map((s, i) => (
+            <div
+              key={s.response_id}
+              style={{ padding: "12px 0", borderBottom: i < surveys.length - 1 ? "1px solid var(--line)" : "none" }}
+            >
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{formatTicketCode(s.ticket_id)}</span>
+                {s.rating != null ? <StarRating rating={s.rating} /> : <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>No rating</span>}
+              </div>
+              <p style={{ fontSize: 13, margin: "4px 0 0", color: "var(--ink-soft)" }}>
+                {s.profiles?.name || "Unknown student"} · {timeAgo(s.submitted_at)}
+              </p>
+              {s.feedback && <p style={{ fontSize: 14, margin: "6px 0 0" }}>{s.feedback}</p>}
             </div>
           ))
         )}
