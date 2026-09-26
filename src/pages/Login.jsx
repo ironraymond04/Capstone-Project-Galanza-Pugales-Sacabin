@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { supabase } from "../lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import "../styles/theme.css";
@@ -10,19 +10,8 @@ const ROLE_ROUTES = {
   admin: "/admin",
 };
 
-const ROLES = [
-  { value: "student", label: "Student" },
-  { value: "staff", label: "Faculty & Staff" },
-  { value: "admin", label: "Admin" },
-];
-
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const requestedRole = searchParams.get("role");
-  const [role, setRole] = useState(
-    ROLES.some((option) => option.value === requestedRole) ? requestedRole : "student"
-  );
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,14 +52,13 @@ export default function Login() {
       return;
     }
 
-    if (profile.role !== role) {
-      setError(
-        `This account is registered as "${profile.role}", not "${role}". Switch the tab above and try again.`
-      );
+    const destination = ROLE_ROUTES[profile.role];
+    if (!destination) {
+      setError("Your account role could not be recognized. Please contact an administrator.");
       return;
     }
 
-    navigate(ROLE_ROUTES[profile.role]);
+    navigate(destination);
   };
 
   return (
@@ -115,25 +103,6 @@ export default function Login() {
             <p className="form-lede">
               Sign in to submit, track, or manage helpdesk tickets.
             </p>
-
-            <div
-              className="role-toggle"
-              role="radiogroup"
-              aria-label="I am signing in as"
-            >
-              {ROLES.map((r) => (
-                <button
-                  type="button"
-                  key={r.value}
-                  role="radio"
-                  aria-checked={role === r.value}
-                  className={`role-btn${role === r.value ? " active" : ""}`}
-                  onClick={() => setRole(r.value)}
-                >
-                  <span>{r.label}</span>
-                </button>
-              ))}
-            </div>
 
             <form onSubmit={handleSubmit} noValidate>
               <div className="input-group">
@@ -285,21 +254,6 @@ export default function Login() {
         .form-card { width: 100%; max-width: 380px; }
         .form-lede { font-size: 14px; color: var(--lg-muted); margin: 6px 0 28px; }
 
-        .role-toggle {
-          display: flex; gap: 6px; margin-bottom: 24px;
-          padding: 4px; border-radius: 10px;
-          background: var(--paper-alt, #f1ece4);
-        }
-        .role-btn {
-          flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-          padding: 10px 6px; border: none; border-radius: 8px;
-          background: transparent; color: var(--lg-muted);
-          font-size: 12px; font-weight: 600; cursor: pointer;
-          transition: transform .18s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
-        }
-        .role-btn.active { background: #fff; color: var(--lg-maroon-700); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-        .role-btn:hover:not(.active) { color: var(--lg-ink); }
-
         .input-group { margin-bottom: 18px; }
         .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--lg-ink); margin-bottom: 6px; }
         .input-wrap {
@@ -334,8 +288,6 @@ export default function Login() {
         @media (max-width: 480px) {
           .form-panel { padding: 32px 16px; }
           .form-card { max-width: 100%; }
-          .role-toggle { gap: 4px; }
-          .role-btn { font-size: 11px; padding: 9px 4px; }
           .brand-headline { font-size: 30px; }
         }
       `}</style>

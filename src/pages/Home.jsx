@@ -19,9 +19,9 @@ const STEPS = [
 ];
 
 const ROLES = [
-  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login?role=student" },
-  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login?role=staff" },
-  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login?role=admin" },
+  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login" },
+  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login" },
+  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login" },
 ];
 
 export default function Home() {
