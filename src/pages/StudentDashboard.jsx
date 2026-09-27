@@ -158,11 +158,13 @@ export default function StudentDashboard() {
               tickets={tickets}
               selectedTicketId={selectedFeedbackTicketId}
               onTicketSelected={setSelectedFeedbackTicketId}
+              onFeedbackSubmitted={loadNotifications}
             />
           )}
           {active === "history" && <History tickets={tickets} loading={ticketsLoading} />}
           {active === "notifications" && (
             <Notifications
+              session={session}
               notifications={notifications}
               loading={notifLoading}
               onRead={loadNotifications}
@@ -539,45 +541,127 @@ function CampusMap() {
   );
 }
 
-function Feedback({ session, tickets, selectedTicketId, onTicketSelected }) {
-  const resolvedTickets = tickets.filter((t) => t.status === "resolved");
+function Feedback({ session, tickets, selectedTicketId, onTicketSelected, onFeedbackSubmitted }) {
+  const [reviewedTicketIds, setReviewedTicketIds] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState("");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [ticketId, setTicketId] = useState(selectedTicketId || resolvedTickets[0]?.ticket_id || "");
+  const [submitError, setSubmitError] = useState("");
+  const [ticketId, setTicketId] = useState(selectedTicketId || "");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReviewedTickets() {
+      if (!session?.user?.id) return;
+      const { data, error } = await supabase
+        .from("survey_responses")
+        .select("ticket_id")
+        .eq("user_id", session.user.id);
+
+      if (cancelled) return;
+      if (error) {
+        console.error("loadReviewedTickets error:", error);
+        setReviewsError("Unable to check your previous feedback. Please refresh and try again.");
+      } else {
+        setReviewedTicketIds((data || []).map((response) => response.ticket_id));
+      }
+      setReviewsLoading(false);
+    }
+
+    loadReviewedTickets();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (selectedTicketId) setTicketId(selectedTicketId);
   }, [selectedTicketId]);
 
+  const resolvedTickets = tickets.filter(
+    (ticket) => ticket.status === "resolved" && !reviewedTicketIds.includes(ticket.ticket_id)
+  );
+  const activeTicketId = resolvedTickets.some((ticket) => ticket.ticket_id === ticketId)
+    ? ticketId
+    : resolvedTickets.some((ticket) => ticket.ticket_id === selectedTicketId)
+      ? selectedTicketId
+      : resolvedTickets[0]?.ticket_id || "";
+
   const handleSubmit = async () => {
-    if (!ticketId || rating === 0) return;
+    if (!activeTicketId || rating === 0 || reviewsError) return;
     setSubmitting(true);
+    setSubmitError("");
+
+    const { data: existingResponses, error: checkError } = await supabase
+      .from("survey_responses")
+      .select("response_id")
+      .eq("user_id", session.user.id)
+      .eq("ticket_id", activeTicketId)
+      .limit(1);
+
+    if (checkError) {
+      console.error("checkExistingFeedback error:", checkError);
+      setSubmitError("Unable to verify this ticket's feedback. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (existingResponses?.length) {
+      setReviewedTicketIds((current) => [...new Set([...current, activeTicketId])]);
+      setSubmitError("Feedback has already been submitted for this ticket.");
+      setSubmitting(false);
+      return;
+    }
 
     const { error } = await supabase.from("survey_responses").insert({
       user_id: session.user.id,
-      ticket_id: ticketId,
+      ticket_id: activeTicketId,
       rating,
       feedback: comment || null,
     });
 
+    if (error) {
+      setSubmitting(false);
+      console.error("submitFeedback error:", error);
+      setSubmitError("Your feedback could not be submitted. Please try again.");
+      return;
+    }
+
+    const { error: notificationError } = await supabase.from("notifications").insert({
+      user_id: session.user.id,
+      ticket_id: activeTicketId,
+      message: `Feedback submitted for ${formatTicketCode(activeTicketId)}.`,
+    });
+    if (notificationError) {
+      console.error("submitFeedback notification error:", notificationError);
+      setSubmitError("Your feedback was saved, but its notification could not be created.");
+    }
+    onFeedbackSubmitted?.();
     setSubmitting(false);
-    if (!error) setSent(true);
+    setReviewedTicketIds((current) => [...new Set([...current, activeTicketId])]);
+    setSent(true);
   };
 
   return (
     <>
       <PageHeader title="Rate your resolution" subtitle="Let us know your feedback and help us improve." />
       <div className="card" style={{ maxWidth: 480 }}>
-        {resolvedTickets.length === 0 ? (
+        {reviewsLoading ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Checking your previous feedback...</p>
+        ) : reviewsError ? (
+          <p role="alert" style={{ fontSize: 13, color: "var(--danger)" }}>{reviewsError}</p>
+        ) : tickets.every((ticket) => ticket.status !== "resolved") ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>You have no resolved tickets to review yet.</p>
+        ) : resolvedTickets.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>You have already submitted feedback for all resolved tickets.</p>
         ) : (
           <>
             <div className="field">
               <label>Ticket</label>
               <select
-                value={ticketId}
+                value={activeTicketId}
                 onChange={(event) => {
                   const nextTicketId = Number(event.target.value);
                   setTicketId(nextTicketId);
@@ -614,6 +698,7 @@ function Feedback({ session, tickets, selectedTicketId, onTicketSelected }) {
             <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Sending..." : "Submit feedback"}
             </button>
+            {submitError && <p role="alert" style={{ color: "var(--danger)", fontSize: 13, marginTop: 12 }}>{submitError}</p>}
             {sent && <p style={{ color: "var(--success)", fontSize: 13, marginTop: 12 }}>Thanks — your feedback was recorded.</p>}
           </>
         )}
@@ -662,8 +747,39 @@ function History({ tickets, loading }) {
   );
 }
 
-function Notifications({ notifications, loading, onRead, onViewFullTicket, onSubmitFeedback }) {
+function Notifications({ session, notifications, loading, onRead, onViewFullTicket, onSubmitFeedback }) {
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [reviewedTicketIds, setReviewedTicketIds] = useState([]);
+  const [feedbackStatus, setFeedbackStatus] = useState("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReviewedTicketIds() {
+      if (!session?.user?.id) {
+        setFeedbackStatus("error");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("survey_responses")
+        .select("ticket_id")
+        .eq("user_id", session.user.id);
+
+      if (cancelled) return;
+      if (error) {
+        console.error("load notification feedback status error:", error);
+        setFeedbackStatus("error");
+        return;
+      }
+
+      setReviewedTicketIds((data || []).map((response) => response.ticket_id));
+      setFeedbackStatus("ready");
+    }
+
+    loadReviewedTicketIds();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -719,6 +835,8 @@ function Notifications({ notifications, loading, onRead, onViewFullTicket, onSub
       {selectedNotification && (
         <NotificationDetailModal
           notification={selectedNotification}
+          feedbackStatus={feedbackStatus}
+          hasSubmittedFeedback={reviewedTicketIds.includes(selectedNotification.ticket_id)}
           onClose={() => setSelectedNotification(null)}
           onViewFullTicket={() => {
             setSelectedNotification(null);
@@ -734,9 +852,42 @@ function Notifications({ notifications, loading, onRead, onViewFullTicket, onSub
   );
 }
 
-function NotificationDetailModal({ notification, onClose, onViewFullTicket, onSubmitFeedback }) {
+function NotificationDetailModal({ notification, feedbackStatus, hasSubmittedFeedback, onClose, onViewFullTicket, onSubmitFeedback }) {
   const ticket = notification.tickets;
   const isResolved = ticket?.status === "resolved";
+  const isFeedbackNotification = notification.message?.startsWith("Feedback submitted for ");
+  const [feedbackDetails, setFeedbackDetails] = useState(null);
+  const [feedbackDetailsLoading, setFeedbackDetailsLoading] = useState(false);
+  const [feedbackDetailsError, setFeedbackDetailsError] = useState("");
+
+  useEffect(() => {
+    if (!isFeedbackNotification || !ticket?.ticket_id || !notification.user_id) return;
+    let cancelled = false;
+
+    async function loadFeedbackDetails() {
+      setFeedbackDetailsLoading(true);
+      const { data, error } = await supabase
+        .from("survey_responses")
+        .select("rating, feedback, submitted_at")
+        .eq("user_id", notification.user_id)
+        .eq("ticket_id", ticket.ticket_id)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.error("load notification feedback details error:", error);
+        setFeedbackDetailsError("Feedback details could not be loaded.");
+      } else {
+        setFeedbackDetails(data);
+      }
+      setFeedbackDetailsLoading(false);
+    }
+
+    loadFeedbackDetails();
+    return () => { cancelled = true; };
+  }, [isFeedbackNotification, notification.user_id, ticket?.ticket_id]);
 
   return (
     <div className="ticket-modal-overlay" onClick={onClose}>
@@ -754,12 +905,28 @@ function NotificationDetailModal({ notification, onClose, onViewFullTicket, onSu
           )}
           <div className="ticket-line ticket-line-block notification-row"><strong>Message</strong><span>{notification.message}</span></div>
           <div className="ticket-line notification-row"><strong>Date</strong><span>{formatDate(notification.created_at)}</span></div>
+          {isFeedbackNotification && feedbackDetailsLoading && (
+            <div className="ticket-line notification-row"><strong>Feedback</strong><span>Loading details...</span></div>
+          )}
+          {isFeedbackNotification && feedbackDetailsError && (
+            <div className="ticket-line notification-row"><strong>Feedback</strong><span>{feedbackDetailsError}</span></div>
+          )}
+          {isFeedbackNotification && feedbackDetails && (
+            <>
+              <div className="ticket-line notification-row"><strong>Rating</strong><span>{feedbackDetails.rating}/5</span></div>
+              <div className="ticket-line ticket-line-block notification-row"><strong>Comments</strong><span>{feedbackDetails.feedback || "No comments provided."}</span></div>
+              <div className="ticket-line notification-row"><strong>Submitted</strong><span>{formatDate(feedbackDetails.submitted_at)}</span></div>
+            </>
+          )}
         </div>
 
         <div className="ticket-detail-actions notification-modal-actions">
-          {isResolved && (
+          {isResolved && feedbackStatus === "ready" && !hasSubmittedFeedback && (
             <button type="button" className="btn btn-primary" onClick={onSubmitFeedback}>Submit Feedback</button>
           )}
+          {isResolved && feedbackStatus === "loading" && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>Checking feedback status...</span>}
+          {isResolved && feedbackStatus === "ready" && hasSubmittedFeedback && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>Feedback already submitted</span>}
+          {isResolved && feedbackStatus === "error" && <span role="status" style={{ fontSize: 13, color: "var(--ink-soft)" }}>Unable to verify feedback status.</span>}
           {ticket && (
             <button type="button" className="btn btn-ghost" onClick={onViewFullTicket}>View Full Ticket</button>
           )}

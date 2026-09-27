@@ -68,9 +68,12 @@ export default function StaffDashboard() {
 
   const officeId = activeOfficeId;
 
-  // Keep in sync if the auth context's profile loads/changes after mount
+  // Keep the selected office in sync when the auth profile loads or changes.
   useEffect(() => {
     setActiveOfficeId(profile?.office_id ?? null);
+  }, [profile?.office_id]);
+
+  useEffect(() => {
     sessionStorage.setItem("chd-staff-active-tab", active);
   }, [active]);
 
@@ -79,7 +82,7 @@ export default function StaffDashboard() {
     setQueueLoading(true);
     const { data, error } = await supabase
       .from("tickets")
-      .select("*, profiles:profiles!tickets_user_id_fkey(name)")
+      .select("*, profiles:profiles!tickets_user_id_fkey(name), offices:offices!tickets_assigned_office_fkey(office_name)")
       .eq("assigned_office", officeId)
       .order("created_at", { ascending: false });
     if (error) console.error("loadQueue error:", error);
@@ -466,15 +469,18 @@ function TicketDetailModal({ ticket, onClose }) {
   const rows = [
     { label: "Ticket ID", value: formatTicketCode(ticket.ticket_id) },
     { label: "Submitted by", value: ticket.profiles?.name || "Unknown" },
+    ...(ticket.assigned_office ? [{ label: "Assigned office", value: ticket.offices?.office_name || "Unknown" }] : []),
     { label: "Priority", value: <PriorityDot level={toDisplayPriority(ticket.priority)} /> },
     { label: "Status", value: <StatusBadge status={toDisplayStatus(ticket.status)} /> },
     { label: "AI confidence", value: ticket.classification_confidence != null ? `${ticket.classification_confidence}%` : "Not yet classified" },
     { label: "Concern", value: ticket.concern_text },
+    ...(ticket.created_at ? [{ label: "Submitted", value: new Date(ticket.created_at).toLocaleString() }] : []),
+    ...(ticket.resolved_at ? [{ label: "Resolved", value: new Date(ticket.resolved_at).toLocaleString() }] : []),
   ];
 
   return (
     <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 480, background: "#fff" }}>
+      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", background: "#fff" }}>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-soft)" }}>{formatTicketCode(ticket.ticket_id)}</div>
         <div style={{ marginTop: 18 }}>
           {rows.map((r, i) => (
@@ -753,6 +759,8 @@ function FeedbackModal({ ticket, draft, setDraft, onCancel, onSubmit, sending })
 }
 
 function AutoAssignment({ queue, loading }) {
+  const [modalTicket, setModalTicket] = useState(null);
+
   return (
     <>
       <PageHeader title="Assignment confidence" subtitle="This section shows the confidence level of each ticket assigned to offices." />
@@ -765,7 +773,19 @@ function AutoAssignment({ queue, loading }) {
               <thead><tr><th>Ticket</th><th>Concern</th><th>AI confidence</th></tr></thead>
               <tbody>
                 {queue.map((t) => (
-                  <tr key={t.ticket_id}>
+                  <tr
+                    key={t.ticket_id}
+                    onClick={() => setModalTicket(t)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setModalTicket(t);
+                      }
+                    }}
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                    aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
+                  >
                     <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                     <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
                     <td><ConfidenceMeter pct={t.classification_confidence} /></td>
@@ -776,6 +796,7 @@ function AutoAssignment({ queue, loading }) {
           </TableScroll>
         )}
       </div>
+      {modalTicket && <TicketDetailModal ticket={modalTicket} onClose={() => setModalTicket(null)} />}
     </>
   );
 }
@@ -814,10 +835,17 @@ function PriorityView({ queue, loading }) {
 }
 
 function Notifications({ notifications, loading, onRead, surveys, surveysLoading }) {
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+
   const markRead = async (n) => {
     if (n.is_read) return;
     const { error } = await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
-    if (error) console.error("markRead error:", error);
+    if (error) {
+      console.error("markRead error:", error);
+      return;
+    }
+    setSelectedNotification((current) => current?.notif_id === n.notif_id ? { ...current, is_read: true } : current);
     onRead?.();
   };
 
@@ -831,17 +859,22 @@ function Notifications({ notifications, loading, onRead, surveys, surveysLoading
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
         ) : (
           notifications.map((n, i) => (
-            <div
+            <button
+              type="button"
               key={n.notif_id}
-              onClick={() => markRead(n)}
-              style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none", cursor: "pointer", fontWeight: n.is_read ? 400 : 700 }}
+              onClick={() => { setSelectedNotification(n); void markRead(n); }}
+              style={{ display: "flex", width: "100%", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: n.is_read ? 400 : 700 }}
             >
               <span style={{ fontSize: 14 }}>{n.message}</span>
               <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
-            </div>
+            </button>
           ))
         )}
       </div>
+
+      {selectedNotification && (
+        <NotificationDetailModal notification={selectedNotification} onClose={() => setSelectedNotification(null)} />
+      )}
 
       <h3 style={{ marginBottom: 10 }}>Student feedback</h3>
       <div className="card">
@@ -851,22 +884,88 @@ function Notifications({ notifications, loading, onRead, surveys, surveysLoading
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No survey responses yet.</p>
         ) : (
           surveys.map((s, i) => (
-            <div
+            <button
+              type="button"
               key={s.response_id}
-              style={{ padding: "12px 0", borderBottom: i < surveys.length - 1 ? "1px solid var(--line)" : "none" }}
+              onClick={() => setSelectedFeedback(s)}
+              style={{ display: "block", width: "100%", padding: "12px 0", border: "none", borderBottom: i < surveys.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
             >
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+              <span style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{formatTicketCode(s.ticket_id)}</span>
                 {s.rating != null ? <StarRating rating={s.rating} /> : <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>No rating</span>}
-              </div>
-              <p style={{ fontSize: 13, margin: "4px 0 0", color: "var(--ink-soft)" }}>
+              </span>
+              <span style={{ display: "block", fontSize: 13, margin: "4px 0 0", color: "var(--ink-soft)" }}>
                 {s.profiles?.name || "Unknown student"} · {timeAgo(s.submitted_at)}
-              </p>
-              {s.feedback && <p style={{ fontSize: 14, margin: "6px 0 0" }}>{s.feedback}</p>}
-            </div>
+              </span>
+              {s.feedback && <span style={{ display: "block", fontSize: 14, margin: "6px 0 0" }}>{s.feedback}</span>}
+            </button>
           ))
         )}
       </div>
+
+      {selectedFeedback && (
+        <FeedbackDetailModal feedback={selectedFeedback} onClose={() => setSelectedFeedback(null)} />
+      )}
     </>
+  );
+}
+
+function FeedbackDetailModal({ feedback, onClose }) {
+  const rows = [
+    { label: "Response ID", value: feedback.response_id },
+    { label: "Ticket ID", value: formatTicketCode(feedback.ticket_id) },
+    { label: "Submitted by", value: feedback.profiles?.name || "Unknown student" },
+    { label: "Rating", value: feedback.rating != null ? <StarRating rating={feedback.rating} /> : "No rating" },
+    { label: "Concern", value: feedback.tickets?.concern_text || "Not available" },
+    { label: "Feedback", value: feedback.feedback || "No written feedback" },
+    { label: "Submitted", value: feedback.submitted_at ? new Date(feedback.submitted_at).toLocaleString() : "Not available" },
+  ];
+
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="feedback-detail-title" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+      <div onClick={(event) => event.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", background: "#fff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <h3 id="feedback-detail-title" style={{ margin: 0, fontSize: 18 }}>Feedback details</h3>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, cursor: "pointer" }}>×</button>
+        </div>
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--line)" }}>
+          {rows.map((row, index) => (
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: index < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{row.label}</span>
+              <span style={{ fontSize: 14, textAlign: "right", overflowWrap: "anywhere" }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationDetailModal({ notification, onClose }) {
+  const rows = [
+    { label: "Notification ID", value: notification.notif_id },
+    ...(notification.ticket_id ? [{ label: "Ticket ID", value: formatTicketCode(notification.ticket_id) }] : []),
+    { label: "Message", value: notification.message },
+    { label: "Read status", value: notification.is_read ? "Read" : "Unread" },
+    { label: "Received", value: new Date(notification.created_at).toLocaleString() },
+  ];
+
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="notification-detail-title" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+      <div onClick={(event) => event.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520, maxHeight: "85vh", overflowY: "auto", background: "#fff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <h3 id="notification-detail-title" style={{ margin: 0, fontSize: 18 }}>Notification details</h3>
+          <button type="button" aria-label="Close" onClick={onClose} style={{ background: "transparent", border: "none", fontSize: 22, cursor: "pointer" }}>×</button>
+        </div>
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--line)" }}>
+          {rows.map((row, index) => (
+            <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: index < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{row.label}</span>
+              <span style={{ fontSize: 14, textAlign: "right", overflowWrap: "anywhere" }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
