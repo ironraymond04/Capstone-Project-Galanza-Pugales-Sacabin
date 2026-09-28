@@ -383,28 +383,39 @@ const handleSubmit = async (e) => {
 
     // 2. Resolve the office name the AI returned into an office_id
     let assignedOfficeId = null;
-    const candidateOffices = [
-      classification?.office,
-      ...(classification?.labels || []),
-    ].filter(Boolean);
 
-    for (const officeName of candidateOffices) {
-      const { data: officeRow } = await supabase
-        .from("offices")
-        .select("office_id")
-        .eq("office_name", officeName)
-        .maybeSingle();
-      if (officeRow?.office_id) {
-        assignedOfficeId = officeRow.office_id;
-        break;
+    const { data: allOffices, error: officesError } = await supabase
+      .from("offices")
+      .select("office_id, office_name");
+
+    if (officesError) {
+      console.error("Failed to load offices table:", officesError);
+    } else {
+      const normalize = (s) => s?.trim().toLowerCase();
+
+      const candidateOffices = [
+        classification?.office,
+        ...(classification?.labels || []),
+      ].filter(Boolean);
+
+      for (const officeName of candidateOffices) {
+        const match = allOffices.find(
+          (row) => normalize(row.office_name) === normalize(officeName)
+        );
+        if (match) {
+          assignedOfficeId = match.office_id;
+          break;
+        }
       }
-    }
 
-    if (!assignedOfficeId) {
-      console.warn(
-        "Ticket could not be matched to an office row. AI classification:",
-        classification
-      );
+      if (!assignedOfficeId) {
+        console.warn(
+          "Ticket could not be matched to an office row. AI classification:",
+          classification,
+          "Available offices in DB:",
+          allOffices.map((o) => o.office_name)
+        );
+      }
     }
 
     // 3. Insert the ticket with the AI-assigned fields (falls back safely if AI failed)
