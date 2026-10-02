@@ -47,7 +47,7 @@ Read the student's concern and decide which office should handle it. Offices and
 - LIBRARY: book borrowing, library fines, library access
 - GUIDANCE OFFICE: counseling, behavioral concerns, scholarships (non-financial)
 - ACCOUNTING: tuition, fees, payments, refunds
-- DSA/OSAS: organizations, discipline, student ID, clearance
+- DSA/OSAS: organizations, discipline, student ID, clearance in Department of Student Affairs and Services/Office of Student Affairs and Services
 - CAS: department-specific academic concerns for College of Arts and Sciences (AB-ENG, AB-FIL, AB-POLSCI)
 - COE: department-specific academic concerns for College of Engineering (BSCE, BSEE, BSME, BSECE, BSCpe)
 - CED: department-specific academic concerns for College of Education (BEED, BSED)
