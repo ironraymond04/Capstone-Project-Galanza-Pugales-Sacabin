@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { generateTicketReport } from "../lib/ai"; 
 import "../styles/theme.css";
 
 const NAV_ITEMS = [
@@ -135,22 +136,14 @@ export default function AdminDashboard() {
       />
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
-          {active === "overview" && (
-            <Overview tickets={tickets} users={users} offices={offices} loading={ticketsLoading || usersLoading || officesLoading} onSelect={setActive} />
-          )}
+          {active === "overview" && (<Overview tickets={tickets} users={users} offices={offices} loading={ticketsLoading || usersLoading || officesLoading} onSelect={setActive} />)}
           {active === "logs" && <SystemLogs logs={logs} loading={logsLoading} />}
-          {active === "tickets" && (<ManageTickets tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />)}
+          {active === "tickets" && (<ManageTickets tickets={tickets} loading={ticketsLoading} />)}
           {active === "users" && <ManageUsers users={users} loading={usersLoading} onUpdated={loadUsers} />}
-          {active === "offices" && (
-            <ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={() => { loadOffices(); loadUsers(); }} />
-          )}
+          {active === "offices" && (<ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={() => { loadOffices(); loadUsers(); }} />)}
           {active === "analytics" && <Analytics tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} />}
-          {active === "transfer" && (
-            <Transfers tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />
-          )}
-          {active === "notifications" && (
-            <Notifications tickets={tickets} loading={ticketsLoading} />
-          )}
+          {active === "transfer" && (<Transfers tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />)}
+          {active === "notifications" && (<Notifications tickets={tickets} loading={ticketsLoading} />)}
         </div>
       </div>
     </div>
@@ -339,54 +332,42 @@ function SystemLogs({ logs, loading }) {
   );
 }
 
-function ManageTickets({ tickets, offices, loading, onUpdated }) {
+function ManageTickets({ tickets, loading }) {
   const [filter, setFilter] = useState("All");
-  const [reassignId, setReassignId] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const filterMap = { Open: "pending", "In Progress": "in_progress", Resolved: "resolved", Transferred: "transferred" };
-  const filtered = filter === "All" ? tickets : tickets.filter((t) => t.status === filterMap[filter]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
-  const reassignTicket = tickets.find((t) => t.ticket_id === reassignId) || null;
-
-  const handleReassign = async (newOfficeId) => {
-    setSubmitting(true);
-    const previousOfficeName = reassignTicket?.offices?.office_name || "Unassigned";
-
-    const { error } = await supabase
-      .from("tickets")
-      .update({
-        assigned_office: newOfficeId,
-        status: reassignTicket.status === "pending" ? "in_progress" : reassignTicket.status,
-      })
-      .eq("ticket_id", reassignId);
-
-    if (error) {
-      console.error("Reassign failed:", error);
-    } else {
-      const newOffice = offices.find((o) => o.office_id === newOfficeId);
-      await supabase.from("logs").insert({
-        ticket_id: reassignId,
-        office_id: newOfficeId,
-        action: `Admin reassigned ${formatTicketCode(reassignId)} from ${previousOfficeName} to ${newOffice?.office_name || "Unassigned"}`,
-        module: "Ticket Transferred",
-      });
-    }
-
-    setSubmitting(false);
-    setReassignId(null);
-    onUpdated?.();
+  const filterMap = {
+    Open: ["pending"],
+    "In Progress": ["in_progress"],
+    Resolved: ["resolved", "closed"],
+    Transferred: ["transferred"],
   };
+
+  const filtered =
+    filter === "All"
+      ? tickets
+      : tickets.filter((t) => filterMap[filter].includes(t.status));
 
   return (
     <>
-      <PageHeader title="All tickets" subtitle="Saved to and retrieved from the Ticket data store. Click a ticket to reassign its office." />
+      <PageHeader
+        title="All tickets"
+        subtitle="View-only list of all submitted tickets and their offices. To assign or reassign a ticket, use Ticket Transfer Management."
+      />
+
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
         {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? "btn btn-primary" : "btn btn-ghost"} style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={filter === f ? "btn btn-primary" : "btn btn-ghost"}
+            style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}
+          >
             {f}
           </button>
         ))}
       </div>
+
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
@@ -395,22 +376,35 @@ function ManageTickets({ tickets, offices, loading, onUpdated }) {
         ) : (
           <TableScroll>
             <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Concern</th><th>Office</th><th>AI confidence</th><th>Status</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Submitted by</th>
+                  <th>Concern</th>
+                  <th>Office</th>
+                  <th>AI confidence</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
               <tbody>
                 {filtered.map((t) => (
-                  <tr key={t.ticket_id} onClick={() => setReassignId(t.ticket_id)} style={{ cursor: "pointer" }}>
+                  <tr
+                    key={t.ticket_id}
+                    onClick={() => setSelectedTicket(t)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                    <td>{t.profiles?.name || "Unknown user"}</td>
+                    <td>
+                      {t.concern_text.slice(0, 50)}
+                      {t.concern_text.length > 50 ? "..." : ""}
+                    </td>
                     <td>{t.offices?.office_name || "Unassigned"}</td>
                     <td><ConfidenceMeter pct={t.classification_confidence} /></td>
                     <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                    <td>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setReassignId(t.ticket_id); }}
-                        style={{ padding: "5px 12px", fontSize: 12.5, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer" }}
-                      >
-                        Reassign
-                      </button>
+                    <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--ink-soft)" }}>
+                      {timeAgo(t.created_at)}
                     </td>
                   </tr>
                 ))}
@@ -420,10 +414,8 @@ function ManageTickets({ tickets, offices, loading, onUpdated }) {
         )}
       </div>
 
-      {reassignTicket && (
-        <Modal title="Reassign ticket" onClose={() => setReassignId(null)}>
-          <ReassignForm ticket={reassignTicket} offices={offices} onCancel={() => setReassignId(null)} onSubmit={handleReassign} submitting={submitting} />
-        </Modal>
+      {selectedTicket && (
+        <TicketStatusModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
       )}
     </>
   );
@@ -644,49 +636,407 @@ const handleAddOffice = async (payload) => {
   );
 }
 
+const STATUS_META = [
+  { key: "open", label: "Open", color: "#e0a030", match: ["pending"] },
+  { key: "progress", label: "In Progress", color: "#3b82f6", match: ["in_progress"] },
+  { key: "resolved", label: "Resolved", color: "#2e9e6b", match: ["resolved", "closed"] },
+  { key: "transferred", label: "Transferred", color: "#8b5cf6", match: ["transferred"] },
+];
+
+const SEVERITY_COLOR = {
+  high: "var(--danger, #c0392b)",
+  medium: "#b7791f",
+  low: "var(--success, #2e9e6b)",
+};
+
+function SeverityPill({ level }) {
+  const color = SEVERITY_COLOR[level] || SEVERITY_COLOR.low;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color, border: `1px solid ${color}`, borderRadius: 999, padding: "2px 8px", whiteSpace: "nowrap" }}>
+      {level}
+    </span>
+  );
+}
+
+function SectionTitle({ children, hint }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h3 style={{ margin: 0, fontSize: 16 }}>{children}</h3>
+      {hint && <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--ink-soft)" }}>{hint}</p>}
+    </div>
+  );
+}
+
 function Analytics({ tickets, offices, loading }) {
   const isMobile = useIsMobile();
+  const [report, setReport] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [generatedAt, setGeneratedAt] = useState(null);
+  const [copied, setCopied] = useState(false);
 
-  const byOffice = offices.map((o) => ({
-    name: o.office_name,
-    count: tickets.filter((t) => t.assigned_office === o.office_id && t.status !== "resolved" && t.status !== "closed").length,
-  }));
-  const max = Math.max(...byOffice.map((o) => o.count), 1);
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const isActive = (t) => t.status !== "resolved" && t.status !== "closed";
+    const last30 = tickets.filter((t) => now - new Date(t.created_at).getTime() <= 30 * 864e5);
 
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now - 30 * 864e5);
-  const last30 = tickets.filter((t) => new Date(t.created_at) >= thirtyDaysAgo);
+    const statusCounts = STATUS_META.map((s) => ({
+      ...s,
+      count: tickets.filter((t) => s.match.includes(t.status)).length,
+    }));
 
-  const resolvedWithTimes = tickets.filter((t) => t.resolved_at);
-  const avgResolutionHrs =
-    resolvedWithTimes.length > 0
-      ? (resolvedWithTimes.reduce((sum, t) => sum + (new Date(t.resolved_at) - new Date(t.created_at)) / 36e5, 0) / resolvedWithTimes.length).toFixed(1)
-      : "—";
+    const resolvedWithTimes = tickets.filter((t) => t.resolved_at);
+    const avgResolutionHrs = resolvedWithTimes.length
+      ? Number(
+          (
+            resolvedWithTimes.reduce(
+              (sum, t) => sum + (new Date(t.resolved_at) - new Date(t.created_at)) / 36e5,
+              0
+            ) / resolvedWithTimes.length
+          ).toFixed(1)
+        )
+      : null;
+
+    const resolvedCount = statusCounts.find((s) => s.key === "resolved").count;
+    const resolutionRate = tickets.length ? Math.round((resolvedCount / tickets.length) * 100) : 0;
+
+    const byOffice = offices.map((o) => {
+      const mine = tickets.filter((t) => t.assigned_office === o.office_id);
+      return { name: o.office_name, active: mine.filter(isActive).length, total: mine.length };
+    });
+
+    const unassigned = tickets.filter((t) => t.assigned_office == null && isActive(t)).length;
+
+    const daily = Array.from({ length: 7 }, (_, i) => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - (6 - i));
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      return {
+        label: start.toLocaleDateString(undefined, { weekday: "short" }),
+        count: tickets.filter((t) => {
+          const c = new Date(t.created_at);
+          return c >= start && c < end;
+        }).length,
+      };
+    });
+
+    return { last30: last30.length, statusCounts, avgResolutionHrs, resolutionRate, byOffice, unassigned, daily };
+  }, [tickets, offices]);
+
+  const maxOffice = Math.max(...stats.byOffice.map((o) => o.active), 1);
+  const maxDaily = Math.max(...stats.daily.map((d) => d.count), 1);
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setReportError("");
+    setCopied(false);
+
+    const payload = {
+      stats: {
+        totalTickets: tickets.length,
+        ticketsLast30Days: stats.last30,
+        avgResolutionHours: stats.avgResolutionHrs,
+        resolutionRatePercent: stats.resolutionRate,
+        unassignedActive: stats.unassigned,
+        byStatus: Object.fromEntries(stats.statusCounts.map((s) => [s.label, s.count])),
+        byOffice: stats.byOffice,
+      },
+      // No names/emails are sent; concerns are truncated and capped to keep the request small
+      tickets: tickets.slice(0, 120).map((t) => ({
+        code: formatTicketCode(t.ticket_id),
+        status: toDisplayStatus(t.status),
+        office: t.offices?.office_name || "Unassigned",
+        concern: (t.concern_text || "").slice(0, 200),
+        aiConfidence: t.classification_confidence,
+        escalation: t.escalation_level,
+        transferReason: t.transfer_reason,
+        createdAt: t.created_at,
+        resolvedAt: t.resolved_at,
+      })),
+    };
+
+    const result = await generateTicketReport(payload);
+    if (result) {
+      setReport(result);
+      setGeneratedAt(new Date());
+    } else {
+      setReportError("The AI couldn't generate a report. Please try again in a moment.");
+    }
+    setGenerating(false);
+  }
+
+  function reportToText() {
+    if (!report) return "";
+    const lines = [
+      "HELPDESK ANALYTICS REPORT",
+      `Generated: ${generatedAt?.toLocaleString() || ""}`,
+      "",
+      "SUMMARY",
+      report.summary,
+      "",
+      "STATUS INSIGHTS",
+      `Open: ${report.status_insights.open}`,
+      `In Progress: ${report.status_insights.in_progress}`,
+      `Resolved: ${report.status_insights.resolved}`,
+      "",
+      "OFFICE INSIGHTS",
+      ...report.office_insights.map((o) => `- [${o.severity.toUpperCase()}] ${o.office}: ${o.observation}`),
+      "",
+      "RECURRING THEMES",
+      ...report.recurring_themes.map((t) => `- ${t.theme} (~${t.approx_count})`),
+      "",
+      "RECOMMENDATIONS",
+      ...report.recommendations.map((r) => `- [${r.priority.toUpperCase()}] ${r.action}`),
+      "",
+      "NEEDS ATTENTION",
+      ...report.attention_tickets.map((t) => `- ${t.code}: ${t.reason}`),
+    ];
+    return lines.join("\n");
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(reportToText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Copy failed:", e);
+    }
+  }
+
+  const kpis = [
+    { label: "Tickets (30 days)", value: stats.last30 },
+    { label: "Avg. resolution time", value: stats.avgResolutionHrs == null ? "—" : `${stats.avgResolutionHrs}h` },
+    { label: "Resolution rate", value: `${stats.resolutionRate}%` },
+    { label: "Unassigned (active)", value: stats.unassigned },
+  ];
 
   return (
     <>
-      <PageHeader title="Analytics" subtitle="Compiled from the Ticket and Survey Response data stores." />
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 20 }}>
-        <StatCard label="Total tickets (30d)" value={last30.length} />
-        <StatCard label="Avg. resolution time" value={avgResolutionHrs === "—" ? "—" : `${avgResolutionHrs}h`} />
-        <StatCard label="Avg. satisfaction" value="—" />
+      <style>{`
+        @keyframes chd-spin { to { transform: rotate(360deg); } }
+        @keyframes chd-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        .chd-report-section { animation: chd-fade-up .35s ease both; }
+        .chd-bar { transition: height .5s ease, width .5s ease; }
+      `}</style>
+
+      {/* Header + action */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 12, marginBottom: isMobile ? 18 : 26 }}>
+        <div>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, marginTop: 6 }}>Analytics</h1>
+          <p style={{ fontSize: 14 }}>Live ticket metrics, plus an AI-written report across Open, In Progress and Resolved tickets.</p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={handleGenerate}
+          disabled={generating || loading || tickets.length === 0}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", width: isMobile ? "100%" : "auto", justifyContent: "center" }}
+        >
+          {generating ? (
+            <>
+              <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "chd-spin .7s linear infinite" }} />
+              Generating report...
+            </>
+          ) : (
+            <>✦ {report ? "Regenerate report" : "Generate report"}</>
+          )}
+        </button>
       </div>
-      <div className="card">
-        <h3>Open tickets by office</h3>
-        {loading ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
-        ) : (
-          <div style={{ display: "flex", alignItems: "flex-end", gap: isMobile ? 8 : 18, height: 160, marginTop: 20, overflowX: "auto" }}>
-            {byOffice.map((o) => (
-              <div key={o.name} style={{ flex: isMobile ? "0 0 64px" : 1, textAlign: "center" }}>
-                <div style={{ height: `${(o.count / max) * 120 + 8}px`, background: "var(--maroon-500)", borderRadius: "6px 6px 0 0", marginBottom: 8 }} />
-                <div style={{ fontSize: 11, color: "var(--ink-soft)" }}>{o.name}</div>
-                <div style={{ fontSize: 12, fontWeight: 700 }}>{o.count}</div>
-              </div>
+
+      {loading ? (
+        <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+      ) : (
+        <>
+          {/* KPIs */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: 20 }}>
+            {kpis.map((k) => (
+              <StatCard key={k.label} label={k.label} value={k.value} />
             ))}
           </div>
-        )}
-      </div>
+
+          {/* Status breakdown */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <SectionTitle hint="Share of all tickets by current status">Status breakdown</SectionTitle>
+            {tickets.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+            ) : (
+              <>
+                <div style={{ display: "flex", height: 14, borderRadius: 999, overflow: "hidden", background: "var(--line)" }}>
+                  {stats.statusCounts.map((s) => (
+                    <div
+                      key={s.key}
+                      className="chd-bar"
+                      title={`${s.label}: ${s.count}`}
+                      style={{ width: `${(s.count / tickets.length) * 100}%`, background: s.color }}
+                    />
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 12, marginTop: 16 }}>
+                  {stats.statusCounts.map((s) => (
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 18, fontFamily: "var(--font-display)", lineHeight: 1.1 }}>{s.count}</div>
+                        <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{s.label}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Charts row */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 20, marginBottom: 20 }}>
+            <div className="card">
+              <SectionTitle hint="Active tickets (not resolved/closed) per office">Open tickets by office</SectionTitle>
+              {stats.byOffice.length === 0 ? (
+                <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No offices yet.</p>
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {stats.byOffice.map((o) => (
+                    <div key={o.name}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 5 }}>
+                        <span>{o.name}</span>
+                        <strong>{o.active}</strong>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 999, background: "var(--line)", overflow: "hidden" }}>
+                        <div className="chd-bar" style={{ height: "100%", width: `${(o.active / maxOffice) * 100}%`, background: "linear-gradient(90deg, var(--maroon-500), #c0504d)", borderRadius: 999 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <SectionTitle hint="New tickets over the last 7 days">Recent volume</SectionTitle>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140 }}>
+                {stats.daily.map((d, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{d.count}</div>
+                    <div className="chd-bar" style={{ height: `${(d.count / maxDaily) * 90 + 4}px`, background: "var(--maroon-500)", opacity: 0.85, borderRadius: "6px 6px 0 0" }} />
+                    <div style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 6 }}>{d.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI report */}
+          <div className="card" style={{ borderTop: "3px solid var(--maroon-500)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <SectionTitle hint={generatedAt ? `Generated ${generatedAt.toLocaleString()}` : "Summarizes Open, In Progress and Resolved tickets"}>
+                ✦ AI report
+              </SectionTitle>
+              {report && (
+                <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={handleCopy}>
+                  {copied ? "Copied ✓" : "Copy report"}
+                </button>
+              )}
+            </div>
+
+            {reportError && <p style={{ fontSize: 13, color: "var(--danger)" }}>{reportError}</p>}
+
+            {generating && (
+              <div style={{ display: "grid", gap: 10 }}>
+                {[100, 92, 76].map((w, i) => (
+                  <div key={i} style={{ height: 12, width: `${w}%`, borderRadius: 6, background: "var(--line)", opacity: 0.7 }} />
+                ))}
+                <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: "6px 0 0" }}>Reading {Math.min(tickets.length, 120)} tickets...</p>
+              </div>
+            )}
+
+            {!generating && !report && !reportError && (
+              <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "4px 0" }}>
+                Click <strong>Generate report</strong> to get an AI summary with trends, office bottlenecks, and recommended actions.
+              </p>
+            )}
+
+            {!generating && report && (
+              <div style={{ display: "grid", gap: 22 }}>
+                <div className="chd-report-section" style={{ padding: 14, borderRadius: 10, background: "rgba(128, 0, 32, 0.05)", borderLeft: "3px solid var(--maroon-500)" }}>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{report.summary}</p>
+                </div>
+
+                <div className="chd-report-section">
+                  <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>By status</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+                    {[
+                      { label: "Open", color: "#e0a030", text: report.status_insights.open },
+                      { label: "In Progress", color: "#3b82f6", text: report.status_insights.in_progress },
+                      { label: "Resolved", color: "#2e9e6b", text: report.status_insights.resolved },
+                    ].map((s) => (
+                      <div key={s.label} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--line)", borderTop: `3px solid ${s.color}` }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: s.color, marginBottom: 6 }}>{s.label}</div>
+                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>{s.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {report.office_insights.length > 0 && (
+                  <div className="chd-report-section">
+                    <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Office insights</h4>
+                    {report.office_insights.map((o, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: i < report.office_insights.length - 1 ? "1px solid var(--line)" : "none" }}>
+                        <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                          <strong>{o.office}</strong> — {o.observation}
+                        </div>
+                        <SeverityPill level={o.severity} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {report.recurring_themes.length > 0 && (
+                  <div className="chd-report-section">
+                    <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Recurring themes</h4>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {report.recurring_themes.map((t, i) => (
+                        <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 999, border: "1px solid var(--line)" }}>
+                          {t.theme} <strong style={{ marginLeft: 4 }}>~{t.approx_count}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
+                  <div className="chd-report-section">
+                    <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Recommendations</h4>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {report.recommendations.map((r, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13, lineHeight: 1.5 }}>
+                          <span style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--maroon-500)", color: "#fff", fontSize: 11, fontWeight: 700, display: "grid", placeItems: "center", flexShrink: 0 }}>{i + 1}</span>
+                          <span style={{ flex: 1 }}>{r.action}</span>
+                          <SeverityPill level={r.priority} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="chd-report-section">
+                    <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Needs attention</h4>
+                    {report.attention_tickets.length === 0 ? (
+                      <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>Nothing flagged.</p>
+                    ) : (
+                      report.attention_tickets.map((t, i) => (
+                        <div key={i} style={{ padding: "8px 0", borderBottom: i < report.attention_tickets.length - 1 ? "1px solid var(--line)" : "none", fontSize: 13, lineHeight: 1.5 }}>
+                          <strong style={{ fontFamily: "var(--font-mono)" }}>{t.code}</strong>
+                          <span style={{ color: "var(--ink-soft)" }}> — {t.reason}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -728,54 +1078,139 @@ function ReassignForm({ ticket, offices, onCancel, onSubmit, submitting }) {
 }
 
 function Transfers({ tickets, offices, loading, onUpdated }) {
-  const transfers = tickets.filter((t) => t.status === "transferred" || t.transfer_reason || t.escalation_level);
+  // Only tickets that have NO office assigned (and are still active)
+  const transfers = tickets.filter(
+    (t) => t.assigned_office == null && t.status !== "resolved" && t.status !== "closed"
+  );
+
   const [reassignId, setReassignId] = useState(null);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   const reassignTicket = transfers.find((t) => t.ticket_id === reassignId) || null;
 
   const handleReassign = async (newOfficeId) => {
+    if (!reassignTicket) return;
     setSubmitting(true);
-    await supabase.from("tickets").update({ assigned_office: newOfficeId, status: "in_progress" }).eq("ticket_id", reassignId);
+    setActionError("");
+
+    const { error } = await supabase
+      .from("tickets")
+      .update({ assigned_office: newOfficeId, status: "in_progress" })
+      .eq("ticket_id", reassignId);
+
+    if (error) {
+      console.error("Reassign failed:", error);
+      setActionError(error.message || "Could not reassign this ticket.");
+      setSubmitting(false);
+      return;
+    }
+
+    const newOffice = offices.find((o) => o.office_id === newOfficeId);
+    const { error: logError } = await supabase.from("logs").insert({
+      ticket_id: reassignId,
+      office_id: newOfficeId,
+      action: `Admin assigned ${formatTicketCode(reassignId)} from Unassigned to ${newOffice?.office_name || "Unknown office"}`,
+      module: "Ticket Transferred",
+    });
+    if (logError) console.error("Log insert failed:", logError);
+
     setSubmitting(false);
     setReassignId(null);
     onUpdated?.();
   };
 
   const handleResolve = async (ticketId) => {
-    await supabase.from("tickets").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("ticket_id", ticketId);
+    setActionError("");
+
+    const { error } = await supabase
+      .from("tickets")
+      .update({ status: "resolved", resolved_at: new Date().toISOString() })
+      .eq("ticket_id", ticketId);
+
+    if (error) {
+      console.error("Resolve failed:", error);
+      setActionError(error.message || "Could not resolve this ticket.");
+      return;
+    }
+
+    const { error: logError } = await supabase.from("logs").insert({
+      ticket_id: ticketId,
+      action: `Admin marked ${formatTicketCode(ticketId)} as resolved`,
+      module: "Ticket Resolved",
+    });
+    if (logError) console.error("Log insert failed:", logError);
+
     onUpdated?.();
   };
 
   return (
     <>
-      <PageHeader title="Transferred tickets" subtitle="Saved to the Logs data store, retrieved from the Ticket data store." />
+      <PageHeader
+        title="Ticket transfer management"
+        subtitle="Tickets with no assigned office. Assign them to an office or resolve them."
+      />
+
+      {actionError && (
+        <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{actionError}</p>
+      )}
+
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : transfers.length === 0 ? (
-          <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "8px 0" }}>No transferred tickets right now.</p>
+          <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "8px 0" }}>
+            No unassigned tickets right now.
+          </p>
         ) : (
           transfers.map((t, i) => (
-            <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: i < transfers.length - 1 ? "1px solid var(--line)" : "none" }}>
-              <button
-                type="button"
+            <div
+              key={t.ticket_id}
+              style={{ padding: "14px 0", borderBottom: i < transfers.length - 1 ? "1px solid var(--line)" : "none" }}
+            >
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedTransfer(t)}
-                style={{ width: "100%", padding: 0, border: "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedTransfer(t);
+                  }
+                }}
+                style={{ cursor: "pointer" }}
               >
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
-                {t.escalation_level && <span className="badge badge-transferred">{t.escalation_level}</span>}
-              </div>
-              <p style={{ fontSize: 14, margin: "4px 0 2px" }}>{t.concern_text.slice(0, 60)} - {t.offices?.office_name || "Unassigned"}</p>
-              {t.transfer_reason && <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {t.transfer_reason}</p>}
-              </button>
-              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn btn-primary" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => setReassignId(t.ticket_id)}>Reassign</button>
-                {(t.status !== "resolved" && t.status !== "closed") && (
-                  <button className="btn btn-ghost" style={{ padding: "7px 14px", fontSize: 12 }} onClick={() => handleResolve(t.ticket_id)}>Mark resolved</button>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                  <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
+                  <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                    {t.escalation_level && <span className="badge badge-transferred">{t.escalation_level}</span>}
+                    <StatusBadge status={toDisplayStatus(t.status)} />
+                  </span>
+                </div>
+                <p style={{ fontSize: 14, margin: "4px 0 2px" }}>
+                  {t.concern_text.slice(0, 60)}{t.concern_text.length > 60 ? "..." : ""} - Unassigned
+                </p>
+                {t.transfer_reason && (
+                  <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>Reason: {t.transfer_reason}</p>
                 )}
+              </div>
+
+              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: "7px 14px", fontSize: 12 }}
+                  onClick={() => { setActionError(""); setReassignId(t.ticket_id); }}
+                >
+                  Assign office
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ padding: "7px 14px", fontSize: 12 }}
+                  onClick={() => handleResolve(t.ticket_id)}
+                >
+                  Mark resolved
+                </button>
               </div>
             </div>
           ))
@@ -783,8 +1218,14 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
       </div>
 
       {reassignTicket && (
-        <Modal title="Reassign ticket" onClose={() => setReassignId(null)}>
-          <ReassignForm ticket={reassignTicket} offices={offices} onCancel={() => setReassignId(null)} onSubmit={handleReassign} submitting={submitting} />
+        <Modal title="Assign ticket" onClose={() => setReassignId(null)}>
+          <ReassignForm
+            ticket={reassignTicket}
+            offices={offices}
+            onCancel={() => setReassignId(null)}
+            onSubmit={handleReassign}
+            submitting={submitting}
+          />
         </Modal>
       )}
       {selectedTransfer && (
