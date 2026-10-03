@@ -306,6 +306,21 @@ export default function Sidebar({
               >
                 <span style={{ fontSize: 16, width: 20, textAlign: "center" }}>{item.icon}</span>
                 <span style={{ flex: 1 }}>{item.label}</span>
+                {item.id === "notifications" && notifCount > 0 && (
+                  <span
+                    aria-label={`${notifCount} unread notifications`}
+                    title={`${notifCount} unread notifications`}
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: "#ff5a5f",
+                      border: "2px solid rgba(255,255,255,0.9)",
+                      boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
                 {item.code === "notif" && notifCount > 0 && (
                   <span
                     style={{
@@ -315,6 +330,7 @@ export default function Sidebar({
                       fontFamily: "var(--font-mono)",
                       borderRadius: 999,
                       padding: "2px 7px",
+                      marginLeft: 4,
                     }}
                   >
                     {notifCount}

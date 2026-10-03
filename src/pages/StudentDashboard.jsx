@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/theme.css";
 import { classifyTicket } from "../lib/ai";
+import TicketThread from "../components/TicketThread";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -13,7 +14,7 @@ const NAV_ITEMS = [
   { id: "map", label: "Use Campus Map", icon: "•" },
   { id: "feedback", label: "Submit Feedback & Ratings", icon: "•" },
   { id: "history", label: "View Ticket History", icon: "•" },
-  { id: "notifications", label: "Notifications", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•", code: "notif" },
 ];
 
 const OFFICES = ["Registrar", "Library", "Guidance Office", "Accounting", "DSA", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS"];
@@ -335,6 +336,8 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
 }
 
 function TicketDetailModal({ ticket, onClose }) {
+  const { session, profile } = useAuth();
+
   return (
     <div className="ticket-modal-overlay" onClick={onClose}>
       <div className="ticket-detail-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
@@ -358,6 +361,14 @@ function TicketDetailModal({ ticket, onClose }) {
             <div className="ticket-line"><strong>Resolved</strong><span>{formatDate(ticket.resolved_at)}</span></div>
           )}
         </div>
+
+        <TicketThread
+          ticket={ticket}
+          currentUserId={session?.user?.id}
+          role="student"
+          allowReply={true}
+          profileName={profile?.name || "You"}
+        />
 
         <div className="ticket-detail-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
@@ -837,7 +848,22 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
                 fontWeight: n.is_read ? 400 : 700,
               }}
             >
-              <span style={{ fontSize: 14 }}>{n.message}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                {!n.is_read && (
+                  <span
+                    aria-label="Unread notification"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#ff5a5f",
+                      boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                <span style={{ fontSize: 14 }}>{n.message}</span>
+              </span>
               <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
             </button>
           ))

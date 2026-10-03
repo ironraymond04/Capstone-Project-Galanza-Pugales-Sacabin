@@ -4,6 +4,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/theme.css";
+import TicketThread from "../components/TicketThread";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -13,7 +14,7 @@ const NAV_ITEMS = [
   { id: "routed", label: "Receive Routed Ticket", icon: "•" },
   { id: "assignment", label: "Auto Ticket Assignment", icon: "•" },
   { id: "priority", label: "Ticket Priority View", icon: "•" },
-  { id: "notifications", label: "Notifications", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•", code: "notif" },
 ];
 
 const ACTIVITY_TYPES = ["All Activities", "Ticket Assigned", "Ticket Updated", "Ticket Transferred", "Ticket Resolved", "AI Routing", "Staff Response"];
@@ -495,6 +496,7 @@ function Reports({ queue, loading, focusTicket, onClearFocus }) {
 }
 
 function TicketDetailModal({ ticket, onClose }) {
+  const { session, profile } = useAuth();
   const rows = [
     { label: "Ticket ID", value: formatTicketCode(ticket.ticket_id) },
     { label: "Submitted by", value: ticket.profiles?.name || "Unknown" },
@@ -519,6 +521,16 @@ function TicketDetailModal({ ticket, onClose }) {
             </div>
           ))}
         </div>
+
+        <TicketThread
+          ticket={ticket}
+          currentUserId={session?.user?.id}
+          role="staff"
+          officeId={ticket.assigned_office || null}
+          allowReply={true}
+          profileName={profile?.name || "You"}
+        />
+
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
           <button onClick={onClose} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 6, border: "none", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}>Close</button>
         </div>
@@ -988,7 +1000,22 @@ function Notifications({ notifications, loading, onRead, tickets, ticketsLoading
                   onClick={() => openFeedItem(feedItem)}
                   style={{ display: "flex", width: "100%", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
                 >
-                  <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    {feedItem.isUnread && (
+                      <span
+                        aria-label="Unread notification"
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#ff5a5f",
+                          boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+                  </span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
                     <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>

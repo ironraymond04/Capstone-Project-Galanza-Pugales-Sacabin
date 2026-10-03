@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { generateTicketReport } from "../lib/ai"; 
 import "../styles/theme.css";
+import TicketThread from "../components/TicketThread";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -14,7 +15,7 @@ const NAV_ITEMS = [
   { id: "offices", label: "Manage Offices", icon: "•" },
   { id: "analytics", label: "Generate Analytics Reports", icon: "•" },
   { id: "transfer", label: "Ticket Transfer Management", icon: "•" },
-  { id: "notifications", label: "Notifications", icon: "•" },
+  { id: "notifications", label: "Notifications", icon: "•", code: "notif" },
 ];
 
 /* ---------------- helpers ---------------- */
@@ -1317,7 +1318,22 @@ function Notifications({ tickets, ticketsLoading, notifications, notificationsLo
               onClick={() => void openFeedItem(feedItem)}
               style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
             >
-              <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                {feedItem.isUnread && (
+                  <span
+                    aria-label="Unread notification"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#ff5a5f",
+                      boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+              </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
                 <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
@@ -1334,6 +1350,7 @@ function Notifications({ tickets, ticketsLoading, notifications, notificationsLo
 }
 
 function TicketStatusModal({ ticket, onClose }) {
+  const { session, profile } = useAuth();
   const status = ticket?.status || "unknown";
   const isResolved = status === "resolved" || status === "closed";
   const statusLabel = ticket ? toDisplayStatus(status) : "Ticket details unavailable";
@@ -1387,6 +1404,14 @@ function TicketStatusModal({ ticket, onClose }) {
           </div>
         )}
       </div>
+
+      <TicketThread
+        ticket={ticket}
+        currentUserId={session?.user?.id}
+        role="admin"
+        allowReply={false}
+        profileName={profile?.name || "Admin"}
+      />
     </Modal>
   ) : null;
 }
