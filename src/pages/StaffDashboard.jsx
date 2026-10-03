@@ -45,6 +45,15 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+function getStoredFeedItemIds(storageKey) {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]"));
+  } catch (error) {
+    console.error("load saved staff notification state error:", error);
+    return new Set();
+  }
+}
+
 export default function StaffDashboard() {
   const { session, profile } = useAuth();
   const [active, setActive] = useState(
@@ -52,6 +61,8 @@ export default function StaffDashboard() {
   );
   const [focusTicketId, setFocusTicketId] = useState(null);
   const isMobile = useIsMobile();
+  const readFeedStorageKey = `chd-staff-read-feed-${session?.user?.id || "guest"}`;
+  const [readFeedItemIds, setReadFeedItemIds] = useState(() => getStoredFeedItemIds(readFeedStorageKey));
 
   const [queue, setQueue] = useState([]);
   const [queueLoading, setQueueLoading] = useState(true);
@@ -175,10 +186,17 @@ async function handleSwitchOffice(newOfficeId) {
 
   const handlePageSelect = (page) => {
     if (page !== "reports") setFocusTicketId(null);
+    if (page === "notifications") {
+      loadLogs();
+      loadNotifications();
+    }
     setActive(page);
   };
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount =
+    notifications.filter((n) => !n.is_read).length +
+    queue.filter((ticket) => !readFeedItemIds.has(`ticket-${ticket.ticket_id}`)).length +
+    logs.filter((entry) => !readFeedItemIds.has(`activity-${entry.log_id}`)).length;
 
   return (
     <div className="chd-app-shell" style={{ flexDirection: isMobile ? "column" : "row" }}>
@@ -223,10 +241,12 @@ async function handleSwitchOffice(newOfficeId) {
               ticketsLoading={queueLoading}
               logs={logs}
               logsLoading={logsLoading}
-              userId={session?.user?.id}
               hasOffice={Boolean(officeId)}
               surveys={surveys}
               surveysLoading={surveysLoading}
+              readFeedStorageKey={readFeedStorageKey}
+              readFeedItemIds={readFeedItemIds}
+              setReadFeedItemIds={setReadFeedItemIds}
             />
           )}
         </div>
@@ -511,27 +531,29 @@ function TicketDetailModal({ ticket, onClose }) {
 
   return (
     <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 560, maxHeight: "85vh", overflowY: "auto", background: "#fff" }}>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-soft)" }}>{formatTicketCode(ticket.ticket_id)}</div>
-        <div style={{ marginTop: 18 }}>
-          {rows.map((r, i) => (
-            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
-              <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{r.label}</span>
-              <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
-            </div>
-          ))}
+      <div onClick={(e) => e.stopPropagation()} className="card ticket-conversation-modal" style={{ background: "#fff" }}>
+        <div className="ticket-detail-header">{formatTicketCode(ticket.ticket_id)}</div>
+        <div className="ticket-conversation-layout">
+          <div className="ticket-modal-details">
+            {rows.map((r, i) => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
+                <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{r.label}</span>
+                <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <TicketThread
+            ticket={ticket}
+            currentUserId={session?.user?.id}
+            role="staff"
+            officeId={ticket.assigned_office || null}
+            allowReply={true}
+            profileName={profile?.name || "You"}
+          />
         </div>
 
-        <TicketThread
-          ticket={ticket}
-          currentUserId={session?.user?.id}
-          role="staff"
-          officeId={ticket.assigned_office || null}
-          allowReply={true}
-          profileName={profile?.name || "You"}
-        />
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+        <div className="ticket-detail-actions">
           <button onClick={onClose} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 6, border: "none", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}>Close</button>
         </div>
       </div>
@@ -875,16 +897,8 @@ function PriorityView({ queue, loading }) {
   );
 }
 
-function Notifications({ notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, userId, hasOffice, surveys, surveysLoading }) {
+function Notifications({ notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, hasOffice, surveys, surveysLoading, readFeedStorageKey, readFeedItemIds, setReadFeedItemIds }) {
   const isMobile = useIsMobile();
-  const readFeedStorageKey = `chd-staff-read-feed-${userId || "guest"}`;
-  const [readFeedItemIds, setReadFeedItemIds] = useState(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(readFeedStorageKey) || "[]"));
-    } catch {
-      return new Set();
-    }
-  });
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -922,7 +936,9 @@ function Notifications({ notifications, loading, onRead, tickets, ticketsLoading
       id: `activity-${entry.log_id}`,
       type: "activity",
       createdAt: entry.created_at,
-      message: entry.action,
+      message: entry.module === "Ticket Reply" && entry.ticket_id
+        ? `${entry.action} on ${formatTicketCode(entry.ticket_id)}: ${entry.description || ""}`
+        : entry.action,
       isUnread: !readFeedItemIds.has(`activity-${entry.log_id}`),
       item: entry,
     })),

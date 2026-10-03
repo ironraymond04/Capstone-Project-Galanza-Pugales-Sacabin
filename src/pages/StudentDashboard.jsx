@@ -340,35 +340,37 @@ function TicketDetailModal({ ticket, onClose }) {
 
   return (
     <div className="ticket-modal-overlay" onClick={onClose}>
-      <div className="ticket-detail-box" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
+      <div className="ticket-detail-box ticket-conversation-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
         <div className="ticket-detail-header">
           <span>TICKET DETAILS</span>
           <button type="button" className="ticket-detail-close" onClick={onClose} aria-label="Close ticket details">×</button>
         </div>
 
-        <div className="ticket-detail-body">
-          <div className="ticket-line"><strong>Ticket ID</strong><span>{formatTicketCode(ticket.ticket_id)}</span></div>
-          <div className="ticket-line"><strong>Status</strong><span>{toDisplayStatus(ticket.status)}</span></div>
-          <div className="ticket-line"><strong>Office</strong><span>{ticket.offices?.office_name || "Unassigned"}</span></div>
+        <div className="ticket-conversation-layout">
+          <div className="ticket-detail-body ticket-modal-details">
+            <div className="ticket-line"><strong>Ticket ID</strong><span>{formatTicketCode(ticket.ticket_id)}</span></div>
+            <div className="ticket-line"><strong>Status</strong><span>{toDisplayStatus(ticket.status)}</span></div>
+            <div className="ticket-line"><strong>Office</strong><span>{ticket.offices?.office_name || "Unassigned"}</span></div>
 
-          <div className="ticket-line ticket-line-block">
-            <strong>Concern</strong>
-            <span>{ticket.concern_text}</span>
+            <div className="ticket-line ticket-line-block">
+              <strong>Concern</strong>
+              <span>{ticket.concern_text}</span>
+            </div>
+
+            <div className="ticket-line"><strong>Submitted</strong><span>{formatDate(ticket.created_at)}</span></div>
+            {ticket.resolved_at && (
+              <div className="ticket-line"><strong>Resolved</strong><span>{formatDate(ticket.resolved_at)}</span></div>
+            )}
           </div>
 
-          <div className="ticket-line"><strong>Submitted</strong><span>{formatDate(ticket.created_at)}</span></div>
-          {ticket.resolved_at && (
-            <div className="ticket-line"><strong>Resolved</strong><span>{formatDate(ticket.resolved_at)}</span></div>
-          )}
+          <TicketThread
+            ticket={ticket}
+            currentUserId={session?.user?.id}
+            role="student"
+            allowReply={true}
+            profileName={profile?.name || "You"}
+          />
         </div>
-
-        <TicketThread
-          ticket={ticket}
-          currentUserId={session?.user?.id}
-          role="student"
-          allowReply={true}
-          profileName={profile?.name || "You"}
-        />
 
         <div className="ticket-detail-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>

@@ -340,6 +340,166 @@ button:active { transform: none; }
   overflow: hidden;
 }
 
+.ticket-conversation-modal {
+  width: min(100%, 960px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ticket-conversation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ticket-modal-details {
+  min-width: 0;
+  max-height: 74vh;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--paper);
+}
+
+.ticket-conversation-modal .ticket-detail-body {
+  border-bottom: 0;
+}
+
+.ticket-conversation-modal .ticket-detail-actions {
+  border-top: 1px solid var(--line);
+  padding: 12px 20px;
+}
+
+.admin-ticket-conversation-modal > div:first-child {
+  margin-bottom: 0 !important;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ticket-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  max-height: 74vh;
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--white);
+}
+
+.ticket-thread-title {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ticket-thread-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.ticket-thread-messages {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ticket-thread-message {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.ticket-thread-message.is-mine {
+  justify-content: flex-end;
+}
+
+.ticket-thread-bubble {
+  max-width: 90%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f5f3f4;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow-wrap: anywhere;
+}
+
+.ticket-thread-bubble.is-mine {
+  background: var(--maroon-700);
+  color: #fff;
+}
+
+.ticket-thread-author,
+.ticket-thread-time {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.ticket-thread-author {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.ticket-thread-bubble.is-mine .ticket-thread-author,
+.ticket-thread-bubble.is-mine .ticket-thread-time {
+  opacity: 0.9;
+}
+
+.ticket-thread-text {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ticket-thread-time {
+  margin-top: 6px;
+}
+
+.ticket-thread-reply {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.ticket-thread-reply-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.ticket-thread-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ticket-thread-send {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary, #6b1d2c);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ticket-thread-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .ticket-detail-header {
   position: relative;
   background: var(--maroon-700);
@@ -446,6 +606,41 @@ button:active { transform: none; }
 @media (max-width: 860px) {
   .chd-content { padding: 24px 18px 48px; }
   .ticket-detail-box { width: min(100%, 92vw); }
+  .ticket-conversation-modal {
+    width: min(100%, 960px);
+  }
+  .ticket-conversation-layout {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+  .ticket-modal-details,
+  .ticket-thread {
+    max-height: 72vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .ticket-conversation-modal {
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .ticket-conversation-layout {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+  .ticket-modal-details,
+  .ticket-thread {
+    max-height: none;
+    overflow: visible;
+  }
+  .ticket-thread {
+    min-height: 280px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .ticket-thread-messages {
+    min-height: 120px;
+    max-height: 38vh;
+  }
 }
 
 /* How It Works — role breakdown grid */

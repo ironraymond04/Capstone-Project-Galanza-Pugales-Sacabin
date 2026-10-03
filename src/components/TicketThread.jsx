@@ -14,6 +14,7 @@ export default function TicketThread({
   const [replyText, setReplyText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   async function loadThread() {
     if (!ticket?.ticket_id) {
@@ -50,6 +51,7 @@ export default function TicketThread({
     const trimmed = replyText.trim();
     if (!trimmed || !ticket?.ticket_id || !currentUserId) return;
 
+    setSendError("");
     setSending(true);
 
     const actionText =
@@ -61,40 +63,50 @@ export default function TicketThread({
 
     const { error } = await supabase.from("logs").insert({
       user_id: currentUserId,
-      office_id: role === "staff" ? officeId : null,
+      office_id: role === "staff" ? officeId : role === "student" ? ticket.assigned_office || null : null,
       ticket_id: ticket.ticket_id,
       module: "Ticket Reply",
       action: actionText,
       description: trimmed,
     });
 
-    if (!error) {
-      setReplyText("");
-      await loadThread();
-      onReplySent?.();
+    if (error) {
+      console.error("send ticket reply error:", error);
+      setSendError("Your reply could not be sent. Please try again.");
+      setSending(false);
+      return;
     }
 
+    if (role !== "student" && ticket.user_id) {
+      const { error: notificationError } = await supabase.from("notifications").insert({
+        user_id: ticket.user_id,
+        ticket_id: ticket.ticket_id,
+        message: `New staff response on TCK-${String(ticket.ticket_id).padStart(4, "0")}: ${trimmed}`,
+      });
+      if (notificationError) {
+        console.error("send ticket reply notification error:", notificationError);
+        setSendError("Your reply was sent, but the student could not be notified.");
+      }
+    }
+
+    setReplyText("");
+    await loadThread();
+    onReplySent?.();
     setSending(false);
   }
 
   return (
-    <div
-      style={{
-        marginTop: 20,
-        borderTop: "1px solid var(--line)",
-        paddingTop: 16,
-      }}
-    >
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Conversation thread</div>
+    <div className="ticket-thread">
+      <div className="ticket-thread-title">Conversation thread</div>
 
       {loading ? (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-soft)" }}>Loading conversation...</p>
+        <p className="ticket-thread-empty">Loading conversation...</p>
       ) : messages.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--ink-soft)" }}>
+        <p className="ticket-thread-empty">
           No replies yet. Start the conversation below if more details are needed.
         </p>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="ticket-thread-messages">
           {messages.map((entry) => {
             const isMine = entry.user_id === currentUserId;
             const text = entry.description || entry.action || "No details provided.";
@@ -103,39 +115,16 @@ export default function TicketThread({
             return (
               <div
                 key={entry.log_id || `${entry.ticket_id}-${entry.created_at}-${entry.action}`}
-                style={{
-                  display: "flex",
-                  justifyContent: isMine ? "flex-end" : "flex-start",
-                }}
+                className={`ticket-thread-message ${isMine ? "is-mine" : ""}`}
               >
                 <div
-                  style={{
-                    maxWidth: "82%",
-                    background: isMine ? "var(--maroon-700)" : "#f5f3f4",
-                    color: isMine ? "#fff" : "var(--ink)",
-                    borderRadius: 12,
-                    padding: "10px 12px",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                  }}
+                  className={`ticket-thread-bubble ${isMine ? "is-mine" : ""}`}
                 >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      marginBottom: 4,
-                      opacity: isMine ? 0.9 : 0.7,
-                    }}
-                  >
+                  <div className="ticket-thread-author">
                     {author}
                   </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>{text}</div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      marginTop: 6,
-                      opacity: isMine ? 0.85 : 0.7,
-                    }}
-                  >
+                  <div className="ticket-thread-text">{text}</div>
+                  <div className="ticket-thread-time">
                     {entry.created_at ? new Date(entry.created_at).toLocaleString() : "Just now"}
                   </div>
                 </div>
@@ -145,39 +134,24 @@ export default function TicketThread({
         </div>
       )}
 
+      {sendError && <p role="alert" className="ticket-thread-empty">{sendError}</p>}
+
       {allowReply && (
-        <div style={{ marginTop: 14, display: "grid", gap: 8 }}>
+        <div className="ticket-thread-reply">
           <label style={{ fontSize: 13, fontWeight: 600 }}>Reply</label>
           <textarea
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             rows={4}
             placeholder="Ask for more details, clarify the issue, or update the student..."
-            style={{
-              width: "100%",
-              resize: "vertical",
-              boxSizing: "border-box",
-              border: "1.5px solid var(--line)",
-              borderRadius: 8,
-              padding: "10px 12px",
-              fontFamily: "inherit",
-              fontSize: 14,
-            }}
+            className="ticket-thread-reply-input"
           />
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div className="ticket-thread-reply-actions">
             <button
               type="button"
               onClick={handleSendReply}
               disabled={!replyText.trim() || sending}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                border: "none",
-                background: "var(--primary, #6b1d2c)",
-                color: "#fff",
-                cursor: replyText.trim() && !sending ? "pointer" : "not-allowed",
-                opacity: !replyText.trim() || sending ? 0.6 : 1,
-              }}
+              className="ticket-thread-send"
             >
               {sending ? "Sending..." : "Send reply"}
             </button>

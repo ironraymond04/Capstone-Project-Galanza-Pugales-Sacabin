@@ -38,12 +38,23 @@ function timeAgo(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function getStoredTicketReadIds(storageKey) {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]"));
+  } catch (error) {
+    console.error("load saved admin notification state error:", error);
+    return new Set();
+  }
+}
+
 export default function AdminDashboard() {
   const { session, profile } = useAuth();
   const [active, setActive] = useState(
     () => sessionStorage.getItem("chd-admin-active-tab") || "overview"
   );
   const isMobile = useIsMobile();
+  const readTicketStorageKey = `chd-admin-read-tickets-${session?.user?.id || "guest"}`;
+  const [readTicketIds, setReadTicketIds] = useState(() => getStoredTicketReadIds(readTicketStorageKey));
 
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
@@ -123,7 +134,9 @@ export default function AdminDashboard() {
       sessionStorage.setItem("chd-admin-active-tab", active);
   }, [active]);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount =
+    notifications.filter((n) => !n.is_read).length +
+    tickets.filter((ticket) => !readTicketIds.has(`ticket-${ticket.ticket_id}`)).length;
 
   return (
     <div className="chd-app-shell" style={{ flexDirection: isMobile ? "column" : "row" }}>
@@ -151,7 +164,9 @@ export default function AdminDashboard() {
               notifications={notifications}
               notificationsLoading={notifLoading}
               onRead={loadNotifications}
-              userId={session?.user?.id}
+              readTicketStorageKey={readTicketStorageKey}
+              readTicketIds={readTicketIds}
+              setReadTicketIds={setReadTicketIds}
             />
           )}
         </div>
@@ -199,10 +214,10 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
-function Modal({ title, onClose, children, width = 420 }) {
+function Modal({ title, onClose, children, width = 420, className = "" }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20, 10, 10, 0.45)", display: "grid", placeItems: "center", zIndex: 1000, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, background: "var(--paper, #fff)" }}>
+      <div onClick={(e) => e.stopPropagation()} className={`card ${className}`} style={{ width: "100%", maxWidth: width, background: "var(--paper, #fff)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 18 }}>{title}</h3>
           <button onClick={onClose} aria-label="Close" className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 14, lineHeight: 1 }}>✕</button>
@@ -1245,16 +1260,8 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
   );
 }
 
-function Notifications({ tickets, ticketsLoading, notifications, notificationsLoading, onRead, userId }) {
+function Notifications({ tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const readTicketStorageKey = `chd-admin-read-tickets-${userId || "guest"}`;
-  const [readTicketIds, setReadTicketIds] = useState(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(readTicketStorageKey) || "[]"));
-    } catch {
-      return new Set();
-    }
-  });
 
   const feedItems = [
     ...notifications.map((notification) => ({
@@ -1356,62 +1363,64 @@ function TicketStatusModal({ ticket, onClose }) {
   const statusLabel = ticket ? toDisplayStatus(status) : "Ticket details unavailable";
 
   return ticket ? (
-    <Modal title="Ticket details" onClose={onClose} width={560}>
-      <div style={{ display: "grid", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
-          <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(ticket.ticket_id)}</strong>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted by</span>
-          <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.profiles?.name || "Unknown user"}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Status</span>
-          <StatusBadge status={statusLabel} />
-        </div>
-        <p style={{ margin: 0, fontSize: 14, color: isResolved ? "var(--success)" : "var(--ink-soft)" }}>
-          {isResolved ? "This ticket is resolved." : "This ticket is not resolved yet."}
-        </p>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Office</span>
-          <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.offices?.office_name || "Unassigned"}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Concern</span>
-          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.concern_text}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted</span>
-          <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.created_at).toLocaleString()}</span>
-        </div>
-        {ticket.resolved_at && (
+    <Modal title="Ticket details" onClose={onClose} width={960} className="ticket-conversation-modal admin-ticket-conversation-modal">
+      <div className="ticket-conversation-layout">
+        <div className="ticket-modal-details" style={{ display: "grid", alignContent: "start", gap: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Resolved</span>
-            <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.resolved_at).toLocaleString()}</span>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
+            <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(ticket.ticket_id)}</strong>
           </div>
-        )}
-        {ticket.classification_confidence != null && (
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
-            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted by</span>
+            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.profiles?.name || "Unknown user"}</span>
           </div>
-        )}
-        {ticket.transfer_reason && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Transfer reason</span>
-            <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Status</span>
+            <StatusBadge status={statusLabel} />
           </div>
-        )}
-      </div>
+          <p style={{ margin: 0, fontSize: 14, color: isResolved ? "var(--success)" : "var(--ink-soft)" }}>
+            {isResolved ? "This ticket is resolved." : "This ticket is not resolved yet."}
+          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Office</span>
+            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.offices?.office_name || "Unassigned"}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Concern</span>
+            <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.concern_text}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted</span>
+            <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.created_at).toLocaleString()}</span>
+          </div>
+          {ticket.resolved_at && (
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Resolved</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.resolved_at).toLocaleString()}</span>
+            </div>
+          )}
+          {ticket.classification_confidence != null && (
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+            </div>
+          )}
+          {ticket.transfer_reason && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Transfer reason</span>
+              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
+            </div>
+          )}
+        </div>
 
-      <TicketThread
-        ticket={ticket}
-        currentUserId={session?.user?.id}
-        role="admin"
-        allowReply={false}
-        profileName={profile?.name || "Admin"}
-      />
+        <TicketThread
+          ticket={ticket}
+          currentUserId={session?.user?.id}
+          role="admin"
+          allowReply={false}
+          profileName={profile?.name || "Admin"}
+        />
+      </div>
     </Modal>
   ) : null;
 }
