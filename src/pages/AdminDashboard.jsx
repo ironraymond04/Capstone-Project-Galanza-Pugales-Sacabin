@@ -143,7 +143,16 @@ export default function AdminDashboard() {
           {active === "offices" && (<ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={() => { loadOffices(); loadUsers(); }} />)}
           {active === "analytics" && <Analytics tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} />}
           {active === "transfer" && (<Transfers tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />)}
-          {active === "notifications" && (<Notifications tickets={tickets} loading={ticketsLoading} />)}
+          {active === "notifications" && (
+            <Notifications
+              tickets={tickets}
+              ticketsLoading={ticketsLoading}
+              notifications={notifications}
+              notificationsLoading={notifLoading}
+              onRead={loadNotifications}
+              userId={session?.user?.id}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -1235,32 +1244,83 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
   );
 }
 
-function Notifications({ tickets, loading }) {
+function Notifications({ tickets, ticketsLoading, notifications, notificationsLoading, onRead, userId }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const readTicketStorageKey = `chd-admin-read-tickets-${userId || "guest"}`;
+  const [readTicketIds, setReadTicketIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(readTicketStorageKey) || "[]"));
+    } catch {
+      return new Set();
+    }
+  });
+
+  const feedItems = [
+    ...notifications.map((notification) => ({
+      id: `notification-${notification.notif_id}`,
+      type: "notification",
+      createdAt: notification.created_at,
+      message: notification.message,
+      isUnread: !notification.is_read,
+      item: notification,
+    })),
+    ...tickets.map((ticket) => ({
+      id: `ticket-${ticket.ticket_id}`,
+      type: "ticket",
+      createdAt: ticket.created_at,
+      message: `${formatTicketCode(ticket.ticket_id)} - ${ticket.concern_text}`,
+      isUnread: !readTicketIds.has(`ticket-${ticket.ticket_id}`),
+      item: ticket,
+    })),
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const openFeedItem = async (feedItem) => {
+    if (feedItem.type === "ticket") {
+      const nextReadIds = new Set(readTicketIds);
+      nextReadIds.add(feedItem.id);
+      setReadTicketIds(nextReadIds);
+      try {
+        localStorage.setItem(readTicketStorageKey, JSON.stringify([...nextReadIds]));
+      } catch (error) {
+        console.error("save read ticket state error:", error);
+      }
+      setSelectedTicket(feedItem.item);
+      return;
+    }
+
+    if (!feedItem.item.is_read) {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("notif_id", feedItem.item.notif_id);
+      if (error) {
+        console.error("mark admin notification read error:", error);
+        return;
+      }
+      onRead?.();
+    }
+  };
 
   return (
     <>
-      <PageHeader title="Notifications" subtitle="All submitted tickets, including resolved tickets." />
+      <PageHeader title="Notifications" subtitle="Ticket updates and notifications for your account." />
       <div className="card">
-        {loading ? (
+        {notificationsLoading || ticketsLoading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
-        ) : tickets.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No submitted tickets yet.</p>
+        ) : feedItems.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
         ) : (
-          tickets.map((ticket, i) => (
+          feedItems.map((feedItem, i) => (
             <button
-              key={ticket.ticket_id}
+              key={feedItem.id}
               type="button"
-              onClick={() => setSelectedTicket(ticket)}
-              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 0", border: "none", borderBottom: i < tickets.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+              onClick={() => void openFeedItem(feedItem)}
+              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
             >
-              <span style={{ minWidth: 0, fontSize: 14 }}>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(ticket.ticket_id)}</strong>
-                <span> - {ticket.concern_text}</span>
-              </span>
+              <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                <StatusBadge status={toDisplayStatus(ticket.status)} />
-                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(ticket.created_at)}</span>
+                {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
               </span>
             </button>
           ))

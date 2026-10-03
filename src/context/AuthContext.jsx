@@ -55,6 +55,9 @@ const { data, error } = await supabase
 
   async function signOut() {
     await supabase.auth.signOut();
+    sessionStorage.removeItem("chd-admin-active-tab");
+    sessionStorage.removeItem("chd-staff-active-tab");
+    sessionStorage.removeItem("chd-student-active-tab");
     setSession(null);
     setProfile(null);
   }

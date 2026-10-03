@@ -825,8 +825,9 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
               style={{
                 width: "100%",
                 textAlign: "left",
-                background: "transparent",
-                padding: "12px 0",
+                background: n.is_read ? "transparent" : "var(--maroon-050)",
+                borderRadius: 4,
+                padding: "12px 8px",
                 borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none",
                 color: "var(--ink)",
                 display: "flex",

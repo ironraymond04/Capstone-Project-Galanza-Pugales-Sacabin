@@ -172,6 +172,11 @@ async function handleSwitchOffice(newOfficeId) {
     setActive("reports");
   };
 
+  const handlePageSelect = (page) => {
+    if (page !== "reports") setFocusTicketId(null);
+    setActive(page);
+  };
+
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
@@ -181,7 +186,7 @@ async function handleSwitchOffice(newOfficeId) {
         userName={profile?.name || "Guest User"}
         items={NAV_ITEMS}
         activeId={active}
-        onSelect={setActive}
+        onSelect={handlePageSelect}
         notifCount={unreadCount}
       />
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
@@ -195,13 +200,34 @@ async function handleSwitchOffice(newOfficeId) {
         </div>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && <Overview queue={queue} loading={queueLoading} profile={profile} officeId={officeId} />}
-          {active === "reports" && <Reports queue={queue} loading={queueLoading} focusTicketId={focusTicketId} />}
+          {active === "reports" && (
+            <Reports
+              queue={queue}
+              loading={queueLoading}
+              focusTicket={queue.find((ticket) => ticket.ticket_id === focusTicketId)}
+              onClearFocus={() => setFocusTicketId(null)}
+            />
+          )}
           {active === "logs" && <ActivityLogs logs={logs} loading={logsLoading} onViewTicket={handleViewTicket} />}
           {active === "status" && <UpdateStatus queue={queue} loading={queueLoading} onUpdated={loadQueue} />}
           {active === "routed" && (<RoutedTickets queue={queue} logs={logs} loading={queueLoading} staffUserId={session?.user?.id} officeId={officeId} onLogged={loadLogs}/>)}
           {active === "assignment" && <AutoAssignment queue={queue} loading={queueLoading} />}
           {active === "priority" && <PriorityView queue={queue} loading={queueLoading} />}
-          {active === "notifications" && (<Notifications notifications={notifications} loading={notifLoading} onRead={loadNotifications} surveys={surveys} surveysLoading={surveysLoading}/>)}
+          {active === "notifications" && (
+            <Notifications
+              notifications={notifications}
+              loading={notifLoading}
+              onRead={loadNotifications}
+              tickets={queue}
+              ticketsLoading={queueLoading}
+              logs={logs}
+              logsLoading={logsLoading}
+              userId={session?.user?.id}
+              hasOffice={Boolean(officeId)}
+              surveys={surveys}
+              surveysLoading={surveysLoading}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -404,15 +430,10 @@ function Overview({ queue, loading, profile, officeId }) {
   );
 }
 
-function Reports({ queue, loading, focusTicketId }) {
+function Reports({ queue, loading, focusTicket, onClearFocus }) {
   const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
-
-  useEffect(() => {
-    if (!focusTicketId) return;
-    const match = queue.find((t) => t.ticket_id === focusTicketId);
-    if (match) setModalTicket(match);
-  }, [focusTicketId, queue]);
+  const visibleModalTicket = modalTicket || focusTicket;
 
   const totalHandled = queue.filter((t) => t.status === "resolved" || t.status === "closed").length;
   const resolvedWithTimes = queue.filter((t) => t.resolved_at);
@@ -460,7 +481,15 @@ function Reports({ queue, loading, focusTicketId }) {
         )}
       </div>
 
-      {modalTicket && <TicketDetailModal ticket={modalTicket} onClose={() => setModalTicket(null)} />}
+      {visibleModalTicket && (
+        <TicketDetailModal
+          ticket={visibleModalTicket}
+          onClose={() => {
+            setModalTicket(null);
+            onClearFocus();
+          }}
+        />
+      )}
     </>
   );
 }
@@ -834,9 +863,20 @@ function PriorityView({ queue, loading }) {
   );
 }
 
-function Notifications({ notifications, loading, onRead, surveys, surveysLoading }) {
+function Notifications({ notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, userId, hasOffice, surveys, surveysLoading }) {
+  const isMobile = useIsMobile();
+  const readFeedStorageKey = `chd-staff-read-feed-${userId || "guest"}`;
+  const [readFeedItemIds, setReadFeedItemIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(readFeedStorageKey) || "[]"));
+    } catch {
+      return new Set();
+    }
+  });
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(null);
 
   const markRead = async (n) => {
     if (n.is_read) return;
@@ -849,59 +889,122 @@ function Notifications({ notifications, loading, onRead, surveys, surveysLoading
     onRead?.();
   };
 
+  const feedItems = [
+    ...notifications.map((notification) => ({
+      id: `notification-${notification.notif_id}`,
+      type: "notification",
+      createdAt: notification.created_at,
+      message: notification.message,
+      isUnread: !notification.is_read,
+      item: notification,
+    })),
+    ...tickets.map((ticket) => ({
+      id: `ticket-${ticket.ticket_id}`,
+      type: "ticket",
+      createdAt: ticket.created_at,
+      message: `${formatTicketCode(ticket.ticket_id)} - ${ticket.concern_text}`,
+      isUnread: !readFeedItemIds.has(`ticket-${ticket.ticket_id}`),
+      item: ticket,
+    })),
+    ...logs.map((entry) => ({
+      id: `activity-${entry.log_id}`,
+      type: "activity",
+      createdAt: entry.created_at,
+      message: entry.action,
+      isUnread: !readFeedItemIds.has(`activity-${entry.log_id}`),
+      item: entry,
+    })),
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const feedLoading = loading || (hasOffice && (ticketsLoading || logsLoading));
+
+  const openFeedItem = (feedItem) => {
+    if (feedItem.type === "notification") {
+      setSelectedNotification(feedItem.item);
+      void markRead(feedItem.item);
+    } else {
+      const nextReadIds = new Set(readFeedItemIds);
+      nextReadIds.add(feedItem.id);
+      setReadFeedItemIds(nextReadIds);
+      try {
+        localStorage.setItem(readFeedStorageKey, JSON.stringify([...nextReadIds]));
+      } catch (error) {
+        console.error("save read notification state error:", error);
+      }
+    }
+
+    if (feedItem.type === "ticket") {
+      setSelectedTicket(feedItem.item);
+    } else if (feedItem.type === "activity") {
+      setSelectedActivity(feedItem.item);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Notifications" subtitle="This section displays all the notifications you have received." />
-      <div className="card" style={{ marginBottom: 20 }}>
-        {loading ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
-        ) : notifications.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
-        ) : (
-          notifications.map((n, i) => (
-            <button
-              type="button"
-              key={n.notif_id}
-              onClick={() => { setSelectedNotification(n); void markRead(n); }}
-              style={{ display: "flex", width: "100%", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: n.is_read ? 400 : 700 }}
-            >
-              <span style={{ fontSize: 14 }}>{n.message}</span>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
-            </button>
-          ))
-        )}
+      <div style={{ display: "flex", flexDirection: isMobile ? "column-reverse" : "row-reverse", alignItems: "flex-start", gap: 16 }}>
+        <section style={{ flex: "0.9 1 0", minWidth: 0, width: isMobile ? "100%" : undefined }}>
+          <h3 style={{ margin: "0 0 10px" }}>Student feedback</h3>
+          <div className="card">
+            {surveysLoading ? (
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading feedback...</p>
+            ) : surveys.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No survey responses yet.</p>
+            ) : (
+              surveys.map((survey, i) => (
+                <button
+                  type="button"
+                  key={survey.response_id}
+                  onClick={() => setSelectedFeedback(survey)}
+                  style={{ display: "block", width: "100%", padding: "12px 0", border: "none", borderBottom: i < surveys.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+                >
+                  <span style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{formatTicketCode(survey.ticket_id)}</span>
+                    {survey.rating != null ? <StarRating rating={survey.rating} /> : <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>No rating</span>}
+                  </span>
+                  <span style={{ display: "block", fontSize: 13, margin: "4px 0 0", color: "var(--ink-soft)" }}>
+                    {survey.profiles?.name || "Unknown student"} · {timeAgo(survey.submitted_at)}
+                  </span>
+                  {survey.feedback && <span style={{ display: "block", fontSize: 14, margin: "6px 0 0" }}>{survey.feedback}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section style={{ flex: "1.3 1 0", minWidth: 0, width: isMobile ? "100%" : undefined }}>
+          <h3 style={{ margin: "0 0 10px" }}>Notifications</h3>
+          <div className="card">
+            {feedLoading ? (
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+            ) : feedItems.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
+            ) : (
+              feedItems.map((feedItem, i) => (
+                <button
+                  type="button"
+                  key={feedItem.id}
+                  onClick={() => openFeedItem(feedItem)}
+                  style={{ display: "flex", width: "100%", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
+                >
+                  <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
+                    <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
       </div>
 
+      {selectedTicket && <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />}
+      {selectedActivity && <ActivityDetailModal activity={selectedActivity} onClose={() => setSelectedActivity(null)} />}
       {selectedNotification && (
         <NotificationDetailModal notification={selectedNotification} onClose={() => setSelectedNotification(null)} />
       )}
-
-      <h3 style={{ marginBottom: 10 }}>Student feedback</h3>
-      <div className="card">
-        {surveysLoading ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
-        ) : surveys.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No survey responses yet.</p>
-        ) : (
-          surveys.map((s, i) => (
-            <button
-              type="button"
-              key={s.response_id}
-              onClick={() => setSelectedFeedback(s)}
-              style={{ display: "block", width: "100%", padding: "12px 0", border: "none", borderBottom: i < surveys.length - 1 ? "1px solid var(--line)" : "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
-            >
-              <span style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{formatTicketCode(s.ticket_id)}</span>
-                {s.rating != null ? <StarRating rating={s.rating} /> : <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>No rating</span>}
-              </span>
-              <span style={{ display: "block", fontSize: 13, margin: "4px 0 0", color: "var(--ink-soft)" }}>
-                {s.profiles?.name || "Unknown student"} · {timeAgo(s.submitted_at)}
-              </span>
-              {s.feedback && <span style={{ display: "block", fontSize: 14, margin: "6px 0 0" }}>{s.feedback}</span>}
-            </button>
-          ))
-        )}
-      </div>
 
       {selectedFeedback && (
         <FeedbackDetailModal feedback={selectedFeedback} onClose={() => setSelectedFeedback(null)} />
