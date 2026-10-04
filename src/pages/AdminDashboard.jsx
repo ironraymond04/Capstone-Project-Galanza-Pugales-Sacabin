@@ -446,24 +446,63 @@ function ManageTickets({ tickets, loading }) {
   );
 }
 
+const FILTERS = [
+  { key: "all", label: "All", match: () => true },
+  { key: "student", label: "Students", match: (r) => r === "student" },
+  { key: "staff", label: "Faculty & Staff", match: (r) => r === "staff" || r === "faculty" },
+  { key: "admin", label: "Admin", match: (r) => r === "admin" },
+];
+
 function ManageUsers({ users, loading, onUpdated }) {
+const [roleFilter, setRoleFilter] = useState("all");
+
   const toggleStatus = async (userId, current) => {
     await supabase.from("profiles").update({ is_active: !current }).eq("user_id", userId);
     onUpdated?.();
   };
 
+  const counts = useMemo(() => {
+    const result = {};
+    FILTERS.forEach((f) => {
+      result[f.key] = users.filter((u) => f.match(u.role)).length;
+    });
+    return result;
+  }, [users]);
+
+  const filteredUsers = useMemo(() => {
+    const active = FILTERS.find((f) => f.key === roleFilter) || FILTERS[0];
+    return users.filter((u) => active.match(u.role));
+  }, [users, roleFilter]);
+
   return (
     <>
       <PageHeader title="Users" subtitle="Saved to and retrieved from the User data store." />
       <div className="card">
+        {/* Filter buttons */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={roleFilter === f.key ? "btn btn-primary" : "btn btn-ghost"}
+              style={{ padding: "6px 14px", fontSize: 12, whiteSpace: "nowrap" }}
+              onClick={() => setRoleFilter(f.key)}
+              aria-pressed={roleFilter === f.key}
+            >
+              {f.label} ({counts[f.key]})
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+        ) : filteredUsers.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No users found for this filter.</p>
         ) : (
           <TableScroll>
             <table className="chd-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
               <tbody>
-                {users.map((u) => (
+                {filteredUsers.map((u) => (
                   <tr key={u.user_id}>
                     <td>{u.name}</td>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
@@ -692,12 +731,40 @@ function SectionTitle({ children, hint }) {
   );
 }
 
+const REPORT_KEY = "chd-analytics-report";
+
+function loadSavedReport() {
+  try {
+    const raw = localStorage.getItem(REPORT_KEY);
+    if (!raw) return { report: null, generatedAt: null };
+    const parsed = JSON.parse(raw);
+    return {
+      report: parsed.report || null,
+      generatedAt: parsed.generatedAt ? new Date(parsed.generatedAt) : null,
+    };
+  } catch {
+    return { report: null, generatedAt: null };
+  }
+}
+
+function saveReport(report, generatedAt) {
+  try {
+    localStorage.setItem(
+      REPORT_KEY,
+      JSON.stringify({ report, generatedAt: generatedAt.toISOString() })
+    );
+  } catch (e) {
+    console.error("Could not save report:", e);
+  }
+}
+
 function Analytics({ tickets, offices, loading }) {
   const isMobile = useIsMobile();
-  const [report, setReport] = useState(null);
+  const [saved] = useState(loadSavedReport);
+  const [report, setReport] = useState(saved.report);
   const [generating, setGenerating] = useState(false);
   const [reportError, setReportError] = useState("");
-  const [generatedAt, setGeneratedAt] = useState(null);
+  const [generatedAt, setGeneratedAt] = useState(saved.generatedAt);
   const [copied, setCopied] = useState(false);
 
   const stats = useMemo(() => {
@@ -784,8 +851,10 @@ function Analytics({ tickets, offices, loading }) {
 
     try {
       const result = await generateTicketReport(payload);
+      const now = new Date();
+      saveReport(result, now);
       setReport(result);
-      setGeneratedAt(new Date());
+      setGeneratedAt(now);
     } catch (err) {
       const msg = String(err?.message || err);
       if (/429|RESOURCE_EXHAUSTED/i.test(msg)) {
