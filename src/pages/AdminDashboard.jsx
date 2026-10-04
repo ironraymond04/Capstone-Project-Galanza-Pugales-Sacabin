@@ -131,7 +131,7 @@ export default function AdminDashboard() {
     loadOffices();
     loadLogs();
     loadNotifications();
-      sessionStorage.setItem("chd-admin-active-tab", active);
+    sessionStorage.setItem("chd-admin-active-tab", active);
   }, [active]);
 
   const unreadCount =
@@ -543,7 +543,7 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
 
   const staffOptions = users.filter((u) => u.role === "staff" && (u.is_active || u.user_id === editingOffice?.head_user_id));
 
-const handleAddOffice = async (payload) => {
+  const handleAddOffice = async (payload) => {
     setSubmitting(true);
     setSubmitError("");
 
@@ -572,7 +572,7 @@ const handleAddOffice = async (payload) => {
     setSubmitting(false);
     onUpdated?.();
     setModalOpen(false);
-};
+  };
 
   const handleEditOffice = async (payload) => {
     setSubmitting(true);
@@ -782,12 +782,21 @@ function Analytics({ tickets, offices, loading }) {
       })),
     };
 
-    const result = await generateTicketReport(payload);
-    if (result) {
+    try {
+      const result = await generateTicketReport(payload);
       setReport(result);
       setGeneratedAt(new Date());
-    } else {
-      setReportError("The AI couldn't generate a report. Please try again in a moment.");
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (/429|RESOURCE_EXHAUSTED/i.test(msg)) {
+        setReportError("AI quota reached. Please wait a minute and try again.");
+      } else if (/404|not found/i.test(msg)) {
+        setReportError("AI model not found. Check the model name in ai.js.");
+      } else if (/JSON/i.test(msg)) {
+        setReportError("The AI response was incomplete. Please try again.");
+      } else {
+        setReportError(`The AI couldn't generate a report: ${msg.slice(0, 120)}`);
+      }
     }
     setGenerating(false);
   }

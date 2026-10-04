@@ -204,22 +204,56 @@ Rules:
 - "attention_tickets": up to 5 tickets that need admin attention (oldest unresolved, unassigned, escalated, or low AI confidence). Use the ticket code exactly as given.
 - Keep the tone professional and brief.`;
 
-export async function generateTicketReport({ stats, tickets }) {
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: JSON.stringify({ generatedAt: new Date().toISOString(), stats, tickets }),
-      config: {
-        systemInstruction: REPORT_PROMPT,
-        responseMimeType: "application/json",
-        responseSchema: REPORT_SCHEMA,
-        temperature: 0.2,
-      },
-    });
+const REPORT_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"]; // tried in order
 
-    return JSON.parse(response.text);
-  } catch (err) {
-    console.error("AI report generation failed:", err);
-    return null;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function parseJsonSafe(text) {
+  // strip ```json fences if the model adds them
+  const clean = (text || "").replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+export async function generateTicketReport({ stats, tickets }) {
+  const contents = JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    stats,
+    tickets,
+  });
+
+  let lastError = null;
+
+  for (const model of REPORT_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: REPORT_PROMPT,
+            responseMimeType: "application/json",
+            responseSchema: REPORT_SCHEMA,
+            maxOutputTokens: 8192, // avoid truncated JSON
+          },
+        });
+
+        if (!response.text) throw new Error("Empty response from model");
+        return parseJsonSafe(response.text);
+      } catch (err) {
+        lastError = err;
+        console.error(`Report failed (model=${model}, attempt=${attempt + 1}):`, err);
+
+        const msg = String(err?.message || err);
+        const retryable = /429|503|overloaded|RESOURCE_EXHAUSTED|UNAVAILABLE/i.test(msg);
+        if (retryable && attempt === 0) {
+          await sleep(2000);
+          continue; // retry same model once
+        }
+        break; // move on to next model
+      }
+    }
   }
+
+  // Throw so the UI can show the real reason
+  throw lastError || new Error("Report generation failed");
 }

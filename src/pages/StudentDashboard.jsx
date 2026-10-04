@@ -467,6 +467,38 @@ const handleSubmit = async (e) => {
     onSubmitted?.();
 };
 
+const DRAFT_KEY = `ticket_draft_${session?.user?.id}`;
+
+// 1. Restore a saved draft when the page loads (only if the box is empty)
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (saved && !ticketText) setTicketText(saved);
+  } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+// 2. Save the draft as the user types; clear it when the box is emptied/submitted
+useEffect(() => {
+  try {
+    if (ticketText.trim()) localStorage.setItem(DRAFT_KEY, ticketText);
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch {}
+}, [ticketText, DRAFT_KEY]);
+
+// 3. Warn before closing/refreshing the tab while there's unsent text
+useEffect(() => {
+  if (!ticketText.trim() || submitting) return;
+
+  const handleBeforeUnload = (e) => {
+    e.preventDefault();
+    e.returnValue = ""; // required for Chrome to show the prompt
+  };
+
+  window.addEventListener("beforeunload", handleBeforeUnload);
+  return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+}, [ticketText, submitting]);
+
   return (
     <>
       <PageHeader
