@@ -8,7 +8,7 @@ console.log("Key preview:", import.meta.env.VITE_GEMINI_API_KEY?.slice(0, 6) + "
 // Keep this in sync with the OFFICES array in your dashboards
 const OFFICE_LABELS = [
   "Registrar", "Library", "Guidance Office", "Accounting", "DSA/OSAS",
-  "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE",
+  "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
 ];
 
 const CLASSIFICATION_SCHEMA = {
@@ -69,7 +69,7 @@ Read the student's concern and decide which office should handle it. Offices and
 
 - GRADUATE STUDIES: Graduate Studies handles department-specific academic concerns for its graduate programs, currently MAED. Master's students go here for questions about their courses and academic requirements.
 
-- SECURITY: Handles campus safety (firearms, deadly weapons, vape/cigarettes, etc.), access control, and order. Route tickets about lost and found items, theft or suspicious persons, ID or gate entry problems, visitor and vehicle passes, parking and traffic concerns, CCTV review requests, incident or accident reports, and emergencies on campus. Do NOT route facility repairs (PHYSICAL PLANT) or network or account problems (MIS) here.
+- SECURITY: Handles campus safety (firearms, deadly weapons, vape/cigarettes, etc.), access control, and order. Proper dress code policy not allowed inside (Spaghetti straps, halter top, plunging neckline, midriff blouse, see-thorugh blouse, tube-top, female shorts/mini skirt, extreme hair color, slitted skirt, sleeveless, backless, slippers, undershirt, piercing among male, male shorts, etc.) Route tickets about lost and found items, theft or suspicious persons, ID or gate entry problems, visitor and vehicle passes, parking and traffic concerns, CCTV review requests, incident or accident reports, and emergencies on campus. Do NOT route facility repairs (PHYSICAL PLANT) or network or account problems (MIS) here.
 
 - PHYSICAL PLANT: Handles the maintenance, repair, and upkeep of campus buildings, grounds, and utilities. Route tickets about broken chairs, desks, doors, windows, or locks, faulty lights, electrical outlets, or aircon units, plumbing leaks, clogged or unclean restrooms, water or power interruptions, leaking roofs, grounds and landscaping, and room setup or equipment moving for events. Do NOT route IT equipment faults such as computers or projectors (MIS) or safety incidents (SECURITY) here.
 
@@ -82,6 +82,8 @@ Read the student's concern and decide which office should handle it. Offices and
 - MIS: The Management Information Systems office, which handles all campus technology and information systems. Route tickets about student, faculty, and staff account issues (login problems, password resets, email, portal access), Wi-Fi and network problems, computer laboratory and workstation faults, projector or presentation equipment issues, software installation and licenses, enrollment, grading, or other system errors, website and online services, and data or system access requests. Do NOT route physical room repairs (PHYSICAL PLANT) here.
 
 - HUMAN RESOURCE: Handles employee-related concerns for faculty and staff. Route tickets about employment records and contracts, payroll and salary concerns, leave applications and balances, attendance and DTR corrections, benefits and government contributions (SSS, PhilHealth, Pag-IBIG), recruitment and applications, certificates of employment, faculty and staff performance or conduct concerns, and onboarding or separation processing. Do NOT route student concerns here.
+
+-CLINIC: Handles health and medical concerns for students, faculty, and staff within the campus. Route tickets about medical consultations and first aid, illness or injury incidents on campus, medical and dental check-ups, health certificates and medical clearances (enrollment, OJT/internship, sports, and events), medical excuse slips and validation of illness-related absences, health records and immunization or vaccination requirements, medicine and supply requests, health and wellness programs or drives, infirmary or rest-room use, and reports of communicable diseases or health hazards. Do NOT route counseling, guidance, or mental health concerns (route to GUIDANCE), campus facility or sanitation repairs, or academic, payroll, and enrollment concerns here.
 
 Critical routing rule for grades:
 - If the concern names a SPECIFIC SUBJECT or COURSE (e.g. "missing grade in Information Technology Fundamentals", "incomplete grade in Data Structures", "wrong grade in Thesis Writing"), route it to the COLLEGE that teaches that subject, NOT Registrar. Use the subject name to infer the program/college (e.g. any IT/Computer Science/Programming/Networking/Systems subject → CCS; any Engineering subject → COE; general education, English, Math, Filipino → CAS; Business, Marketing, Accounting-as-a-subject → CBA; Education/Teaching methods subjects → CED; Criminology/Law Enforcement subjects → COC).
