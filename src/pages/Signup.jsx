@@ -10,6 +10,37 @@ const ROLES = [
   { value: "admin", label: "Admin" },
 ];
 
+const COURSES = [
+  "BSIT",
+  "BSCS",
+  "BSCE",
+  "BSEE",
+  "BSME",
+  "BSCpE",
+  "BSECE",
+  "AB-ENG",
+  "AB-FIL",
+  "AB-POLSCI",
+  "BEED",
+  "BSED",
+  "BSBA-MM",
+  "BSBA-FM",
+  "BSBA-OM",
+  "BSBA-HRM",
+  "BSCRIM",
+  "G7",
+  "G8",
+  "G9",
+  "G10",
+  "G11",
+  "G12",
+];
+
+const YEARS = [1, 2, 3, 4];
+
+// Junior / Senior High School grade levels have no "year" dropdown
+const isGradeLevel = (course) => /^G(7|8|9|10|11|12)$/.test(course);
+
 export default function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -18,22 +49,51 @@ export default function Signup() {
     fullName: "",
     email: "",
     role: ROLES.some((option) => option.value === requestedRole) ? requestedRole : "student",
+    course: "",
+    year: "",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isStudent = form.role === "student";
+  const showYear = isStudent && form.course && !isGradeLevel(form.course);
+
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const setRole = (role) => setForm((f) => ({ ...f, role }));
+  const setRole = (role) =>
+    setForm((f) => ({
+      ...f,
+      role,
+      // clear student-only fields when switching away from student
+      ...(role !== "student" ? { course: "", year: "" } : {}),
+    }));
+
+  const handleCourseChange = (e) => {
+    const course = e.target.value;
+    setForm((f) => ({
+      ...f,
+      course,
+      // G7-G12 have no year level
+      year: isGradeLevel(course) ? "" : f.year,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.fullName || !form.email || !form.password) {
       setError("Fill in all required fields.");
+      return;
+    }
+    if (isStudent && !form.course) {
+      setError("Please select your course.");
+      return;
+    }
+    if (showYear && !form.year) {
+      setError("Please select your year level.");
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -44,11 +104,17 @@ export default function Signup() {
     setError("");
     setLoading(true);
 
+    const metadata = { name: form.fullName, role: form.role };
+    if (isStudent) {
+      metadata.course = form.course;
+      metadata.year_level = showYear ? Number(form.year) : null;
+    }
+
     const { error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
-        data: { name: form.fullName, role: form.role },
+        data: metadata,
       },
     });
 
@@ -147,6 +213,46 @@ export default function Signup() {
                   ))}
                 </div>
               </div>
+
+              {isStudent && (
+                <div className={showYear ? "field-row" : undefined}>
+                  <div className="field">
+                    <label htmlFor="course">Course</label>
+                    <select
+                      id="course"
+                      name="course"
+                      value={form.course}
+                      onChange={handleCourseChange}
+                    >
+                      <option value="">Select course</option>
+                      {COURSES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {showYear && (
+                    <div className="field">
+                      <label htmlFor="year">Year</label>
+                      <select
+                        id="year"
+                        name="year"
+                        value={form.year}
+                        onChange={handleChange}
+                      >
+                        <option value="">Select year</option>
+                        {YEARS.map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="field-row">
                 <div className="field">
@@ -289,15 +395,20 @@ export default function Signup() {
 
         .field { margin-bottom: 16px; }
         .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-        .field input {
+        .field input,
+        .field select {
           width: 100%; padding: 11px 12px; font-size: 16px;
           border: 1px solid var(--border, #e5dede); border-radius: 8px;
+          background: #fff;
           transition: border-color .15s ease, box-shadow .15s ease;
         }
+        .field select { cursor: pointer; }
         @media (min-width: 481px) {
-          .field input { font-size: 14px; }
+          .field input,
+          .field select { font-size: 14px; }
         }
-        .field input:focus {
+        .field input:focus,
+        .field select:focus {
           outline: none;
           border-color: var(--maroon-600);
           box-shadow: 0 0 0 3px rgba(133,57,58,.12);

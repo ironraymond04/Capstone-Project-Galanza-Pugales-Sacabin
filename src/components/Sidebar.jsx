@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient"; // <-- adjust to your client path
+import ProfileModal from "./ProfileModal";
 import "../styles/theme.css";
 import spcLogo from "../assets/spc.jpg";
 
@@ -15,6 +17,8 @@ import spcLogo from "../assets/spc.jpg";
  *  - Mobile (< 900px): sidebar collapses into a slide-in drawer, triggered by
  *    a hamburger button in a small top bar. Selecting an item or tapping the
  *    overlay closes the drawer.
+ *
+ * Clicking the user card in the footer opens the Profile modal.
  *
  * Props:
  *  role        - "Student" | "Faculty & Staff" | "Admin"
@@ -38,6 +42,8 @@ export default function Sidebar({
     typeof window !== "undefined" ? window.innerWidth < 900 : false
   );
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   useEffect(() => {
     const onResize = () => {
@@ -60,8 +66,31 @@ export default function Sidebar({
     }
   }, [isMobile, open]);
 
+  // load the avatar for the footer card
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("user_id", auth.user.id)
+        .single();
+      if (!cancelled && data?.avatar_url) setAvatarUrl(data.avatar_url);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSelect = (id) => {
     onSelect(id);
+    if (isMobile) setOpen(false);
+  };
+
+  const openProfile = () => {
+    setProfileOpen(true);
     if (isMobile) setOpen(false);
   };
 
@@ -354,8 +383,12 @@ export default function Sidebar({
 
         {/* Footer / user + logout */}
         <div style={{ padding: 16, borderTop: "1px solid rgba(255,255,255,0.10)" }}>
-          <div
+          <button
+            onClick={openProfile}
+            aria-label="Open profile"
+            title="View profile"
             style={{
+              width: "100%",
               display: "flex",
               alignItems: "center",
               gap: 10,
@@ -363,7 +396,13 @@ export default function Sidebar({
               borderRadius: "var(--radius-sm)",
               background: "rgba(255,255,255,0.06)",
               marginBottom: 8,
+              textAlign: "left",
+              color: "inherit",
+              cursor: "pointer",
+              transition: "background 0.15s ease",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
           >
             <span
               style={{
@@ -376,19 +415,37 @@ export default function Sidebar({
                 fontSize: 12,
                 fontWeight: 700,
                 flexShrink: 0,
+                overflow: "hidden",
               }}
             >
-              {userName.charAt(0).toUpperCase()}
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                userName.charAt(0).toUpperCase()
+              )}
             </span>
-            <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+              }}
+            >
               {userName}
             </div>
-          </div>
+          </button>
           <button
             onClick={async () => {
-            await signOut();
-            navigate("/login");
-          }}
+              await signOut();
+              navigate("/login");
+            }}
             className="btn btn-outline-white"
             style={{ width: "100%", justifyContent: "center" }}
           >
@@ -396,6 +453,14 @@ export default function Sidebar({
           </button>
         </div>
       </aside>
+
+      {/* Profile modal */}
+      <ProfileModal
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        role={role}
+        onAvatarChange={setAvatarUrl}
+      />
     </>
   );
 }
