@@ -19,9 +19,9 @@ const STEPS = [
 ];
 
 const ROLES = [
-  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", path: "/login" },
-  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", path: "/login" },
-  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", path: "/login" },
+  { name: "Students", detail: "Submit tickets, track status, use the campus map, rate resolutions.", role: "student" },
+  { name: "Faculty & Staff", detail: "Receive routed tickets, manage priority, resolve and report.", role: "staff" },
+  { name: "Admin", detail: "Oversee users, offices, transfers, and system-wide analytics.", role: "admin" },
 ];
 
 export default function Home() {
@@ -150,12 +150,13 @@ export default function Home() {
             <div
               key={r.name}
               className="card"
+              style={{ display: "flex", flexDirection: "column" }}
             >
               <h3 style={{ fontSize: 18 }}>{r.name}</h3>
-              <p style={{ fontSize: 14 }}>{r.detail}</p>
+              <p style={{ fontSize: 14, flex: 1 }}>{r.detail}</p>
               <button
                 type="button"
-                onClick={() => navigate(r.path)}
+                onClick={() => navigate(`/signup?role=${r.role}`)}
                 style={{
                   color: "var(--maroon-600)",
                   fontWeight: 600,

@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
 import { generateTicketReport } from "../lib/ai"; 
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
@@ -121,7 +122,7 @@ export default function AdminDashboard() {
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
     if (error) console.error("loadNotifications error:", error);
-    if (!error) setNotifications(data || []);
+    if (!error) setNotifications(applyStoredReadNotifications(data, session.user.id));
     setNotifLoading(false);
   }
 
@@ -159,6 +160,7 @@ export default function AdminDashboard() {
           {active === "transfer" && (<Transfers tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} onUpdated={loadTickets} />)}
           {active === "notifications" && (
             <Notifications
+              userId={session?.user?.id}
               tickets={tickets}
               ticketsLoading={ticketsLoading}
               notifications={notifications}
@@ -1338,7 +1340,7 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
   );
 }
 
-function Notifications({ tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds }) {
+function Notifications({ userId, tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
 
   const feedItems = [
@@ -1375,13 +1377,18 @@ function Notifications({ tickets, ticketsLoading, notifications, notificationsLo
     }
 
     if (!feedItem.item.is_read) {
-      const { error } = await supabase
+      storeReadNotification(userId, feedItem.item.notif_id);
+      const { data, error } = await supabase
         .from("notifications")
         .update({ is_read: true })
-        .eq("notif_id", feedItem.item.notif_id);
-      if (error) {
-        console.error("mark admin notification read error:", error);
-        return;
+        .eq("notif_id", feedItem.item.notif_id)
+        .eq("user_id", userId)
+        .select("notif_id")
+        .maybeSingle();
+      if (error || !data) {
+        console.error("mark admin notification read error:", error || "No notification row was updated.");
+      } else {
+        clearStoredReadNotification(userId, feedItem.item.notif_id);
       }
       onRead?.();
     }

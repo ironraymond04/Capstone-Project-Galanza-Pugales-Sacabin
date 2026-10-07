@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
 import "../styles/theme.css";
 import { classifyTicket } from "../lib/ai";
 import TicketThread from "../components/TicketThread";
@@ -107,7 +108,7 @@ export default function StudentDashboard() {
       .select("*, tickets(ticket_id, concern_text, status)")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
-    if (!error) setNotifications(data || []);
+    if (!error) setNotifications(applyStoredReadNotifications(data, session.user.id));
     setNotifLoading(false);
   }
 
@@ -115,7 +116,7 @@ export default function StudentDashboard() {
     loadTickets();
     loadNotifications();
     sessionStorage.setItem("chd-student-active-tab", active);
-  }, [active]);
+  }, [active, session?.user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -846,9 +847,21 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
   }, [selectedNotification]);
 
   const openNotification = async (n) => {
-    setSelectedNotification(n);
+    setSelectedNotification({ ...n, is_read: true });
     if (!n.is_read) {
-      await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
+      storeReadNotification(session?.user?.id, n.notif_id);
+      const { data, error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("notif_id", n.notif_id)
+        .eq("user_id", session?.user?.id)
+        .select("notif_id")
+        .maybeSingle();
+      if (error || !data) {
+        console.error("mark student notification read error:", error || "No notification row was updated.");
+      } else {
+        clearStoredReadNotification(session?.user?.id, n.notif_id);
+      }
       onRead?.();
     }
   };

@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
+import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
 
@@ -124,7 +125,7 @@ export default function StaffDashboard() {
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false });
     if (error) console.error("loadNotifications error:", error);
-    if (!error) setNotifications(data || []);
+    if (!error) setNotifications(applyStoredReadNotifications(data, session.user.id));
     setNotifLoading(false);
   }
 
@@ -234,6 +235,7 @@ async function handleSwitchOffice(newOfficeId) {
           {active === "priority" && <PriorityView queue={queue} loading={queueLoading} />}
           {active === "notifications" && (
             <Notifications
+              userId={session?.user?.id}
               notifications={notifications}
               loading={notifLoading}
               onRead={loadNotifications}
@@ -897,7 +899,7 @@ function PriorityView({ queue, loading }) {
   );
 }
 
-function Notifications({ notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, hasOffice, surveys, surveysLoading, readFeedStorageKey, readFeedItemIds, setReadFeedItemIds }) {
+function Notifications({ userId, notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, hasOffice, surveys, surveysLoading, readFeedStorageKey, readFeedItemIds, setReadFeedItemIds }) {
   const isMobile = useIsMobile();
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
@@ -906,10 +908,18 @@ function Notifications({ notifications, loading, onRead, tickets, ticketsLoading
 
   const markRead = async (n) => {
     if (n.is_read) return;
-    const { error } = await supabase.from("notifications").update({ is_read: true }).eq("notif_id", n.notif_id);
-    if (error) {
-      console.error("markRead error:", error);
-      return;
+    storeReadNotification(userId, n.notif_id);
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("notif_id", n.notif_id)
+      .eq("user_id", userId)
+      .select("notif_id")
+      .maybeSingle();
+    if (error || !data) {
+      console.error("mark staff notification read error:", error || "No notification row was updated.");
+    } else {
+      clearStoredReadNotification(userId, n.notif_id);
     }
     setSelectedNotification((current) => current?.notif_id === n.notif_id ? { ...current, is_read: true } : current);
     onRead?.();
