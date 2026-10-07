@@ -355,7 +355,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                   style={{ display: "none" }}
                 />
                 <button
-                  className="btn"
+                  className="btn btn-ghost"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
                   style={{ marginTop: 10 }}
@@ -406,7 +406,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                 <>
                   <Message msg={infoMsg} />
                   <button
-                    className="btn"
+                    className="btn btn-primary"
                     onClick={handleSaveInfo}
                     disabled={savingInfo}
                     style={{ width: "100%", justifyContent: "center", marginBottom: 6 }}
@@ -422,7 +422,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                   <>
                     <Message msg={pwMsg} />
                     <button
-                      className="btn"
+                      className="btn btn-primary"
                       onClick={() => setShowPw(true)}
                       style={{ width: "100%", justifyContent: "center" }}
                     >
@@ -459,7 +459,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                     <Message msg={pwMsg} />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
-                        className="btn"
+                        className="btn btn-primary"
                         onClick={handleChangePassword}
                         disabled={savingPw}
                         style={{ flex: 1, justifyContent: "center" }}
@@ -467,7 +467,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                         {savingPw ? "Updating…" : "Update password"}
                       </button>
                       <button
-                        className="btn"
+                        className="btn btn-ghost"
                         onClick={() => {
                           setShowPw(false);
                           setPwMsg(null);
