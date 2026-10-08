@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
+import ScrollReveal from "../components/ScrollReveal";
 import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
 
@@ -119,11 +120,13 @@ export default function Home() {
             gap: isMobile ? 16 : 20,
           }}
         >
-          {STEPS.map((s) => (
-            <div key={s.title} className="card">
-              <h3 style={{ marginTop: 10, fontSize: 19 }}>{s.title}</h3>
-              <p style={{ fontSize: 14 }}>{s.text}</p>
-            </div>
+          {STEPS.map((s, index) => (
+            <ScrollReveal key={s.title} delay={index * 100}>
+              <div className="card">
+                <h3 style={{ marginTop: 10, fontSize: 19 }}>{s.title}</h3>
+                <p style={{ fontSize: 14 }}>{s.text}</p>
+              </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -146,30 +149,31 @@ export default function Home() {
             gap: isMobile ? 16 : 20,
           }}
         >
-          {ROLES.map((r) => (
-            <div
-              key={r.name}
-              className="card"
-              style={{ display: "flex", flexDirection: "column" }}
-            >
-              <h3 style={{ fontSize: 18 }}>{r.name}</h3>
-              <p style={{ fontSize: 14, flex: 1 }}>{r.detail}</p>
-              <button
-                type="button"
-                onClick={() => navigate(`/signup?role=${r.role}`)}
-                style={{
-                  color: "var(--maroon-600)",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  background: "none",
-                  border: 0,
-                  padding: 0,
-                  cursor: "pointer",
-                }}
+          {ROLES.map((r, index) => (
+            <ScrollReveal key={r.name} delay={index * 100}>
+              <div
+                className="card"
+                style={{ display: "flex", flexDirection: "column" }}
               >
-                Continue →
-              </button>
-            </div>
+                <h3 style={{ fontSize: 18 }}>{r.name}</h3>
+                <p style={{ fontSize: 14, flex: 1 }}>{r.detail}</p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/signup?role=${r.role}`)}
+                  style={{
+                    color: "var(--maroon-600)",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    background: "none",
+                    border: 0,
+                    padding: 0,
+                    cursor: "pointer",
+                  }}
+                >
+                  Continue →
+                </button>
+              </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>

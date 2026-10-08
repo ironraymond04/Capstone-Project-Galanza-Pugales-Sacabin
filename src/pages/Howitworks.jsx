@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
+import ScrollReveal from "../components/ScrollReveal";
 import "../styles/theme.css";
 
 // The end-to-end flow, in order — this genuinely is a sequence,
@@ -76,8 +76,6 @@ const ROLE_DETAIL = [
 ];
 
 export default function HowItWorks() {
-  const navigate = useNavigate();
-
   return (
     <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
       <Navbar />
@@ -105,15 +103,15 @@ export default function HowItWorks() {
   <div className="card flow-timeline">
         <div className="card" style={{ padding: "36px 40px" }}>
           {FLOW.map((step, i) => (
-            <div
-              key={step.n}
-              style={{
-                display: "flex",
-                gap: 24,
-                paddingBottom: i < FLOW.length - 1 ? 28 : 0,
-                position: "relative",
-              }}
-            >
+            <ScrollReveal key={step.n} delay={i * 80}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 24,
+                  paddingBottom: i < FLOW.length - 1 ? 28 : 0,
+                  position: "relative",
+                }}
+              >
               {/* connector line */}
               {i < FLOW.length - 1 && (
                 <div
@@ -151,7 +149,8 @@ export default function HowItWorks() {
                 <h3 style={{ fontSize: 18, marginTop: 4 }}>{step.title}</h3>
                 <p style={{ fontSize: 14, marginBottom: 0 }}>{step.text}</p>
               </div>
-            </div>
+              </div>
+            </ScrollReveal>
           ))}
   </div>
   </div>
@@ -163,26 +162,28 @@ export default function HowItWorks() {
     <h2 style={{ fontSize: "clamp(22px, 4vw, 28px)", marginTop: 8 }}>What each portal gives you</h2>
   </div>
   <div className="role-grid">
-    {ROLE_DETAIL.map((r) => (
-      <div key={r.role} className="card">
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: r.color,
-            marginBottom: 12,
-          }}
-        />
-        <h3 style={{ fontSize: 18 }}>{r.role}</h3>
-        <ul style={{ margin: 0, paddingLeft: 18 }}>
-          {r.points.map((p) => (
-            <li key={p} style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 8 }}>
-              {p}
-            </li>
-          ))}
-        </ul>
-      </div>
+    {ROLE_DETAIL.map((r, index) => (
+      <ScrollReveal key={r.role} delay={index * 100}>
+        <div className="card">
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: r.color,
+              marginBottom: 12,
+            }}
+          />
+          <h3 style={{ fontSize: 18 }}>{r.role}</h3>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {r.points.map((p) => (
+              <li key={p} style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 8 }}>
+                {p}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </ScrollReveal>
     ))}
   </div>
 </section>
