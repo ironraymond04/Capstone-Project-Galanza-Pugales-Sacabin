@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import ScrollReveal from "../components/ScrollReveal";
 import useIsMobile from "../hooks/useIsMobile";
 import "../styles/theme.css";
+import spcLogo from "../assets/spc.jpg";
 
 const STEPS = [
   {
@@ -35,12 +36,13 @@ export default function Home() {
 
       {/* Hero */}
       <section
+        className="public-hero public-hero--home"
         style={{
-          background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
           color: "var(--white)",
           padding: isMobile ? "56px 20px 88px" : "88px 32px 120px",
         }}
       >
+        <img className="public-hero__seal" src={spcLogo} alt="" aria-hidden="true" />
         <div style={{ maxWidth: 780, margin: "0 auto", textAlign: "center" }}>
           <h1
             className="page-description page-description--from-left"

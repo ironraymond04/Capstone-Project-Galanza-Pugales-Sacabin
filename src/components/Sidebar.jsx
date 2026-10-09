@@ -221,7 +221,10 @@ export default function Sidebar({
           color: "var(--white)",
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100vh",
+          minHeight: 0,
+          maxHeight: "100vh",
+          alignSelf: "flex-start",
           position: isMobile ? "fixed" : "sticky",
           top: 0,
           left: 0,
@@ -304,7 +307,7 @@ export default function Sidebar({
         )}
 
         {/* Nav items */}
-        <nav style={{ flex: 1, padding: "16px 12px", overflowY: "auto" }}>
+        <nav style={{ flex: 1, minHeight: 0, padding: "16px 12px", overflowY: "auto" }}>
           {items.map((item) => {
             const active = item.id === activeId;
             return (

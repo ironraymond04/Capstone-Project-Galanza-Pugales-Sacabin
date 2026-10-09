@@ -82,9 +82,8 @@ export default function HowItWorks() {
 
 {/* Intro */}
 <section
-  className="how-it-works-hero"
+  className="public-hero public-hero--process how-it-works-hero"
   style={{
-    background: "linear-gradient(180deg, var(--maroon-900) 0%, var(--maroon-500) 62%, #8c1c2b 100%)",
     color: "var(--white)",
     textAlign: "center",
   }}
@@ -99,7 +98,7 @@ export default function HowItWorks() {
 </section>
 
 {/* Flow timeline */}
-<section style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 clamp(16px, 4vw, 32px) 90px" }}>
+<section className="process-flow-section" style={{ maxWidth: 860, margin: "-48px auto 0", padding: "0 clamp(16px, 4vw, 32px) 90px" }}>
   <div className="card flow-timeline">
         <div className="card" style={{ padding: "36px 40px" }}>
           {FLOW.map((step, i) => (

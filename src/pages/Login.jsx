@@ -63,10 +63,10 @@ export default function Login() {
   };
 
   return (
-    <div className="login-shell">
+    <div className="login-shell public-auth-shell">
       <Navbar />
 
-      <div className="login-stage">
+      <div className="login-stage public-auth-stage">
         {/* Brand panel — hidden on mobile */}
         <section className="brand-panel" aria-hidden="true">
           <span className="brand-eyebrow page-description page-description--from-left">

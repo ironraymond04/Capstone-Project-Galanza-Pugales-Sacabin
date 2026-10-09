@@ -129,10 +129,10 @@ export default function Signup() {
   };
 
   return (
-    <div className="auth-shell">
+    <div className="auth-shell public-auth-shell">
       <Navbar />
 
-      <div className="auth-stage">
+      <div className="auth-stage public-auth-stage">
         <section className="brand-panel" aria-hidden="true">
           <span className="brand-eyebrow page-description page-description--from-left">
             SPC Helpdesk

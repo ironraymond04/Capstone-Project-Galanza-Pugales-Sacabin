@@ -666,6 +666,54 @@ button:active { transform: none; }
 }
 
 /* How It Works — role breakdown grid */
+.public-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--maroon-900);
+}
+
+.public-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -260px;
+  right: -120px;
+  width: clamp(340px, 48vw, 700px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 22px rgba(255, 255, 255, 0.025),
+    0 0 0 23px rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.public-hero__seal {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: clamp(18px, 5vw, 72px);
+  width: clamp(190px, 22vw, 300px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.public-hero--process::before {
+  top: -340px;
+  right: auto;
+  left: -220px;
+  width: clamp(420px, 58vw, 820px);
+}
+
+.process-flow-section {
+  position: relative;
+  z-index: 1;
+}
+
 .how-it-works-hero {
   padding: clamp(40px, 8vw, 72px) clamp(20px, 5vw, 32px) clamp(56px, 10vw, 88px);
 }
@@ -688,6 +736,12 @@ button:active { transform: none; }
   gap: 20px;
 }
 
+@media (max-width: 1100px) {
+  .public-hero__seal {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .role-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -699,5 +753,147 @@ button:active { transform: none; }
   .role-grid {
     grid-template-columns: 1fr;
     gap: 14px;
+  }
+}
+
+/* Shared public authentication pages */
+.public-auth-shell {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.public-auth-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - 78px);
+}
+
+.public-auth-shell .brand-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 72px 56px;
+  background: var(--maroon-900);
+  color: var(--white);
+}
+
+.public-auth-shell .brand-panel::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -170px;
+  right: -150px;
+  width: min(72%, 520px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 20px rgba(255, 255, 255, 0.025),
+    0 0 0 21px rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.public-auth-shell .brand-panel::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  bottom: -42px;
+  left: 24px;
+  width: 220px;
+  aspect-ratio: 1;
+  background: url("../assets/spc.jpg") center / contain no-repeat;
+  opacity: 0.14;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.public-auth-shell .brand-eyebrow {
+  color: var(--maroon-300);
+}
+
+.public-auth-shell .brand-headline {
+  font-family: var(--font-display);
+  font-size: 38px;
+  color: var(--white);
+}
+
+.public-auth-shell .brand-sub {
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 44px;
+}
+
+.public-auth-shell .form-panel {
+  padding: 48px 24px;
+  background: var(--paper);
+}
+
+.public-auth-shell .form-card {
+  max-width: 420px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.public-auth-shell .form-lede {
+  color: var(--ink-soft);
+}
+
+.public-auth-shell .input-wrap,
+.public-auth-shell .field input,
+.public-auth-shell .field select {
+  border-color: var(--line);
+  border-radius: 6px;
+  background-color: var(--white);
+}
+
+.public-auth-shell .role-toggle {
+  border-radius: 6px;
+  background: var(--maroon-050);
+}
+
+.public-auth-shell .role-btn {
+  border-radius: 4px;
+  color: var(--ink-soft);
+}
+
+.public-auth-shell .role-btn.active {
+  color: var(--maroon-700);
+}
+
+.public-auth-shell .submit-btn {
+  border-radius: 6px;
+  background: var(--maroon-700);
+}
+
+.public-auth-shell .submit-btn:hover {
+  background: var(--maroon-600);
+}
+
+.public-auth-shell .form-footer {
+  color: var(--ink-soft);
+}
+
+.public-auth-shell .form-footer a {
+  color: var(--maroon-700);
+}
+
+@media (max-width: 880px) {
+  .public-auth-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .public-auth-shell .brand-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-auth-shell .form-panel {
+    padding: 32px 16px;
+  }
+
+  .public-auth-shell .form-card {
+    padding: 24px;
   }
 }
