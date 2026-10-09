@@ -385,6 +385,51 @@ button:active { transform: none; }
   background: var(--paper);
 }
 
+.ticket-staff-responses {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #e6d48b;
+  border-left: 5px solid var(--maroon-700);
+  background: #fff8df;
+}
+
+.ticket-staff-responses h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.ticket-staff-response-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-staff-response {
+  padding: 10px 12px;
+  border: 1px solid #e6d48b;
+  background: var(--white);
+  overflow-wrap: anywhere;
+}
+
+.ticket-staff-response p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ticket-staff-response time,
+.ticket-staff-response-empty {
+  display: block;
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.ticket-staff-response-empty {
+  font-size: 13px;
+}
+
 .ticket-conversation-modal .ticket-detail-body {
   border-bottom: 0;
 }

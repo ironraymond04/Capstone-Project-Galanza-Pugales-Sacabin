@@ -7,6 +7,7 @@ import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNot
 import { generateTicketReport } from "../lib/ai"; 
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
+import TicketResponses from "../components/TicketResponses";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -1496,6 +1497,7 @@ function TicketStatusModal({ ticket, onClose }) {
               <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
             </div>
           )}
+          <TicketResponses ticket={ticket} />
         </div>
 
         <TicketThread

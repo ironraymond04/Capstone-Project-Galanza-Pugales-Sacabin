@@ -221,9 +221,9 @@ export default function Sidebar({
           color: "var(--white)",
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          height: isMobile ? "100dvh" : "100vh",
           minHeight: 0,
-          maxHeight: "100vh",
+          maxHeight: isMobile ? "100dvh" : "100vh",
           alignSelf: "flex-start",
           position: isMobile ? "fixed" : "sticky",
           top: 0,
@@ -385,7 +385,7 @@ export default function Sidebar({
         </nav>
 
         {/* Footer / user + logout */}
-        <div style={{ padding: 16, borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+        <div style={{ padding: isMobile ? "12px 16px calc(12px + env(safe-area-inset-bottom))" : 16, flexShrink: 0, borderTop: "1px solid rgba(255,255,255,0.10)" }}>
           <button
             onClick={openProfile}
             aria-label="Open profile"

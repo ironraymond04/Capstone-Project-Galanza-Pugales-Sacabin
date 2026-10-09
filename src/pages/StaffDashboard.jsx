@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
+import TicketResponses from "../components/TicketResponses";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -543,6 +544,7 @@ function TicketDetailModal({ ticket, onClose }) {
                 <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
               </div>
             ))}
+            <TicketResponses ticket={ticket} />
           </div>
 
           <TicketThread

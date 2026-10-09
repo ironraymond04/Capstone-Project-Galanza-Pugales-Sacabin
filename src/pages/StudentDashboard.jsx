@@ -7,6 +7,7 @@ import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNot
 import "../styles/theme.css";
 import { classifyTicket } from "../lib/ai";
 import TicketThread from "../components/TicketThread";
+import TicketResponses from "../components/TicketResponses";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -362,6 +363,8 @@ function TicketDetailModal({ ticket, onClose }) {
             {ticket.resolved_at && (
               <div className="ticket-line"><strong>Resolved</strong><span>{formatDate(ticket.resolved_at)}</span></div>
             )}
+
+            <TicketResponses ticket={ticket} />
           </div>
 
           <TicketThread
