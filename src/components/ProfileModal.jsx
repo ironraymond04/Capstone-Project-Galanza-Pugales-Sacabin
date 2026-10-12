@@ -104,6 +104,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
   const [pwMsg, setPwMsg] = useState(null);
 
   const isStudent = role === "Student";
+  const idLabel = isStudent ? "Student ID number" : "Employee number";
 
   // Load profile whenever the modal opens
   useEffect(() => {
@@ -122,7 +123,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
       }
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, email, role, course, year_level, avatar_url, created_at")
+        .select("name, email, role, id_number, course, year_level, avatar_url, created_at")
         .eq("user_id", user.id)
         .single();
       if (cancelled) return;
@@ -373,6 +374,9 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
               </Field>
               <Field label="Role">
                 <input style={readOnlyStyle} value={role || profile.role} readOnly />
+              </Field>
+              <Field label={idLabel}>
+                <input style={readOnlyStyle} value={profile.id_number || "—"} readOnly />
               </Field>
 
               {isStudent && (

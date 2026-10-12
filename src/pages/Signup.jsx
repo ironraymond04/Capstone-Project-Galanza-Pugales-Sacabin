@@ -49,6 +49,7 @@ export default function Signup() {
     fullName: "",
     email: "",
     role: ROLES.some((option) => option.value === requestedRole) ? requestedRole : "student",
+    idNumber: "",
     course: "",
     year: "",
     password: "",
@@ -60,16 +61,26 @@ export default function Signup() {
   const isStudent = form.role === "student";
   const showYear = isStudent && form.course && !isGradeLevel(form.course);
 
+  // Label/placeholder change depending on role
+  const idLabel = isStudent ? "Student ID number" : "Employee number";
+  const idPlaceholder = isStudent ? "e.g. 2026-00001" : "e.g. 26-0001";
+
   const handleChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const setRole = (role) =>
-    setForm((f) => ({
-      ...f,
-      role,
-      // clear student-only fields when switching away from student
-      ...(role !== "student" ? { course: "", year: "" } : {}),
-    }));
+    setForm((f) => {
+      const wasStudent = f.role === "student";
+      const nowStudent = role === "student";
+      return {
+        ...f,
+        role,
+        // student ID and employee no. are different things: clear when switching between them
+        idNumber: wasStudent !== nowStudent ? "" : f.idNumber,
+        // clear student-only fields when switching away from student
+        ...(role !== "student" ? { course: "", year: "" } : {}),
+      };
+    });
 
   const handleCourseChange = (e) => {
     const course = e.target.value;
@@ -88,6 +99,10 @@ export default function Signup() {
       setError("Fill in all required fields.");
       return;
     }
+    if (!form.idNumber.trim()) {
+      setError(`Please enter your ${idLabel.toLowerCase()}.`);
+      return;
+    }
     if (isStudent && !form.course) {
       setError("Please select your course.");
       return;
@@ -104,7 +119,11 @@ export default function Signup() {
     setError("");
     setLoading(true);
 
-    const metadata = { name: form.fullName, role: form.role };
+    const metadata = {
+      name: form.fullName,
+      role: form.role,
+      id_number: form.idNumber.trim(),
+    };
     if (isStudent) {
       metadata.course = form.course;
       metadata.year_level = showYear ? Number(form.year) : null;
@@ -212,6 +231,19 @@ export default function Signup() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="idNumber">{idLabel}</label>
+                <input
+                  id="idNumber"
+                  name="idNumber"
+                  value={form.idNumber}
+                  onChange={handleChange}
+                  placeholder={idPlaceholder}
+                  autoComplete="off"
+                  maxLength={50}
+                />
               </div>
 
               {isStudent && (
