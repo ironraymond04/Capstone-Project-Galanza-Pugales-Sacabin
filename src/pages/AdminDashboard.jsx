@@ -1319,13 +1319,6 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
                 >
                   Assign office
                 </button>
-                <button
-                  className="btn btn-ghost"
-                  style={{ padding: "7px 14px", fontSize: 12 }}
-                  onClick={() => handleResolve(t.ticket_id)}
-                >
-                  Mark resolved
-                </button>
               </div>
             </div>
           ))
