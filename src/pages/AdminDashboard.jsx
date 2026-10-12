@@ -4,7 +4,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
-import { generateTicketReport } from "../lib/ai"; 
+import { generateTicketReport, suggestTransferOffice } from "../lib/ai";
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
@@ -154,7 +154,9 @@ export default function AdminDashboard() {
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && (<Overview tickets={tickets} users={users} offices={offices} loading={ticketsLoading || usersLoading || officesLoading} onSelect={setActive} />)}
           {active === "logs" && <SystemLogs logs={logs} loading={logsLoading} />}
-          {active === "tickets" && (<ManageTickets tickets={tickets} loading={ticketsLoading} />)}
+          {active === "tickets" && (
+            <ManageTickets tickets={tickets} loading={ticketsLoading} offices={offices} onUpdated={loadTickets} />
+          )}
           {active === "users" && <ManageUsers users={users} loading={usersLoading} onUpdated={loadUsers} />}
           {active === "offices" && (<ManageOffices offices={offices} loading={officesLoading} users={users} onUpdated={() => { loadOffices(); loadUsers(); }} />)}
           {active === "analytics" && <Analytics tickets={tickets} offices={offices} loading={ticketsLoading || officesLoading} />}
@@ -170,6 +172,8 @@ export default function AdminDashboard() {
               readTicketStorageKey={readTicketStorageKey}
               readTicketIds={readTicketIds}
               setReadTicketIds={setReadTicketIds}
+              offices={offices}
+              onTicketsUpdated={loadTickets}
             />
           )}
         </div>
@@ -360,7 +364,7 @@ function SystemLogs({ logs, loading }) {
   );
 }
 
-function ManageTickets({ tickets, loading }) {
+function ManageTickets({ tickets, loading, offices, onUpdated }) {
   const [filter, setFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
 
@@ -380,7 +384,7 @@ function ManageTickets({ tickets, loading }) {
     <>
       <PageHeader
         title="All tickets"
-        subtitle="View-only list of all submitted tickets and their offices. To assign or reassign a ticket, use Ticket Transfer Management."
+        subtitle="List of all submitted tickets and their offices. Open a ticket to transfer it to another office."
       />
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
@@ -443,7 +447,12 @@ function ManageTickets({ tickets, loading }) {
       </div>
 
       {selectedTicket && (
-        <TicketStatusModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        <TicketStatusModal
+          ticket={selectedTicket}
+          offices={offices}
+          onUpdated={onUpdated}
+          onClose={() => setSelectedTicket(null)}
+        />
       )}
     </>
   );
@@ -457,7 +466,7 @@ const FILTERS = [
 ];
 
 function ManageUsers({ users, loading, onUpdated }) {
-const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
 
   const toggleStatus = async (userId, current) => {
     await supabase.from("profiles").update({ is_active: !current }).eq("user_id", userId);
@@ -1335,13 +1344,18 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
         </Modal>
       )}
       {selectedTransfer && (
-        <TicketStatusModal ticket={selectedTransfer} onClose={() => setSelectedTransfer(null)} />
+        <TicketStatusModal
+          ticket={selectedTransfer}
+          offices={offices}
+          onUpdated={onUpdated}
+          onClose={() => setSelectedTransfer(null)}
+        />
       )}
     </>
   );
 }
 
-function Notifications({ userId, tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds }) {
+function Notifications({ userId, tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds, offices, onTicketsUpdated }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
 
   const feedItems = [
@@ -1436,78 +1450,295 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
         )}
       </div>
       {selectedTicket && (
-        <TicketStatusModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+        <TicketStatusModal
+          ticket={selectedTicket}
+          offices={offices}
+          onUpdated={onTicketsUpdated}
+          onClose={() => setSelectedTicket(null)}
+        />
       )}
     </>
   );
 }
 
-function TicketStatusModal({ ticket, onClose }) {
+/* ---------------- ticket transfer ---------------- */
+
+// Status given to a ticket after an admin transfers it.
+// Change to "pending" or "in_progress" if the receiving office should see it as a fresh/active ticket.
+const TRANSFER_STATUS = "transferred";
+
+const normalizeName = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// AI labels (ai.js OFFICE_LABELS) that don't match the office_name in your DB 1:1
+const OFFICE_LABEL_ALIASES = {
+  gs: ["graduatestudies"],
+  guidanceoffice: ["guidance"],
+  humanresource: ["hr", "humanresources"],
+};
+
+function findOfficeByLabel(label, offices) {
+  const key = normalizeName(label);
+  if (!key) return null;
+  const candidates = [key, ...(OFFICE_LABEL_ALIASES[key] || [])];
+
+  // 1) exact match, 2) loose "contains" match (only for names 4+ chars to avoid false hits)
+  return (
+    offices.find((o) => candidates.includes(normalizeName(o.office_name))) ||
+    offices.find((o) => {
+      const n = normalizeName(o.office_name);
+      return candidates.some((c) => c.length >= 4 && (n.includes(c) || c.includes(n)));
+    }) ||
+    null
+  );
+}
+
+function TransferTicketModal({ ticket, offices, onClose, onDone }) {
+  const [reason, setReason] = useState("");
+  const [officeId, setOfficeId] = useState("");
+  const [suggestion, setSuggestion] = useState(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const currentOffice = offices.find((o) => o.office_id === ticket.assigned_office);
+  const targets = offices.filter((o) => o.office_id !== ticket.assigned_office);
+
+  const handleSuggest = async () => {
+    setError("");
+    setSuggestion(null);
+    setSuggesting(true);
+
+    const result = await suggestTransferOffice({
+      concernText: ticket.concern_text,
+      transferReason: reason,
+      currentOffice: currentOffice?.office_name,
+    });
+
+    setSuggesting(false);
+
+    if (!result) {
+      setError("The AI couldn't suggest an office. Please pick one manually.");
+      return;
+    }
+
+    const match = findOfficeByLabel(result.office, targets);
+    if (!match) {
+      setError(`The AI suggested "${result.office}", but no matching office exists. Please pick one manually.`);
+      return;
+    }
+
+    setOfficeId(String(match.office_id));
+    setSuggestion({ ...result, officeName: match.office_name });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!reason.trim()) { setError("Please enter a transfer reason."); return; }
+    if (!officeId) { setError("Please select the office to transfer to."); return; }
+
+    const newOfficeId = Number(officeId);
+    const newOffice = offices.find((o) => o.office_id === newOfficeId);
+
+    setSubmitting(true);
+
+    const { data, error: updateError } = await supabase
+      .from("tickets")
+      .update({
+        assigned_office: newOfficeId,
+        transfer_reason: reason.trim(),
+        status: TRANSFER_STATUS,
+      })
+      .eq("ticket_id", ticket.ticket_id)
+      .select("ticket_id")
+      .maybeSingle();
+
+    if (updateError || !data) {
+      console.error("Transfer failed:", updateError || "No row updated (check RLS policies).");
+      setError(updateError?.message || "Transfer was not saved. Check your update permissions on tickets.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: logError } = await supabase.from("logs").insert({
+      ticket_id: ticket.ticket_id,
+      office_id: newOfficeId,
+      action: `Admin transferred ${formatTicketCode(ticket.ticket_id)} from ${currentOffice?.office_name || "Unassigned"} to ${newOffice?.office_name || "Unknown office"}`,
+      description: `Reason: ${reason.trim()}`,
+      module: "Ticket Transferred",
+    });
+    if (logError) console.error("Log insert failed:", logError);
+
+    setSubmitting(false);
+    onDone?.();
+  };
+
+  return (
+    <Modal title="Transfer ticket" onClose={onClose} width={480}>
+      <form onSubmit={handleSubmit}>
+        <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 0, marginBottom: 14 }}>
+          <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(ticket.ticket_id)}</strong>
+          {" — "}{ticket.concern_text.slice(0, 80)}{ticket.concern_text.length > 80 ? "..." : ""}
+          <br />
+          Currently: <strong>{currentOffice?.office_name || "Unassigned"}</strong>
+        </p>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle} htmlFor="transfer-reason">Transfer reason</label>
+          <textarea
+            id="transfer-reason"
+            style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. This is a subject-specific grade concern, not a records issue."
+            autoFocus
+          />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }} htmlFor="transfer-office">Transfer to</label>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "5px 12px", fontSize: 12 }}
+              onClick={handleSuggest}
+              disabled={suggesting || submitting}
+            >
+              {suggesting ? "Thinking..." : "✦ Suggest with AI"}
+            </button>
+          </div>
+
+          <select
+            id="transfer-office"
+            style={inputStyle}
+            value={officeId}
+            onChange={(e) => { setOfficeId(e.target.value); setSuggestion(null); }}
+          >
+            <option value="">Select an office…</option>
+            {targets.map((o) => (
+              <option key={o.office_id} value={o.office_id}>{o.office_name}</option>
+            ))}
+          </select>
+
+          {suggestion && (
+            <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: "8px 0 0", lineHeight: 1.5 }}>
+              ✦ AI picked <strong>{suggestion.officeName}</strong> ({suggestion.confidence}% confident). {suggestion.reasoning}
+            </p>
+          )}
+        </div>
+
+        {error && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error}</p>}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={submitting || suggesting}>
+            {submitting ? "Transferring..." : "Transfer ticket"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ---------------- ticket details modal ---------------- */
+
+function TicketStatusModal({ ticket, onClose, offices = [], onUpdated }) {
   const { session, profile } = useAuth();
+  const [showTransfer, setShowTransfer] = useState(false);
   const status = ticket?.status || "unknown";
   const isResolved = status === "resolved" || status === "closed";
   const statusLabel = ticket ? toDisplayStatus(status) : "Ticket details unavailable";
+  const canTransfer = !isResolved && offices.length > 1 && !!onUpdated;
 
   return ticket ? (
-    <Modal title="Ticket details" onClose={onClose} width={960} className="ticket-conversation-modal admin-ticket-conversation-modal">
-      <div className="ticket-conversation-layout">
-        <div className="ticket-modal-details" style={{ display: "grid", alignContent: "start", gap: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
-            <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(ticket.ticket_id)}</strong>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted by</span>
-            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.profiles?.name || "Unknown user"}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Status</span>
-            <StatusBadge status={statusLabel} />
-          </div>
-          <p style={{ margin: 0, fontSize: 14, color: isResolved ? "var(--success)" : "var(--ink-soft)" }}>
-            {isResolved ? "This ticket is resolved." : "This ticket is not resolved yet."}
-          </p>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Office</span>
-            <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.offices?.office_name || "Unassigned"}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Concern</span>
-            <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.concern_text}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted</span>
-            <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.created_at).toLocaleString()}</span>
-          </div>
-          {ticket.resolved_at && (
+    <>
+      <Modal title="Ticket details" onClose={onClose} width={960} className="ticket-conversation-modal admin-ticket-conversation-modal">
+        <div className="ticket-conversation-layout">
+          <div className="ticket-modal-details" style={{ display: "grid", alignContent: "start", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Resolved</span>
-              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.resolved_at).toLocaleString()}</span>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
+              <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(ticket.ticket_id)}</strong>
             </div>
-          )}
-          {ticket.classification_confidence != null && (
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
-              <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted by</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.profiles?.name || "Unknown user"}</span>
             </div>
-          )}
-          {ticket.transfer_reason && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Transfer reason</span>
-              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Status</span>
+              <StatusBadge status={statusLabel} />
             </div>
-          )}
-          <TicketResponses ticket={ticket} />
-        </div>
+            <p style={{ margin: 0, fontSize: 14, color: isResolved ? "var(--success)" : "var(--ink-soft)" }}>
+              {isResolved ? "This ticket is resolved." : "This ticket is not resolved yet."}
+            </p>
 
-        <TicketThread
+            {canTransfer && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ justifySelf: "start", padding: "8px 16px", fontSize: 13 }}
+                onClick={() => setShowTransfer(true)}
+              >
+                ⇄ Transfer ticket
+              </button>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Office</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.offices?.office_name || "Unassigned"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Concern</span>
+              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.concern_text}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Submitted</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.created_at).toLocaleString()}</span>
+            </div>
+            {ticket.resolved_at && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Resolved</span>
+                <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(ticket.resolved_at).toLocaleString()}</span>
+              </div>
+            )}
+            {ticket.classification_confidence != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
+                <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+              </div>
+            )}
+            {ticket.transfer_reason && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Transfer reason</span>
+                <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>{ticket.transfer_reason}</span>
+              </div>
+            )}
+            <TicketResponses ticket={ticket} />
+          </div>
+
+          <TicketThread
+            ticket={ticket}
+            currentUserId={session?.user?.id}
+            role="admin"
+            allowReply={false}
+            profileName={profile?.name || "Admin"}
+          />
+        </div>
+      </Modal>
+
+      {showTransfer && (
+        <TransferTicketModal
           ticket={ticket}
-          currentUserId={session?.user?.id}
-          role="admin"
-          allowReply={false}
-          profileName={profile?.name || "Admin"}
+          offices={offices}
+          onClose={() => setShowTransfer(false)}
+          onDone={() => {
+            setShowTransfer(false);
+            onUpdated?.();
+            onClose();
+          }}
         />
-      </div>
-    </Modal>
+      )}
+    </>
   ) : null;
 }

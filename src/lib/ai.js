@@ -259,3 +259,46 @@ export async function generateTicketReport({ stats, tickets }) {
   // Throw so the UI can show the real reason
   throw lastError || new Error("Report generation failed");
 }
+
+export async function suggestTransferOffice({ concernText, transferReason, currentOffice }) {
+  try {
+    const contents = [
+      `Ticket concern: ${concernText}`,
+      `Currently assigned office: ${currentOffice || "Unassigned"}`,
+      `Admin's reason for transferring: ${transferReason?.trim() || "(not provided)"}`,
+      "",
+      "This ticket is being TRANSFERRED because it is in the wrong office.",
+      "Choose the best office to receive it. Do NOT pick the currently assigned office.",
+    ].join("\n");
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        responseSchema: CLASSIFICATION_SCHEMA,
+        temperature: 0.2,
+      },
+    });
+
+    const result = JSON.parse(response.text);
+    const current = (currentOffice || "").toLowerCase();
+
+    // First candidate that isn't the current office
+    const office =
+      [result.primary_office, ...(result.labels || [])].find(
+        (label) => label && label.toLowerCase() !== current
+      ) || null;
+    if (!office) return null;
+
+    return {
+      office,
+      confidence: Math.round(result.confidence),
+      reasoning: result.reasoning,
+    };
+  } catch (err) {
+    console.error("AI transfer suggestion failed:", err);
+    return null;
+  }
+}
