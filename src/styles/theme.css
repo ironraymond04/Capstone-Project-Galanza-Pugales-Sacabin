@@ -439,6 +439,12 @@ button:active { transform: none; }
   padding: 12px 20px;
 }
 
+.ticket-conversation-modal .ticket-detail-actions .btn-ghost {
+  background: var(--primary, #6b1d2c);
+  color: var(--white);
+  border-color: var(--primary, #6b1d2c);
+}
+
 .admin-ticket-conversation-modal > div:first-child {
   margin-bottom: 0 !important;
   padding: 18px 24px;
@@ -687,12 +693,15 @@ button:active { transform: none; }
 
 @media (max-width: 640px) {
   .ticket-conversation-modal {
+    height: 92vh;
     max-height: 92vh;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .ticket-conversation-layout {
     grid-template-columns: minmax(0, 1fr);
-    overflow: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
   .ticket-modal-details,
   .ticket-thread {
@@ -703,6 +712,9 @@ button:active { transform: none; }
     min-height: 280px;
     border-top: 1px solid var(--line);
     border-left: 0;
+  }
+  .ticket-conversation-modal .ticket-detail-actions {
+    flex: 0 0 auto;
   }
   .ticket-thread-messages {
     min-height: 120px;

@@ -520,6 +520,7 @@ function Reports({ queue, loading, focusTicket, onClearFocus }) {
 
 function TicketDetailModal({ ticket, onClose }) {
   const { session, profile } = useAuth();
+  const [responseSubmitted, setResponseSubmitted] = useState(false);
   const rows = [
     { label: "Ticket ID", value: formatTicketCode(ticket.ticket_id) },
     { label: "Submitted by", value: ticket.profiles?.name || "Unknown" },
@@ -533,35 +534,61 @@ function TicketDetailModal({ ticket, onClose }) {
   ];
 
   return (
-    <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card ticket-conversation-modal" style={{ background: "#fff" }}>
-        <div className="ticket-detail-header">{formatTicketCode(ticket.ticket_id)}</div>
-        <div className="ticket-conversation-layout">
-          <div className="ticket-modal-details">
-            {rows.map((r, i) => (
-              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
-                <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{r.label}</span>
-                <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
-              </div>
-            ))}
-            <TicketResponses ticket={ticket} />
+    <>
+      <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} className="card ticket-conversation-modal" style={{ background: "#fff" }}>
+          <div className="ticket-detail-header">{formatTicketCode(ticket.ticket_id)}</div>
+          <div className="ticket-conversation-layout">
+            <div className="ticket-modal-details">
+              {rows.map((r, i) => (
+                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid var(--line)" : "none" }}>
+                  <span style={{ fontSize: 13, color: "var(--ink-soft)", flexShrink: 0 }}>{r.label}</span>
+                  <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
+                </div>
+              ))}
+              <TicketResponses ticket={ticket} />
+            </div>
+
+            <TicketThread
+              ticket={ticket}
+              currentUserId={session?.user?.id}
+              role="staff"
+              officeId={ticket.assigned_office || null}
+              allowReply={true}
+              profileName={profile?.name || "You"}
+              onReplySent={() => setResponseSubmitted(true)}
+            />
           </div>
 
-          <TicketThread
-            ticket={ticket}
-            currentUserId={session?.user?.id}
-            role="staff"
-            officeId={ticket.assigned_office || null}
-            allowReply={true}
-            profileName={profile?.name || "You"}
-          />
-        </div>
-
-        <div className="ticket-detail-actions">
-          <button onClick={onClose} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 6, border: "none", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}>Close</button>
+          <div className="ticket-detail-actions">
+            <button onClick={onClose} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 6, border: "none", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}>Close</button>
+          </div>
         </div>
       </div>
-    </div>
+      {responseSubmitted && (
+        <div className="ticket-modal-overlay" onClick={() => setResponseSubmitted(false)}>
+          <div
+            className="ticket-detail-box"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="staff-response-submitted-title"
+          >
+            <div className="ticket-detail-header" id="staff-response-submitted-title">
+              Response submitted
+            </div>
+            <div className="ticket-detail-body">
+              Your response has been recorded for the student.
+            </div>
+            <div className="ticket-detail-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setResponseSubmitted(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -732,12 +759,25 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
   const [modalTicket, setModalTicket] = useState(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
-  const openModal = (ticket) => { setModalTicket(ticket); setDraft(""); };
-  const closeModal = () => { setModalTicket(null); setDraft(""); };
+  const openModal = (ticket) => {
+    setModalTicket(ticket);
+    setDraft("");
+    setSubmitted(false);
+    setSubmitError("");
+  };
+  const closeModal = () => {
+    setModalTicket(null);
+    setDraft("");
+    setSubmitted(false);
+    setSubmitError("");
+  };
 
   const submitFeedback = async () => {
     if (!draft.trim() || !modalTicket) return;
+    setSubmitError("");
     setSending(true);
 
     const { error: notifError } = await supabase.from("notifications").insert({
@@ -756,9 +796,18 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
     });
     if (logError) console.error("submitFeedback log error:", logError);
 
+    if (logError || notifError) {
+      setSubmitError(notifError
+        ? "Your response could not be delivered to the student. Please try again."
+        : "Your response could not be recorded. Please try again.");
+      setSending(false);
+      if (!logError) onLogged?.();
+      return;
+    }
+
     setSending(false);
-    onLogged?.(); // this reloads logs, which now removes the ticket from view
-    closeModal();
+    onLogged?.();
+    setSubmitted(true);
   };
 
   return (
@@ -789,13 +838,49 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
       </div>
 
       {modalTicket && (
-        <FeedbackModal ticket={modalTicket} draft={draft} setDraft={setDraft} onCancel={closeModal} onSubmit={submitFeedback} sending={sending} />
+        <FeedbackModal
+          ticket={modalTicket}
+          draft={draft}
+          setDraft={setDraft}
+          onCancel={closeModal}
+          onDone={closeModal}
+          onSubmit={submitFeedback}
+          sending={sending}
+          submitted={submitted}
+          submitError={submitError}
+        />
       )}
     </>
   );
 }
 
-function FeedbackModal({ ticket, draft, setDraft, onCancel, onSubmit, sending }) {
+function FeedbackModal({ ticket, draft, setDraft, onCancel, onDone, onSubmit, sending, submitted, submitError }) {
+  if (submitted) {
+    return (
+      <div className="ticket-modal-overlay" onClick={onDone}>
+        <div
+          className="ticket-detail-box"
+          onClick={(event) => event.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="staff-routed-response-title"
+        >
+          <div className="ticket-detail-header" id="staff-routed-response-title">
+            Response submitted
+          </div>
+          <div className="ticket-detail-body">
+            Your response has been sent to the student.
+          </div>
+          <div className="ticket-detail-actions">
+            <button type="button" className="btn btn-primary" onClick={onDone}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div role="dialog" aria-modal="true" onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460, background: "#fff" }}>
@@ -810,6 +895,7 @@ function FeedbackModal({ ticket, draft, setDraft, onCancel, onSubmit, sending })
             style={{ width: "100%", padding: "10px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontFamily: "inherit", fontSize: 14, resize: "vertical", boxSizing: "border-box" }}
           />
         </div>
+        {submitError && <p role="alert" style={{ color: "var(--danger)", fontSize: 13 }}>{submitError}</p>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
           <button onClick={onCancel} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer" }}>Cancel</button>
           <button

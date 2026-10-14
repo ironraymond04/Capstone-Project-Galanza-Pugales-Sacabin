@@ -527,13 +527,31 @@ useEffect(() => {
             {submitting ? "Submitting..." : "Submit ticket"}
           </button>
 
-          {submitted && (
-            <p style={{ color: "var(--success)", fontSize: 13, marginTop: 12 }}>
-              Your ticket has been submitted, please wait for the response.
-            </p>
-          )}
         </form>
       </div>
+      {submitted && (
+        <div className="ticket-modal-overlay" onClick={() => setSubmitted(false)}>
+          <div
+            className="ticket-detail-box"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ticket-submitted-title"
+          >
+            <div className="ticket-detail-header" id="ticket-submitted-title">
+              Concern submitted
+            </div>
+            <div className="ticket-detail-body">
+              Your concern has been submitted successfully. Please wait for a response.
+            </div>
+            <div className="ticket-detail-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setSubmitted(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -759,10 +777,32 @@ function Feedback({ session, tickets, selectedTicketId, onTicketSelected, onFeed
               {submitting ? "Sending..." : "Submit feedback"}
             </button>
             {submitError && <p role="alert" style={{ color: "var(--danger)", fontSize: 13, marginTop: 12 }}>{submitError}</p>}
-            {sent && <p style={{ color: "var(--success)", fontSize: 13, marginTop: 12 }}>Thanks — your feedback was recorded.</p>}
           </>
         )}
       </div>
+      {sent && (
+        <div className="ticket-modal-overlay" onClick={() => setSent(false)}>
+          <div
+            className="ticket-detail-box"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-submitted-title"
+          >
+            <div className="ticket-detail-header" id="feedback-submitted-title">
+              Feedback submitted
+            </div>
+            <div className="ticket-detail-body">
+              Thanks. Your feedback was recorded.
+            </div>
+            <div className="ticket-detail-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setSent(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
