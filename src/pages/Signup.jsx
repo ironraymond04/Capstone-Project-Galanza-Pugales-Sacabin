@@ -28,6 +28,7 @@ const COURSES = [
   "BSBA-OM",
   "BSBA-HRM",
   "BSCRIM",
+  "MAED",
   "G7",
   "G8",
   "G9",
@@ -36,7 +37,17 @@ const COURSES = [
   "G12",
 ];
 
-const YEARS = [1, 2, 3, 4];
+const DEFAULT_YEARS = [1, 2, 3, 4];
+
+// Courses with a shorter program length
+const COURSE_MAX_YEARS = {
+  MAED: 2,
+};
+
+const getYearsForCourse = (course) => {
+  const max = COURSE_MAX_YEARS[course] ?? DEFAULT_YEARS.length;
+  return DEFAULT_YEARS.slice(0, max);
+};
 
 // Junior / Senior High School grade levels have no "year" dropdown
 const isGradeLevel = (course) => /^G(7|8|9|10|11|12)$/.test(course);
@@ -84,12 +95,18 @@ export default function Signup() {
 
   const handleCourseChange = (e) => {
     const course = e.target.value;
-    setForm((f) => ({
-      ...f,
-      course,
-      // G7-G12 have no year level
-      year: isGradeLevel(course) ? "" : f.year,
-    }));
+    setForm((f) => {
+      const validYears = getYearsForCourse(course);
+      return {
+        ...f,
+        course,
+        // G7-G12 have no year level; also clear year if it exceeds the new course's max
+        year:
+          isGradeLevel(course) || !validYears.includes(Number(f.year))
+            ? ""
+            : f.year,
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -109,6 +126,10 @@ export default function Signup() {
     }
     if (showYear && !form.year) {
       setError("Please select your year level.");
+      return;
+    }
+    if (showYear && !getYearsForCourse(form.course).includes(Number(form.year))) {
+      setError("Please select a valid year level for your course.");
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -275,7 +296,7 @@ export default function Signup() {
                         onChange={handleChange}
                       >
                         <option value="">Select year</option>
-                        {YEARS.map((y) => (
+                        {getYearsForCourse(form.course).map((y) => (
                           <option key={y} value={y}>
                             {y}
                           </option>

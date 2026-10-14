@@ -19,6 +19,7 @@ const COURSES = [
   "BSBA-OM",
   "BSBA-HRM",
   "BSCRIM",
+  "MAED",
   "G7",
   "G8",
   "G9",
@@ -26,6 +27,28 @@ const COURSES = [
   "G11",
   "G12",
 ];
+
+const DEFAULT_YEARS = [1, 2, 3, 4];
+
+// Courses with a shorter program length
+const COURSE_MAX_YEARS = {
+  MAED: 2,
+};
+
+const YEAR_LABELS = {
+  1: "1st Year",
+  2: "2nd Year",
+  3: "3rd Year",
+  4: "4th Year",
+};
+
+const getYearsForCourse = (course) => {
+  const max = COURSE_MAX_YEARS[course] ?? DEFAULT_YEARS.length;
+  return DEFAULT_YEARS.slice(0, max);
+};
+
+// Junior / Senior High School grade levels have no "year" dropdown
+const isGradeLevel = (course) => /^G(7|8|9|10|11|12)$/.test(course);
 
 const labelStyle = {
   fontFamily: "var(--font-mono)",
@@ -105,6 +128,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
 
   const isStudent = role === "Student";
   const idLabel = isStudent ? "Student ID number" : "Employee number";
+  const showYear = isStudent && !!course && !isGradeLevel(course);
 
   // Load profile whenever the modal opens
   useEffect(() => {
@@ -131,7 +155,15 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
       if (!error && data) {
         setProfile(data);
         setCourse(data.course || "");
-        setYearLevel(data.year_level ? String(data.year_level) : "");
+        // Ignore any stored year that doesn't apply to the stored course
+        const validYears = getYearsForCourse(data.course);
+        setYearLevel(
+          data.year_level &&
+            !isGradeLevel(data.course) &&
+            validYears.includes(Number(data.year_level))
+            ? String(data.year_level)
+            : ""
+        );
       }
       setLoading(false);
     })();
@@ -154,6 +186,15 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const handleCourseChange = (e) => {
+    const next = e.target.value;
+    setCourse(next);
+    // G7-G12 have no year level; also clear year if it exceeds the new course's max
+    if (isGradeLevel(next) || !getYearsForCourse(next).includes(Number(yearLevel))) {
+      setYearLevel("");
+    }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -199,12 +240,21 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
 
   const handleSaveInfo = async () => {
     setInfoMsg(null);
+
+    if (showYear && yearLevel && !getYearsForCourse(course).includes(Number(yearLevel))) {
+      return setInfoMsg({
+        type: "error",
+        text: "Please select a valid year level for your course.",
+      });
+    }
+
     setSavingInfo(true);
     const { error } = await supabase
       .from("profiles")
       .update({
         course: course || null,
-        year_level: yearLevel ? Number(yearLevel) : null,
+        // Grade levels (G7-G12) have no year level
+        year_level: showYear && yearLevel ? Number(yearLevel) : null,
       })
       .eq("user_id", userId);
     setSavingInfo(false);
@@ -382,7 +432,7 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
               {isStudent && (
                 <>
                   <Field label="Course">
-                    <select style={inputStyle} value={course} onChange={(e) => setCourse(e.target.value)}>
+                    <select style={inputStyle} value={course} onChange={handleCourseChange}>
                       <option value="">Select course…</option>
                       {COURSES.map((c) => (
                         <option key={c} value={c}>{c}</option>
@@ -390,15 +440,20 @@ export default function ProfileModal({ open, onClose, role, onAvatarChange }) {
                       {course && !COURSES.includes(course) && <option value={course}>{course}</option>}
                     </select>
                   </Field>
-                  <Field label="Year">
-                    <select style={inputStyle} value={yearLevel} onChange={(e) => setYearLevel(e.target.value)}>
-                      <option value="">Select year…</option>
-                      <option value="1">1st Year</option>
-                      <option value="2">2nd Year</option>
-                      <option value="3">3rd Year</option>
-                      <option value="4">4th Year</option>
-                    </select>
-                  </Field>
+                  {showYear && (
+                    <Field label="Year">
+                      <select
+                        style={inputStyle}
+                        value={yearLevel}
+                        onChange={(e) => setYearLevel(e.target.value)}
+                      >
+                        <option value="">Select year…</option>
+                        {getYearsForCourse(course).map((y) => (
+                          <option key={y} value={y}>{YEAR_LABELS[y]}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
                 </>
               )}
 
