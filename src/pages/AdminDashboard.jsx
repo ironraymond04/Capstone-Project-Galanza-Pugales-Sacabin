@@ -1156,41 +1156,7 @@ function Analytics({ tickets, offices, loading }) {
   );
 }
 
-function ReassignForm({ ticket, offices, onCancel, onSubmit, submitting }) {
-  const [officeId, setOfficeId] = useState(ticket.assigned_office || "");
-  const [error, setError] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!officeId) { setError("Please select an office."); return; }
-    onSubmit(Number(officeId));
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 0, marginBottom: 14 }}>
-        <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(ticket.ticket_id)}</strong> — {ticket.concern_text.slice(0, 60)}
-      </p>
-
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle} htmlFor="reassign-office">Assign to office</label>
-        <select id="reassign-office" style={inputStyle} value={officeId} onChange={(e) => setOfficeId(e.target.value)}>
-          <option value="">Select an office…</option>
-          {offices.map((o) => (
-            <option key={o.office_id} value={o.office_id}>{o.office_name}</option>
-          ))}
-        </select>
-      </div>
-
-      {error && <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{error}</p>}
-
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 6 }}>
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-        <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? "Reassigning..." : "Reassign"}</button>
-      </div>
-    </form>
-  );
-}
+/* ---------------- ticket transfer management tab ---------------- */
 
 function Transfers({ tickets, offices, loading, onUpdated }) {
   // Only tickets that have NO office assigned (and are still active)
@@ -1198,43 +1164,10 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
     (t) => t.assigned_office == null && t.status !== "resolved" && t.status !== "closed"
   );
 
-  const [reassignId, setReassignId] = useState(null);
+  // Ticket currently being transferred (opens the "Transfer ticket" modal)
+  const [transferTicket, setTransferTicket] = useState(null);
   const [selectedTransfer, setSelectedTransfer] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState("");
-
-  const reassignTicket = transfers.find((t) => t.ticket_id === reassignId) || null;
-
-  const handleReassign = async (newOfficeId) => {
-    if (!reassignTicket) return;
-    setSubmitting(true);
-    setActionError("");
-
-    const { error } = await supabase
-      .from("tickets")
-      .update({ assigned_office: newOfficeId, status: "in_progress" })
-      .eq("ticket_id", reassignId);
-
-    if (error) {
-      console.error("Reassign failed:", error);
-      setActionError(error.message || "Could not reassign this ticket.");
-      setSubmitting(false);
-      return;
-    }
-
-    const newOffice = offices.find((o) => o.office_id === newOfficeId);
-    const { error: logError } = await supabase.from("logs").insert({
-      ticket_id: reassignId,
-      office_id: newOfficeId,
-      action: `Admin assigned ${formatTicketCode(reassignId)} from Unassigned to ${newOffice?.office_name || "Unknown office"}`,
-      module: "Ticket Transferred",
-    });
-    if (logError) console.error("Log insert failed:", logError);
-
-    setSubmitting(false);
-    setReassignId(null);
-    onUpdated?.();
-  };
 
   const handleResolve = async (ticketId) => {
     setActionError("");
@@ -1315,9 +1248,9 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
                 <button
                   className="btn btn-primary"
                   style={{ padding: "7px 14px", fontSize: 12 }}
-                  onClick={() => { setActionError(""); setReassignId(t.ticket_id); }}
+                  onClick={() => { setActionError(""); setTransferTicket(t); }}
                 >
-                  Assign office
+                  ⇄ Transfer Ticket
                 </button>
               </div>
             </div>
@@ -1325,17 +1258,18 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
         )}
       </div>
 
-      {reassignTicket && (
-        <Modal title="Assign ticket" onClose={() => setReassignId(null)}>
-          <ReassignForm
-            ticket={reassignTicket}
-            offices={offices}
-            onCancel={() => setReassignId(null)}
-            onSubmit={handleReassign}
-            submitting={submitting}
-          />
-        </Modal>
+      {transferTicket && (
+        <TransferTicketModal
+          ticket={transferTicket}
+          offices={offices}
+          onClose={() => setTransferTicket(null)}
+          onDone={() => {
+            setTransferTicket(null);
+            onUpdated?.();
+          }}
+        />
       )}
+
       {selectedTransfer && (
         <TicketStatusModal
           ticket={selectedTransfer}
