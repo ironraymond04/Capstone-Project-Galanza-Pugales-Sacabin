@@ -542,21 +542,81 @@ function ManageUsers({ users, loading, onUpdated }) {
 
 function OfficeForm({ staff, office, onCancel, onSubmit, submitting, submitError }) {
   const [name, setName] = useState(office?.office_name || "");
+  const [location, setLocation] = useState(office?.location || "");
+  const [contactEmail, setContactEmail] = useState(office?.contact_email || "");
   const [headId, setHeadId] = useState(office?.head_user_id || "");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError("Office name is required."); return; }
+    setError("");
+
+    const trimmedName = name.trim();
+    const trimmedLocation = location.trim();
+    const trimmedEmail = contactEmail.trim();
+
+    if (!trimmedName) { setError("Office name is required."); return; }
+    if (trimmedName.length > 150) { setError("Office name must be 150 characters or fewer."); return; }
+    if (trimmedLocation.length > 255) { setError("Location must be 255 characters or fewer."); return; }
+    if (trimmedEmail) {
+      if (trimmedEmail.length > 150) { setError("Contact email must be 150 characters or fewer."); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        setError("Please enter a valid contact email.");
+        return;
+      }
+    }
     if (!headId) { setError("Please select a head for this office."); return; }
-    await onSubmit({ office_name: name.trim(), head_user_id: headId });
+
+    await onSubmit({
+      office_name: trimmedName,
+      location: trimmedLocation || null,
+      contact_email: trimmedEmail || null,
+      head_user_id: headId,
+    });
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ marginBottom: 14 }}>
         <label style={labelStyle} htmlFor="office-name">Office name</label>
-        <input id="office-name" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Student Affairs" autoFocus />
+        <input
+          id="office-name"
+          style={inputStyle}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Student Affairs"
+          maxLength={150}
+          autoFocus
+        />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle} htmlFor="office-location">
+          Location <span style={{ fontWeight: 400, color: "var(--ink-soft)" }}>(optional)</span>
+        </label>
+        <input
+          id="office-location"
+          style={inputStyle}
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Main Building, 2nd Floor, Room 204"
+          maxLength={255}
+        />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle} htmlFor="office-email">
+          Contact email <span style={{ fontWeight: 400, color: "var(--ink-soft)" }}>(optional)</span>
+        </label>
+        <input
+          id="office-email"
+          type="email"
+          style={inputStyle}
+          value={contactEmail}
+          onChange={(e) => setContactEmail(e.target.value)}
+          placeholder="e.g. studentaffairs@spc.edu.ph"
+          maxLength={150}
+        />
       </div>
 
       <div style={{ marginBottom: 14 }}>
@@ -675,20 +735,19 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
         <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
-          {offices.map((o) => (
-            <div key={o.office_id} className="card">
-              <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
-              <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ padding: "6px 12px", fontSize: 12, marginTop: 10 }}
-                onClick={() => { setEditingOffice(o); setSubmitError(""); setModalOpen(true); }}
-              >
-                Edit office
-              </button>
-            </div>
-          ))}
+        {offices.map((o) => (
+         <div key={o.office_id} className="card">
+           <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
+           <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
+           <p style={{ fontSize: 13, margin: "4px 0" }}>Location: {o.location || "—"}</p>
+           <p style={{ fontSize: 13, margin: "4px 0", wordBreak: "break-word" }}>
+              Email: {o.contact_email || "—"}
+           </p>
+           <button type="button" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: 12, marginTop: 10 }} onClick={() => { setEditingOffice(o); setSubmitError(""); setModalOpen(true); }}>
+             Edit office
+           </button>
+        </div>
+        ))}
           <div className="card" style={{ display: "grid", placeItems: "center", border: "1.5px dashed var(--line)" }}>
             <button className="btn btn-primary" onClick={() => { setEditingOffice(null); setSubmitError(""); setModalOpen(true); }}>+ Add office</button>
           </div>
