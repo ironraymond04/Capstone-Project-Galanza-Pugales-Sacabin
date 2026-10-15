@@ -883,8 +883,14 @@ function FeedbackModal({ ticket, draft, setDraft, onCancel, onDone, onSubmit, se
 
   return (
     <div role="dialog" aria-modal="true" onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460, background: "#fff" }}>
+      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460, maxHeight: "calc(100vh - 32px)", overflowY: "auto", background: "#fff" }}>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-soft)" }}>{formatTicketCode(ticket.ticket_id)}</div>
+        <div style={{ marginTop: 16, padding: 12, borderRadius: 6, background: "var(--surface, #f7f7f7)" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Student concern</div>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+            {ticket.concern_text || "No concern details provided."}
+          </p>
+        </div>
         <div style={{ marginTop: 16 }}>
           <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Your feedback</label>
           <textarea
