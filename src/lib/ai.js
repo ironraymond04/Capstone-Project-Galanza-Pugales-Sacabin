@@ -7,7 +7,7 @@ console.log("Key preview:", import.meta.env.VITE_GEMINI_API_KEY?.slice(0, 6) + "
 
 // Keep this in sync with the OFFICES array in your dashboards
 const OFFICE_LABELS = [
-  "Registrar", "Library", "Guidance Office", "Accounting", "DSA/OSAS", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
+  "REGISTRAR", "LIBRARY", "GUIDANCE", "ACCOUNTING", "DSA/OSAS", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
 ];
 
 const CLASSIFICATION_SCHEMA = {
@@ -46,7 +46,7 @@ Read the student's concern and decide which office should handle it. Offices and
 
 - LIBRARY: The Library takes care of book borrowing, library fines, and library access. Students go here to borrow materials, settle overdue or lost-item charges, and get access to library services and facilities.
 
-- GUIDANCE OFFICE: The Guidance Office provides counseling and addresses behavioral concerns. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
+- GUIDANCE: The Guidance Office provides counseling and addresses behavioral concerns. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
 
 - ACCOUNTING: The Accounting Office manages everything related to money owed to or from the school, including tuition, fees, payments, and refunds. Students go here for billing questions, payment concerns, and refund requests.
 
