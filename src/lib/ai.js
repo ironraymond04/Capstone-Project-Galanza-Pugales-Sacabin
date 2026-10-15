@@ -7,8 +7,7 @@ console.log("Key preview:", import.meta.env.VITE_GEMINI_API_KEY?.slice(0, 6) + "
 
 // Keep this in sync with the OFFICES array in your dashboards
 const OFFICE_LABELS = [
-  "Registrar", "Library", "Guidance Office", "Accounting", "DSA/OSAS",
-  "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
+  "REGISTRAR", "LIBRARY", "GUIDANCE", "ACCOUNTING", "DSA/OSAS", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
 ];
 
 const CLASSIFICATION_SCHEMA = {
