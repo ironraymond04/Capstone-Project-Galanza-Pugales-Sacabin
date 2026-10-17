@@ -396,17 +396,17 @@ const DM={right:'v+',left:'v-',down:'u+',up:'u-'};
 const TRt=r=>({l:r.l.map(pl=>pl.map(QP)),a:r.a.map(([u,v,d])=>[...QP([u,v]),DM[d]])});
 const IT=interior({b:B[3],name:'Technology Bldg.',o:{x:TX0,z:TZ0,d:0},kv:TK,ku:TK,vc:0,U:25,V:39.5,mir:false,fx:true,poly:TPOLY.map(TW),
  FL:[
- TR([['Stock Room 3','k',0,0,2,7.3],['Classroom LR-4','e',2,0,8,7.3],['Classroom LR-5','e',8,0,14,7.3],['Speech Laboratory','l',14,0,20,7.3],
-  ['Automation Laboratory','l',20,0,26,7.3],['Eng. Faculty Room LR-6','f',26,0,31.5,7.3],
+ TR([['Stock Room 3','k',0,0,2,7.3],['LR4','e',2,0,8,7.3],['LR5','e',8,0,14,7.3],['Speech Laboratory','l',14,0,20,7.3],
+  ['Automation Laboratory','l',20,0,26,7.3],['COE Faculty Room','f',26,0,31.5,7.3],
   ['Hallway','h',0,7.3,26.6,8.6],['','h',5.6,8.6,7.9,15.7],['Hallway','h',-6.35,15.7,7.9,17.6],
   ['CE Lab Equipment Room','l',7.9,8.7,16.1,14.1],['Stairs','s',8,11.6,13.3,14.1],['EE Lab Equip. Room','l',7.9,14.1,10.6,21.9],
   ['CR','c',26.6,8.6,29.3,15.2],['Stairs','s',22,11.2,24.3,13.3],
-  ['EL-2','e',-6.35,17.65,-.2,21.95],['EL-1','e',-.2,17.65,7.9,21.95],['Physics Room','l',-2.7,21.95,.9,24.9]]),
- TR([['','k',0,0,2,7.4],['Hydraulics Laboratory','l',2,0,8.1,7.4],['Classroom LR-1','e',8.1,0,14.1,7.4],['Classroom LR-2','e',14.1,0,20.1,7.4],
-  ['Classroom LR-3','e',20.1,0,26,7.4],['CBA Faculty Office','f',26,0,31.5,7.4],
+  ['EL2','e',-6.35,17.65,-.2,21.95],['EL1','e',-.2,17.65,7.9,21.95],['Physics Room','l',-2.7,21.95,.9,24.9]]),
+ TR([['','k',0,0,2,7.4],['Hydraulics Laboratory','l',2,0,8.1,7.4],['LR1','e',8.1,0,14.1,7.4],['LR2','e',14.1,0,20.1,7.4],
+  ['LR3','e',20.1,0,26,7.4],['CBA Faculty Office','f',26,0,31.5,7.4],
   ['Hallway','h',0,7.4,26,9],['Comfort Room','c',26,9,29.8,14.6],['Down to the Back Gate','s',21,9,26,12.6],['Down to Ground Floor','s',8,9,11.1,13.2],
   ['','h',6,9,8,15.7],['Hallway','h',-6.35,15.7,8,17.7],['Chem. Equip. / Materials Rm','k',8,14.5,10.6,21.9],
-  ['Classroom EL-2','e',-6.35,17.7,-.2,21.95],['Chemistry Laboratory','l',-.2,17.7,7.9,21.95]])
+  ['EL2','e',-6.35,17.7,-.2,21.95],['Chemistry Laboratory','l',-.2,17.7,7.9,21.95]])
  ],
  MK:[
  TM({fe:[[17.7,8.4],[21.1,5.4],[6.7,16],[-1.8,19],[5.5,19]],el:[[5.2,8.3],[7,13.7],[2.5,16.4],[23.1,8.5]],fh:[]}),
@@ -430,10 +430,10 @@ const TRt2=r=>({l:r.l.map(pl=>pl.map(QP2)),a:r.a.map(([u,v,d])=>[...QP2([u,v]),D
 const IL=interior({b:B[5],bs:[B[5],B[6]],name:'Canteen + Elementary Bldg.',view:{x:14,z:-43.4,w:44,d:8.25},
  PXf:PXL,PZf:PZL,mir:true,U:8.95,V:88,kv:1,ku:1,vc:0,poly:[[-8,-47.5],[36,-47.5],[36,-39.25],[-8,-39.25]],
  FL:[
- TR2([['Canteen','t',0,0,8,7.35],['Canteen','t',8,0,14,7.35],['CR','c',14,0,17,7.35],['CR Hallway','h',17,0,19,7.35],
-  ['Classroom X107','e',19,0,28,7.35],['Classroom X106','e',28,0,37,7.35],['Classroom X105','e',37,0,46,7.35],['Classroom X104','e',46,0,55,7.35],
-  ['Classroom X103','e',55,0,64,7.35],['Classroom X102','e',64,0,73,7.35],['Classroom X101','e',73,0,79,7.35],
-  ["Dean's Office",'o',79,0,81.92,7.35],['Faculty Room','f',81.92,0,87.95,7.35],
+ TR2([['Canteen','t',0,0,8,7.35],['Canteen','t',8,0,14,7.35],['CR','c',14,0,17,7.35],['Hallway','h',17,0,19,7.35],
+  ['X101','e',19,0,28,7.35],['X102','e',28,0,37,7.35],['X103','e',37,0,46,7.35],['X104','e',46,0,55,7.35],
+  ['X105','e',55,0,64,7.35],['X106','e',64,0,73,7.35],['X107','e',73,0,79,7.35],
+  ["COE Dean's Office",'o',79,0,81.92,7.35],['COE Faculty Room','f',81.92,0,87.95,7.35],
   ['Hallway','h',0,7.35,87.95,8.95],['Consultation','o',81.7,7.35,86.5,8.95]])
  ],
  MK:[TM2({fe:[[15.5,1.8],[21.5,2.8],[31.6,8.4],[49.1,8.3],[62.9,8.3],[78.1,8.1],[86.4,5.6],[83.3,8.7]],el:[[25.3,8.3],[52.2,8.3],[75.6,8.3]],fh:[]})],
