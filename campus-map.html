@@ -125,7 +125,8 @@ html,body {
 <div id="side" class="panel"><h1>St. Peter's College</h1></div>
 <div id="bar" class="panel">
   <button data-n="99" class="on">All floors</button><button data-n="1">1F</button><button data-n="2">2F</button><button data-n="3">3F</button>
-  <button id="lb" class="on">Labels</button><button id="rot">Auto-rotate</button><button id="reset">Reset view</button><button id="inb">Admin interior</button>
+  <button id="lb" class="on">Labels</button><button id="rot">Auto-rotate</button><button id="reset">Reset view</button>
+  <button id="inb">Admin interior</button><button id="inc">Crim interior</button><button id="ine">Eng interior</button><button id="itb">Tech interior</button>
 </div>
 <div id="info" class="panel">Click a building to see its details. Floor buttons show floors up to the one you pick.</div>
 
@@ -140,7 +141,7 @@ const M=(c,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c},o));
 function wall(col,rep){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
   g.fillStyle=col;g.fillRect(0,0,64,64);g.fillStyle='#3b5a78';g.fillRect(12,14,40,28);g.fillStyle='#8fb4d4';g.fillRect(12,14,40,8);
   g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,60,64,4);
-  const t=new THREE.CanvasTexture(c);t.wrapS=THREE.RepeatWrapping;t.repeat.set(rep,1);return new THREE.MeshLambertMaterial({map:t});}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep,1);return new THREE.MeshLambertMaterial({map:t});}
 
 // ---------- scene ----------
 const scene=new THREE.Scene();scene.background=new THREE.Color(0xdfe7ee);
@@ -184,27 +185,51 @@ function label(t,p,o){const el=document.createElement('div');el.className='lbl';
 const RN={flat:'Flat roof',gable:'Gable roof',hip:'Hip roof',arc:'Arc roof'};
 function building(o){
   const g=new THREE.Group();o.parts=[];o.g=g;scene.add(g);
-  o.vols.forEach(v=>{
+  if(o.poly){ // ---- free-form footprint (Technology Bldg.): floors are extruded from the polygon ----
+    const sh=new THREE.Shape(o.poly.map(([x,z])=>new THREE.Vector2(x,-z))),sm=wall(o.wall,1),cap=M(0xcfc8bd);
+    sm.map.repeat.set(1/3.2,1/H);
+    for(let f=0;f<o.floors;f++){
+      const geo=new THREE.ExtrudeGeometry(sh,{depth:H,bevelEnabled:false});geo.rotateX(-Math.PI/2);
+      const m=new THREE.Mesh(geo,[cap,sm]);m.position.y=f*H;m.castShadow=m.receiveShadow=true;g.add(m);m.userData.need=f+1;o.parts.push(m);}
+    (o.hips||[]).forEach(v=>{const r=roof(v,'hip',o.rc);r.position.set(v.x,o.floors*H,v.z);g.add(r);r.userData.need=o.floors;r.userData.isRoof=1;o.parts.push(r);});
+    (o.flats||[]).forEach(pl=>{const geo=new THREE.ExtrudeGeometry(new THREE.Shape(pl.map(([x,z])=>new THREE.Vector2(x,-z))),{depth:.5,bevelEnabled:false});
+      geo.rotateX(-Math.PI/2);const r=new THREE.Mesh(geo,M(o.rc,{side:THREE.DoubleSide}));r.position.y=o.floors*H;r.castShadow=true;
+      g.add(r);r.userData.need=o.floors;r.userData.isRoof=1;o.parts.push(r);});
+    (o.annex||[]).forEach(v=>{const m=box(v.w,H,v.d,wall(o.wall,2),v.x,H/2,v.z,g);m.userData.need=1;o.parts.push(m);
+      const r=roof(v,'flat',o.rc);r.position.set(v.x,H,v.z);g.add(r);r.userData.need=1;r.userData.isRoof=1;o.parts.push(r);});
+  } else o.vols.forEach(v=>{
     if(o.roof==='arc'){
       const s=box(v.w,.5,v.d,M(0xcfd6d4),v.x,.25,v.z,g);s.userData.need=1;o.parts.push(s);
       const rv=o.rot?{w:v.d,d:v.w}:v;            // swap span and length when rotated
       const r=roof(rv,'arc',o.rc,o.rise);
       if(o.rot)r.rotation.y=Math.PI/2;           // turn the arch 90°
-      r.position.set(v.x,.5,v.z);g.add(r);r.userData.need=1;o.parts.push(r);return;}
+      r.position.set(v.x,.5,v.z);g.add(r);r.userData.need=1;r.userData.isRoof=1;o.parts.push(r);return;}
     const mx=wall(o.wall,Math.max(1,Math.round(v.d/3.2))),mz=wall(o.wall,Math.max(1,Math.round(v.w/3.2))),top=M(0xcfc8bd);
     for(let f=0;f<o.floors;f++){
       const m=box(v.w,H,v.d,[mx,mx,top,top,mz,mz],v.x,f*H+H/2,v.z,g);m.userData.need=f+1;o.parts.push(m);}
-    const r=roof(v,o.roof,o.rc);r.position.set(v.x,o.floors*H,v.z);g.add(r);r.userData.need=o.floors;o.parts.push(r);
+    const r=roof(v,o.roof,o.rc);r.position.set(v.x,o.floors*H,v.z);g.add(r);r.userData.need=o.floors;r.userData.isRoof=1;o.parts.push(r);
   });
   const v=o.vols[0];o.p=new THREE.Vector3(v.x,0,v.z);o.top=o.roof==='arc'?o.rise+.5:o.floors*H;
   g.traverse(n=>n.userData.b=o);label(o.name,o.p,o);
 }
 const RED=0xb5533c,MAR=0x8e2f45,TEAL=0x4a8f86;
+
+// ---- Technology Bldg. footprint: 12 corners, drawn in plan metres then placed on the campus ----
+// Plan (u right, v down) is rotated 180° onto the map so the long classroom row is in the south and the stem runs north-east,
+// like the Google Maps roof. TK = map units per metre, (TX0,TZ0) = where the plan's top-right of the row sits.
+const TK=.63,TX0=-9.9,TZ0=-28.6;
+const TW=([u,v])=>[TX0-(u+6.5)*TK,TZ0-v*TK];
+const TRC=(u1,v1,u2,v2)=>{const[a,b]=TW([u1,v1]),[c,d]=TW([u2,v2]);return{x:(a+c)/2,z:(b+d)/2,w:Math.abs(a-c),d:Math.abs(b-d)};};
+const TPOLY=[[0,0],[32.5,0],[29.6,17.6],[25.6,15.6],[24.6,14.4],[16.1,10.75],[10.4,21.8],[-6.35,22],[-6.35,15.7],[5.6,15.7],[5.6,9],[0,9]]; // 12 corners
+
 const B=[
  {name:'Administration Bldg.',floors:3,vols:[R(500,570,690,1290)],wall:'#e3b98a',roof:'flat',rc:0xd9a877},
  {name:'Engineering Bldg.',floors:3,vols:[R(1140,500,1335,1300)],wall:'#dfb487',roof:'flat',rc:0xcfa06f},
  {name:'High School Bldg.',floors:2,vols:[R(735,690,880,1370)],wall:'#d9c3b0',roof:'gable',rc:MAR},
- {name:'Technology Bldg.',floors:2,vols:[R(245,215,590,440),R(480,50,735,215)],wall:'#e6cfae',roof:'hip',rc:RED},
+ {name:'Technology Bldg.',floors:2,poly:TPOLY.map(TW),vols:[{x:-22.2,z:-35.55,w:24.6,d:13.9}],wall:'#e6cfae',roof:'hip',rc:0xd0623a,
+  hips:[TRC(0,0,32.5,9),TRC(5.6,9,12,21.5),TRC(-6.35,15.7,5.6,22)],
+  flats:[[[16.1,9],[32,9],[29.6,17.6],[25.6,15.6],[24.6,14.4],[16.1,10.75]].map(TW)],
+  annex:[TRC(-2.7,22,.9,24.9)]},
  {name:'Criminology Building',floors:3,vols:[R(185,755,490,1145)],wall:'#d7e3df',roof:'flat',rc:TEAL},
  {name:'Elementary Bldg.',floors:1,vols:[R(1060,50,1620,215)],wall:'#e6cfae',roof:'gable',rc:RED},
  {name:'Canteen',floors:1,vols:[R(740,50,1060,215)],wall:'#e6cfae',roof:'gable',rc:RED},
@@ -230,7 +255,7 @@ function pav(r){[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>box(.3,2.6,.3,M(0
 pav(LR(780,320,900,390));pav(LR(915,320,1040,385));
 const W=R(1000,1240,1070,1900);box(W.w,.3,W.d,M(0xa63f3f),W.x,3,W.z); // covered walkway
 for(let z=W.z-W.d/2+1;z<W.z+W.d/2;z+=6)[-1,1].forEach(s=>box(.25,3,.25,M(0x7a5c3e),W.x+s*(W.w/2-.3),1.5,z));
-[[665,330],[170,730],[985,1440],[610,1520],[330,1210],[520,420]].forEach(([px,py])=>{
+[[665,330],[170,730],[985,1440],[610,1520],[330,1210],[560,470]].forEach(([px,py])=>{ // last tree moved so it stays clear of the new Technology Bldg.
   const x=(px-900)/S,z=(py-1000)/S;
   box(.4,2,.4,M(0x6b4a2f),x,1,z);const f=new THREE.Mesh(new THREE.IcosahedronGeometry(2,0),M(0x4f7f3f));
   f.position.set(x,3.6,z);f.castShadow=true;scene.add(f);});
@@ -238,13 +263,49 @@ const GR=[{name:'Quadrangle',p:new THREE.Vector3(R(930,480,1120,1250).x,0,R(930,
           {name:'Student Lounge',p:new THREE.Vector3(LR(760,305,1065,405).x,0,LR(760,305,1065,405).z)}];
 GR.forEach(q=>label(q.name,q.p,null));
 
-// ================= ADMIN INTERIOR =================
-const AD=B[0],AV=AD.vols[0],K=AV.d/67.4,MIRROR=false; // MIRROR=true puts the ramp end in the south
-const PX=v=>AV.x+(v-8.05)*K, PZ=u=>MIRROR?AV.z-AV.d/2+u*K:AV.z+AV.d/2-u*K;
-// plan units are metres: u = along the building, v = across (top of plan = west side, hallway = east/quadrangle side)
-const TC={o:0xf3e3c3,c:0xbfe0ea,s:0xb4b4c2,h:0xe4e4e4,l:0xcfe0f5,b:0xe6d7f0,k:0xd9d1c0,t:0xf7f0df,r:0xcbd8c0,f:0xf7dfd0};
-// [name, type, u1, v1, u2, v2]   types: o office, c CR, s stairs, h hall, l lab, b library, k stock, t lobby, r ramp, f faculty
-const FL=[
+// ================= INTERIOR SYSTEM =================
+// Plan units are metres. u = across the plan (left to right), v = down the plan.
+// Room format: [name, type, u1, v1, u2, v2]
+// types: o office, c CR, s stairs, h hall, l lab, b special room, k stock/dark/control room, t lobby, r ramp/roof, f faculty, e lecture/classroom
+// Options: mir = flip which end of the building u=0 sits at; fx = flip the plan's v direction (plan bottom faces west instead of east)
+//          o = custom origin {x,z,d}; poly = footprint polygon (world x,z) used for the floor slab
+const TC={o:0xf3e3c3,c:0xbfe0ea,s:0xb4b4c2,h:0xe4e4e4,l:0xcfe0f5,b:0xe6d7f0,k:0xd9d1c0,t:0xf7f0df,r:0xcbd8c0,f:0xf7dfd0,e:0xf6edcf};
+function interior(c){
+  const v0=c.o||c.b.vols[0],sx=c.fx?-1:1,
+    PX=v=>v0.x+sx*(v-c.vc)*c.kv,PZ=u=>c.mir?v0.z-v0.d/2+u*c.ku:v0.z+v0.d/2-u*c.ku;
+  c.IF=[];
+  c.FL.forEach((rooms,f)=>{
+    const g=new THREE.Group();g.visible=false;scene.add(g);c.IF.push(g);const y0=f*H+.2;
+    if(c.poly){const sg=new THREE.ShapeGeometry(new THREE.Shape(c.poly.map(([x,z])=>new THREE.Vector2(x,-z))));sg.rotateX(-Math.PI/2);
+      const bm=new THREE.Mesh(sg,M(0xf7f7f4,{side:THREE.DoubleSide}));bm.position.y=y0;g.add(bm);}
+    else box(c.V*c.kv,.04,c.U*c.ku,M(0xf7f7f4),PX(c.V/2),y0,PZ(c.U/2),g);
+    rooms.forEach(([n,t,u1,v1,u2,v2],i)=>{
+      const w=(v2-v1)*c.kv,d=(u2-u1)*c.ku,x=PX((v1+v2)/2),z=PZ((u1+u2)/2);
+      box(w,.06,d,M(TC[t]),x,y0+.05+i*.004,z,g);
+      const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,2.6,d)),new THREE.LineBasicMaterial({color:0x3a3f47}));
+      e.position.set(x,y0+1.3,z);g.add(e);
+      if(n){const el=document.createElement('div');el.className='lbl rl';el.textContent=n;document.body.appendChild(el);
+        labels.push({el,p:new THREE.Vector3(x,0,z),f,r:1,ib:c});}
+    });
+    const m=c.MK[f],rt=c.RT[f],RC=0xd0213a;
+    m.fe.forEach(([u,v])=>box(.45,1.1,.35,M(RC),PX(v),y0+.6,PZ(u),g));                       // fire extinguishers
+    m.el.forEach(([u,v])=>box(.6,.45,.12,M(0x2a63c9),PX(v),y0+2.1,PZ(u),g));                 // emergency lights
+    m.fh.forEach(([u,v])=>{const cy=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.2,16),M(RC)); // fire house cabinet
+      cy.rotation.z=Math.PI/2;cy.position.set(PX(v),y0+1.4,PZ(u));g.add(cy);});
+    rt.l.forEach(pl=>{const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pl.map(([u,v])=>new THREE.Vector3(PX(v),y0+.3,PZ(u)))),
+      new THREE.LineDashedMaterial({color:RC,dashSize:.7,gapSize:.45}));ln.computeLineDistances();g.add(ln);}); // escape route
+    rt.a.forEach(([u,v,d])=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.45,1.1,8),M(RC));      // exit arrows
+      const s=d[1]==='+'?1:-1,dir=d[0]==='v'?new THREE.Vector3(sx*s,0,0):new THREE.Vector3(0,0,(c.mir?1:-1)*s);
+      a.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);a.position.set(PX(v),y0+.35,PZ(u));g.add(a);});
+  });
+  return c;
+}
+const ad=(a,v)=>a.map(u=>[u,v]);
+
+// ---------- ADMINISTRATION BLDG. ----------
+const AV=B[0].vols[0];
+const IA=interior({b:B[0],name:'Administration Bldg.',kv:AV.d/67.4,ku:AV.d/67.4,vc:8.05,U:67.5,V:19,mir:false, // mir:true puts the ramp end in the south
+ FL:[
  [['ROTC Office','o',0,0,4,6.7],['','h',0,6.7,4.2,13.6],['Stairs','s',.1,6.8,4.2,10.9],["President's Office",'o',4.2,3,8.8,10.1],
   ['CR','c',4.2,10.1,8.8,13.6],['Board Room','o',8.8,3,13.3,8.4],['Secretary Office','o',8.8,10.1,13.3,13.6],
   ['Stock Room','k',13.3,3,15,6.3],['CR','c',15,3,17.7,6.3],['Office','o',17.7,3,22.2,6.5],
@@ -260,45 +321,127 @@ const FL=[
  [['Research Office','o',0,0,4.1,3],['','h',0,3,4.2,13.6],['Stairs','s',2.2,5.4,4.2,13.6],['E-Library','b',4.2,3,13.2,13.6],
   ['Library','b',13.2,3,49,13.6],['Library Stockroom','k',49,3,58.2,13.6],['Female CR','c',58.2,3,62.7,13.6],
   ['Ramp','r',62.7,5.1,67.5,12.8],['Hallway','h',0,13.6,67.5,16.1],['Canopy','r',0,16.1,6,19]]
-];
-// fe = fire extinguisher, el = emergency light, fh = fire house cabinet (u positions along the hallway)
-const MK=[{fe:[27.1,60.1],el:[10,19.1,50.2],fh:[62.2]},{fe:[10,27.9,55.1],el:[6.1,16.1,32.4,53.4],fh:[61.5]},{fe:[10.3,23.8,54.9],el:[8.1,20.7,36.7,52.9],fh:[61.2]}];
-const IF=[];let IN=false;
-FL.forEach((rooms,f)=>{
-  const g=new THREE.Group();g.visible=false;scene.add(g);IF.push(g);const y0=f*H+.2;
-  box(19*K,.04,67.5*K,M(0xf7f7f4),PX(9.5),y0,PZ(33.75),g);
-  rooms.forEach(([n,t,u1,v1,u2,v2],i)=>{
-    const w=(v2-v1)*K,d=(u2-u1)*K,x=PX((v1+v2)/2),z=PZ((u1+u2)/2);
-    box(w,.06,d,M(TC[t]),x,y0+.05+i*.004,z,g);
-    const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,2.6,d)),new THREE.LineBasicMaterial({color:0x3a3f47}));
-    e.position.set(x,y0+1.3,z);g.add(e);
-    if(n){const el=document.createElement('div');el.className='lbl rl';el.textContent=n;document.body.appendChild(el);
-      labels.push({el,p:new THREE.Vector3(x,0,z),f,r:1});}
-  });
-  const m=MK[f],RC=0xd0213a;
-  m.fe.forEach(u=>box(.45,1.1,.35,M(RC),PX(14.4),y0+.6,PZ(u),g));
-  m.el.forEach(u=>box(.6,.45,.12,M(0x2a63c9),PX(13.7),y0+2.1,PZ(u),g));
-  m.fh.forEach(u=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.2,16),M(RC));c.rotation.z=Math.PI/2;c.position.set(PX(13.7),y0+1.4,PZ(u));g.add(c);});
-  const pts=[[1,15.2],[66.5,15.2]].map(([u,v])=>new THREE.Vector3(PX(v),y0+.12,PZ(u)));
-  const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:RC,dashSize:.7,gapSize:.45}));
-  ln.computeLineDistances();g.add(ln);
-  if(f===0)[1.5,30.5,63.5].forEach(u=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.45,1.1,8),M(RC)); // exits to the Quadrangle
-    a.rotation.z=-Math.PI/2;a.position.set(PX(16.6),y0+.2,PZ(u));g.add(a);});
+ ],
+ MK:[{fe:ad([27.1,60.1],14.4),el:ad([10,19.1,50.2],13.7),fh:ad([62.2],13.7)},
+     {fe:ad([10,27.9,55.1],14.4),el:ad([6.1,16.1,32.4,53.4],13.7),fh:ad([61.5],13.7)},
+     {fe:ad([10.3,23.8,54.9],14.4),el:ad([8.1,20.7,36.7,52.9],13.7),fh:ad([61.2],13.7)}],
+ RT:[{l:[[[1,15.2],[66.5,15.2]]],a:[[1.5,16.6,'v+'],[30.5,16.6,'v+'],[63.5,16.6,'v+']]},
+     {l:[[[1,15.2],[66.5,15.2]]],a:[]},{l:[[[1,15.2],[66.5,15.2]]],a:[]}]
 });
-function setIN(on){ // make the Admin shell see-through
-  AD.parts.forEach(p=>{p.castShadow=!on;(p.isGroup?[]:[].concat(p.material)).forEach(m=>{m.transparent=on;m.opacity=on?.12:1;m.depthWrite=!on;m.needsUpdate=true;});});
+
+// ---------- CRIMINOLOGY BLDG. ----------
+// Plan: 21 m wide x 19 m deep. Plan bottom faces east (toward Admin), plan right faces north (toward the Covered Court).
+const CV=B[4].vols[0];
+const IC=interior({b:B[4],name:'Criminology Building',kv:CV.w/19,ku:CV.d/21,vc:9.5,U:21,V:19,mir:false,
+ FL:[
+ [['Lecture Room','e',0,0,9,7],['Lecture Room','e',9,0,18,7],['Restroom','c',18,0,21,3.8],['CR','c',18,3.8,21,7],
+  ['Hallway','h',.6,7,18.9,8.5],['','h',.6,8.5,2,19],['Consultation Room','o',2,8.5,8.5,15.4],
+  ['','h',8.5,8.5,14.4,15.5],['Stairs / Ramp','s',9.5,9.2,13.5,15.2],['','h',14.4,8.5,18.9,10],
+  ['Lecture Room','e',14.4,10,18.9,19],['Registration Office','o',2,15.5,14.4,19],['Passage to Admin Bldg.','h',18.9,7,21,19]],
+ [['Crim Audio Visual Room','e',0,0,18,7.1],['Restroom','c',18,0,21,3.6],['CR','c',18,3.6,21,7.1],
+  ['Hallway','h',2.7,7.1,18.9,8.6],['Fire Exit','s',0,7.1,2.7,8.6],['Interrogation Room','b',.9,8.6,8.5,15.4],
+  ['','h',8.5,8.6,14.5,15.4],['Stairs / Ramp','s',9.5,9.2,13.5,15.4],['Crime Scene Simulation Area','b',1,15.4,14.5,19],
+  ['Lecture Room','e',14.5,8.6,18.9,19],['Walkway to Covered Court','h',18.9,7.1,21,19]],
+ [['Forensic Chem. & Toxicology Lab','l',0,0,9,7],['Forensic Lab Working Area','l',9,0,18,7],['Restroom','c',18,0,21,3.4],['CR','c',18,3.4,21,7],
+  ['Hallway','h',2.4,7,20.8,8.5],['Fire Exit 1','s',0,7,2.4,8.5],['Fire Exit 2','s',20.8,7,21,8.5],
+  ['Criminology Forensic Lab','l',.7,8.5,8.4,19],['','h',8.4,8.5,14.4,15.5],['Stairs / Ramp','s',9.4,9.2,13.4,14.6],
+  ['Dark Room','k',8.4,15.5,14.4,19],['Moot Court Simulation Room','b',14.4,8.5,18.8,19],['Roof','r',18.8,8.5,21,19]]
+ ],
+ MK:[{fe:[[3,7.7],[16.7,9.3],[20.1,7.9]],el:[[4.3,7.7],[12.8,7.7],[18.9,7.7],[1.9,15.2]],fh:[[20.7,7.6]]},
+     {fe:[[4.8,7.7],[11.2,7.8],[17.2,7.7],[20.1,7.9]],el:[[6,7.7],[12.8,7.7],[19,7.7]],fh:[[20.8,7.6]]},
+     {fe:[[4.5,7.7],[16.6,7.7],[19.5,7.7]],el:[[5.7,7.7],[10.6,7.7],[18.5,7.7]],fh:[[20.6,7.5]]}],
+ RT:[{l:[[[18.3,7.7],[1.2,7.7],[1.2,18.6]],[[20.2,8.3],[20.9,18.6]]],a:[[1.2,19.3,'v+'],[20.9,19.3,'v+']]},
+     {l:[[[18.3,7.7],[1.5,7.7]],[[20.2,8.3],[20.8,18.4]]],a:[[.4,7.7,'u-'],[20.8,19.1,'v+']]},
+     {l:[[[18.3,7.7],[1,7.7]],[[19,7.7],[21.2,7.7]]],a:[[.2,7.7,'u-'],[21.6,7.7,'u+']]}]
+});
+
+// ---------- ENGINEERING BLDG. ----------
+// Plan: 63.2 m long. The hallway side (plan bottom, "Going to Quadrangle") faces WEST toward the Quadrangle (fx:true),
+// and the ramp end (u=0) is in the north (mir:true). Plan v: 0-2.7 control-room strip, 2.7-11.8 rooms, 11.8-13.3 hallway.
+const EV=B[1].vols[0];
+const IE=interior({b:B[1],name:'Engineering Bldg.',kv:EV.d/63.2,ku:EV.d/63.2,vc:6.8,U:63.2,V:13.6,mir:true,fx:true,
+ FL:[
+ [['Ramp','r',0,3.8,4.7,13.1],['Male CR','c',4.7,2.7,7.7,7.3],['Female CR','c',4.7,7.3,7.7,11.8],
+  ['CE Laboratory Room 1','l',7.7,2.7,14.3,11.8],['Audio Visual Room','b',14.3,2.7,23.4,11.8],['Audio Visual Room','b',23.4,2.7,32.3,11.8],
+  ['Control Room','k',23.4,0,32.3,2.7],['E104','e',32.3,2.7,41.1,11.8],['E105','e',41.1,2.7,50,11.8],
+  ['Counseling Room','o',50,2.7,53.2,7.2],['Guidance Office','o',53.2,2.7,58.8,7.5],['Receiving Area','o',50,7.2,54.3,11.8],
+  ['Testing Area','o',54.3,7.5,58.8,11.8],['','h',58.8,2.7,63.2,4.9],['Stairs','s',58.8,4.9,63.2,9.2],['E.S.O. Office','o',58.8,9.2,63.2,11.8],
+  ['Hallway','h',4.7,11.8,63.2,13.3]],
+ [['Ramp','r',0,3.7,4.7,12.7],['Male CR','c',4.7,2.7,7.7,11.8],['ME Laboratory Room 2','l',7.7,2.7,14.3,11.8],
+  ['E202','e',14.3,2.7,23.2,11.8],['E203','e',23.2,2.7,32.2,11.8],['E204','e',32.2,2.7,41,11.8],
+  ['E205','e',41,2.7,50,11.8],['E206','e',50,2.7,59,11.8],['','h',59,2.7,63.2,5],['Stairs','s',59,5,63.2,11.8],
+  ['Hallway','h',4.7,11.8,63.2,13.3]],
+ [['Ramp','r',0,4,4.7,12.8],['Female CR','c',4.7,2.7,7.7,11.8],['E301','e',7.7,2.7,14.3,11.8],
+  ['E302','e',14.3,2.7,23.2,11.8],['E303','e',23.2,2.7,32.2,11.8],['E304','e',32.2,2.7,41,11.8],
+  ['E305','e',41,2.7,50,11.8],['E306','e',50,2.7,59,11.8],['','h',59,2.7,63.2,4.9],['Stairs','s',59,4.9,63.2,11.8],
+  ['Hallway','h',4.7,11.8,63.2,13.3]]
+ ],
+ MK:[{fe:[[10.5,12.6],[15.7,8.7],[29.3,12.6],[47,12.6],[17.4,12.6]],el:[[12.7,12.6],[31.6,12.6],[53.3,12.6],[60.2,12.6]],fh:[[7.3,12.6]]},
+     {fe:[[9.6,12.6],[28.4,12.6],[37.8,12.6],[55.5,12.6]],el:[[11.7,12.6],[30.6,12.6],[52.7,12.6],[3.7,6.4],[62.2,10]],fh:[[6.7,12.6],[62.6,12.6]]},
+     {fe:[[9.9,12.6],[29.9,12.6],[55.4,12.6]],el:[[11.9,12.6],[27.8,12.6],[52.9,12.6],[3.8,6.3],[62.4,7]],fh:[]}],
+ RT:[{l:[[[60,12.5],[3.4,12.5]]],a:[[3.4,13.7,'v+'],[4.3,13.7,'v+']]},
+     {l:[[[30,12.5],[1.4,12.5],[1.4,8.2]],[[30,12.5],[59.2,12.5],[59.2,9.5]]],a:[[1.4,7.4,'v-'],[59.2,8.7,'v-']]},
+     {l:[[[40,12.6],[3.3,12.6],[3.3,8]],[[40,12.6],[59,12.6],[59,9]]],a:[[3.3,7.2,'v-'],[59,8.3,'v-']]}]
+});
+
+// ---------- TECHNOLOGY BLDG. ----------
+// Rooms below are written exactly like the floor plan: [name, type, u1, v1, u2, v2] in metres, u = right, v = down (u=0 at the row's left wall).
+// The plan is rotated 180° onto the map (plan right = west, plan down = north). These helpers convert plan coordinates to interior() coordinates.
+const TR=a=>a.map(([n,t,a1,b1,a2,b2])=>[n,t,b1,a1+6.5,b2,a2+6.5]);
+const QP=p=>[p[1],p[0]+6.5];
+const TM=m=>({fe:m.fe.map(QP),el:m.el.map(QP),fh:m.fh.map(QP)});
+const DM={right:'v+',left:'v-',down:'u+',up:'u-'};
+const TRt=r=>({l:r.l.map(pl=>pl.map(QP)),a:r.a.map(([u,v,d])=>[...QP([u,v]),DM[d]])});
+const IT=interior({b:B[3],name:'Technology Bldg.',o:{x:TX0,z:TZ0,d:0},kv:TK,ku:TK,vc:0,U:25,V:39.5,mir:false,fx:true,poly:TPOLY.map(TW),
+ FL:[
+ TR([['Stock Room 3','k',0,0,2,7.3],['Classroom LR-4','e',2,0,8,7.3],['Classroom LR-5','e',8,0,14,7.3],['Speech Laboratory','l',14,0,20,7.3],
+  ['Automation Laboratory','l',20,0,26,7.3],['Eng. Faculty Room LR-6','f',26,0,31.5,7.3],
+  ['Hallway','h',0,7.3,26.6,8.6],['','h',5.6,8.6,7.9,15.7],['Hallway','h',-6.35,15.7,7.9,17.6],
+  ['CE Lab Equipment Room','l',7.9,8.7,16.1,14.1],['Stairs','s',8,11.6,13.3,14.1],['EE Lab Equip. Room','l',7.9,14.1,10.6,21.9],
+  ['CR','c',26.6,8.6,29.3,15.2],['Stairs','s',22,11.2,24.3,13.3],
+  ['EL-2','e',-6.35,17.65,-.2,21.95],['EL-1','e',-.2,17.65,7.9,21.95],['Physics Room','l',-2.7,21.95,.9,24.9]]),
+ TR([['','k',0,0,2,7.4],['Hydraulics Laboratory','l',2,0,8.1,7.4],['Classroom LR-1','e',8.1,0,14.1,7.4],['Classroom LR-2','e',14.1,0,20.1,7.4],
+  ['Classroom LR-3','e',20.1,0,26,7.4],['CBA Faculty Office','f',26,0,31.5,7.4],
+  ['Hallway','h',0,7.4,26,9],['Comfort Room','c',26,9,29.8,14.6],['Down to the Back Gate','s',21,9,26,12.6],['Down to Ground Floor','s',8,9,11.1,13.2],
+  ['','h',6,9,8,15.7],['Hallway','h',-6.35,15.7,8,17.7],['Chem. Equip. / Materials Rm','k',8,14.5,10.6,21.9],
+  ['Classroom EL-2','e',-6.35,17.7,-.2,21.95],['Chemistry Laboratory','l',-.2,17.7,7.9,21.95]])
+ ],
+ MK:[
+ TM({fe:[[17.7,8.4],[21.1,5.4],[6.7,16],[-1.8,19],[5.5,19]],el:[[5.2,8.3],[7,13.7],[2.5,16.4],[23.1,8.5]],fh:[]}),
+ TM({fe:[[12.7,8.5],[27.2,5.6],[-1.3,18.9],[5.7,19]],el:[[5.4,8.3],[22.5,8.5],[14.1,12.2],[2.6,16.7]],fh:[]})
+ ],
+ RT:[
+ TRt({l:[[[26,8],[-1.5,8],[-1.5,.6]],[[6.8,8.3],[6.8,16.5],[-6,16.5]]],a:[[-1.5,-.2,'up'],[-6.8,16.5,'left']]}),
+ TRt({l:[[[26,8.2],[.3,8.2]],[[6.8,8.2],[6.8,16.8],[-5,16.8]],[[25.3,8.8],[25.3,13.8]]],a:[[25.3,14.4,'down'],[10.6,9.9,'right'],[10.6,11,'right']]})
+ ]
+});
+
+const INT=[IA,IC,IE,IT];let CUR=null;
+function setIN(b,on){ // make a building's shell see-through (and back)
+  b.parts.forEach(p=>{p.castShadow=!on;if(p.userData.isRoof)return;
+    [].concat(p.material).forEach(m=>{m.transparent=on;m.opacity=on?.12:1;m.depthWrite=!on;m.needsUpdate=true;});});
 }
-inb.onclick=()=>{
-  IN=!IN;inb.classList.toggle('on',IN);setIN(IN);setN(N);
-  if(IN){info.innerHTML='<b>Administration Bldg. – Interior</b><br>Use 1F / 2F / 3F to switch floors. Red = fire equipment, blue = emergency lights, dashed line = escape route.';
-    const t=new THREE.Vector3(AV.x,3,AV.z);fly(t,t.clone().add(new THREE.Vector3(22,46,30)));}
-};
+function toggleI(c){
+  const off=CUR===c;
+  if(CUR)setIN(CUR.b,false);
+  CUR=off?null:c;
+  if(CUR)setIN(CUR.b,true);
+  inb.classList.toggle('on',CUR===IA);inc.classList.toggle('on',CUR===IC);ine.classList.toggle('on',CUR===IE);itb.classList.toggle('on',CUR===IT);
+  setN(N);
+  if(CUR){info.innerHTML=`<b>${CUR.name} – Interior</b><br>Use 1F / 2F / 3F to switch floors. Red = fire equipment, blue = emergency lights, dashed line = escape route.`;
+    const v=CUR.b.vols[0],s=Math.max(v.w,v.d),t=new THREE.Vector3(v.x,3,v.z);
+    fly(t,t.clone().add(new THREE.Vector3(.6*s,1.3*s,.9*s)));}
+}
+inb.onclick=()=>toggleI(IA);
+inc.onclick=()=>toggleI(IC);
+ine.onclick=()=>toggleI(IE);
+itb.onclick=()=>toggleI(IT);
 
 // ---------- UI ----------
 let N=99,tw=null;
 function setN(n){N=n;
-  B.forEach(o=>o.parts.forEach(p=>p.visible=p.userData.need<=N&&!(IN&&o===AD&&p.isGroup))); // hide Admin roof in interior mode
-  IF.forEach((g,f)=>g.visible=IN&&f+1<=N);}
+  B.forEach(o=>o.parts.forEach(p=>p.visible=p.userData.need<=N&&!(CUR&&o===CUR.b&&p.userData.isRoof))); // hide roof of the building being viewed inside
+  INT.forEach(c=>c.IF.forEach((g,f)=>g.visible=c===CUR&&f+1<=N));}
 function fly(t,p){tw={t:0,t0:ctl.target.clone(),p0:cam.position.clone(),t1:t,p1:p};}
 function select(o){
   info.innerHTML=`<b>${o.name}</b><br>${o.floors} floor${o.floors>1?'s':''} · ${RN[o.roof]}`;
@@ -337,8 +480,8 @@ const v3=new THREE.Vector3();
   const w=innerWidth,h=innerHeight;
   labels.forEach(l=>{
     const o=l.o;let on=showL;
-    if(l.r){l.p.y=l.f*H+3;on=on&&IN&&l.f===Math.min(N,3)-1;}   // room labels: top visible floor only
-    else{l.p.y=o?(o.roof==='arc'?o.top+1.5:Math.min(N,o.floors)*H+4):1.5;if(IN&&o===AD)on=false;}
+    if(l.r){l.p.y=l.f*H+3;on=on&&CUR===l.ib&&l.f===Math.min(N,l.ib.b.floors)-1;}   // room labels: top visible floor only
+    else{l.p.y=o?(o.roof==='arc'?o.top+1.5:Math.min(N,o.floors)*H+4):1.5;if(CUR&&o===CUR.b)on=false;}
     v3.copy(l.p).project(cam);
     l.el.style.display=(on&&v3.z<1)?'':'none';
     l.el.style.transform=`translate(${(v3.x*.5+.5)*w}px,${(-v3.y*.5+.5)*h}px) translate(-50%,-100%)`;});
