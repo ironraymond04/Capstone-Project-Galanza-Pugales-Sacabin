@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>St. Peter's College – 3D Campus Map</title>
+<style>
+* {
+  box-sizing:border-box
+}
+
+html,body {
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  font-family:system-ui, Segoe UI, sans-serif;
+  background:#dfe7ee
+}
+
+#c {
+  position:fixed;
+  inset:0
+}
+
+.lbl {
+  position:fixed;
+  left:0;
+  top:0;
+  padding:2px 7px;
+  font-size:11px;
+  font-weight:600;
+  color:#fff;
+  background:rgba(20,30,45,.78);
+  border-radius:10px;
+  white-space:nowrap;
+  pointer-events:none
+}
+
+.rl {
+  font-size:10px;
+  background:rgba(255,255,255,.88);
+  color:#222;
+  padding:1px 5px
+}
+
+.panel {
+  position:fixed;
+  background:rgba(255,255,255,.93);
+  border-radius:12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.18);
+  padding:12px
+}
+
+#side {
+  top:12px;
+  left:12px;
+  width:215px;
+  max-height:calc(100% - 24px);
+  overflow:auto
+}
+
+#side h1 {
+  font-size:14px;
+  margin:0 0 6px
+}
+
+#side h2 {
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:#667;
+  margin:10px 0 3px
+}
+
+#side button {
+  display:block;
+  width:100%;
+  text-align:left;
+  border:0;
+  background:none;
+  padding:5px 6px;
+  border-radius:6px;
+  font-size:13px;
+  cursor:pointer
+}
+
+#side button:hover {
+  background:#e8eef5
+}
+
+#bar {
+  top:12px;
+  right:12px;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  max-width:340px;
+  justify-content:flex-end
+}
+
+#bar button {
+  border:1px solid #c5d0dc;
+  background:#fff;
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:13px;
+  cursor:pointer
+}
+
+#bar button.on {
+  background:#1f4e79;
+  color:#fff;
+  border-color:#1f4e79
+}
+
+#info {
+  bottom:12px;
+  right:12px;
+  width:230px;
+  font-size:13px
+}
+</style>
+</head>
+<body>
+<div id="side" class="panel"><h1>St. Peter's College</h1></div>
+<div id="bar" class="panel">
+  <button data-n="99" class="on">All floors</button><button data-n="1">1F</button><button data-n="2">2F</button><button data-n="3">3F</button><button data-n="4">4F</button>
+  <button id="lb" class="on">Labels</button><button id="rot">Auto-rotate</button><button id="reset">Reset view</button><button id="inb">Admin interior</button>
+</div>
+<div id="info" class="panel">Click a building to see its details. Floor buttons show floors up to the one you pick.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ---------- helpers ----------
+// Rectangles are taken straight from the reference image's pixel coordinates (north = up).
+const S=20,H=3.4;
+const R=(a,b,c,d)=>({x:((a+c)/2-900)/S,z:((b+d)/2-1000)/S,w:(c-a)/S,d:(d-b)/S});
+const M=(c,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c},o));
+function wall(col,rep){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+  g.fillStyle=col;g.fillRect(0,0,64,64);g.fillStyle='#3b5a78';g.fillRect(12,14,40,28);g.fillStyle='#8fb4d4';g.fillRect(12,14,40,8);
+  g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,60,64,4);
+  const t=new THREE.CanvasTexture(c);t.wrapS=THREE.RepeatWrapping;t.repeat.set(rep,1);return new THREE.MeshLambertMaterial({map:t});}
+
+// ---------- scene ----------
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xdfe7ee);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;
+renderer.domElement.id='c';document.body.prepend(renderer.domElement);
+const cam=new THREE.PerspectiveCamera(45,1,.5,600);
+const HOME={p:new THREE.Vector3(0,90,105),t:new THREE.Vector3(0,0,5)};
+cam.position.copy(HOME.p);
+const ctl=new THREE.OrbitControls(cam,renderer.domElement);
+ctl.target.copy(HOME.t);ctl.enableDamping=true;ctl.maxPolarAngle=Math.PI/2.1;ctl.minDistance=15;ctl.maxDistance=220;
+scene.add(new THREE.HemisphereLight(0xffffff,0x6b7a5a,.8));
+const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(-50,90,40);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-70,right:70,top:70,bottom:-70,near:10,far:250});scene.add(sun);
+
+function box(w,h,d,mat,x,y,z,par){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;(par||scene).add(m);return m;}
+const slab=(r,h,c,y)=>box(r.w,h,r.d,M(c),r.x,y,r.z);
+
+// ---------- roofs ----------
+function roof(v,type,col,rise){
+  const m=M(col,{side:THREE.DoubleSide}),w=v.w+.6,d=v.d+.6;let r;
+  if(type==='hip'){const h=Math.min(w,d)*.32,geo=new THREE.ConeGeometry(1,h,4);geo.rotateY(Math.PI/4);geo.translate(0,h/2,0);
+    r=new THREE.Mesh(geo,m);r.scale.set(w/1.4142,1,d/1.4142);}
+  else if(type==='gable'){const z=v.d>=v.w,sp=z?w:d,len=z?d:w,h=sp*.3,s=new THREE.Shape();
+    s.moveTo(-sp/2,0);s.lineTo(sp/2,0);s.lineTo(0,h);
+    const geo=new THREE.ExtrudeGeometry(s,{depth:len,bevelEnabled:false});geo.translate(0,0,-len/2);
+    r=new THREE.Mesh(geo,m);if(!z)r.rotation.y=Math.PI/2;}
+  else if(type==='arc'){const a=v.w/2,t=.35,s=new THREE.Shape();
+    s.moveTo(a,0);s.absellipse(0,0,a,rise,0,Math.PI,false,0);
+    s.lineTo(-a+t,0);s.absellipse(0,0,a-t,rise-t,Math.PI,0,true,0);
+    const geo=new THREE.ExtrudeGeometry(s,{depth:v.d,bevelEnabled:false});geo.translate(0,0,-v.d/2);r=new THREE.Mesh(geo,m);}
+  else{r=new THREE.Group();box(v.w+.5,.6,v.d+.5,m,0,.3,0,r);box(v.w-.7,.1,v.d-.7,M(0x8d949a),0,.62,0,r);} // FLAT roof + parapet
+  r.traverse(n=>n.castShadow=true);return r;}
+
+// ---------- labels ----------
+const labels=[];let showL=true;
+function label(t,p,o){const el=document.createElement('div');el.className='lbl';el.textContent=t;document.body.appendChild(el);labels.push({el,p:p.clone(),o});}
+
+// ---------- buildings ----------
+const RN={flat:'Flat roof',gable:'Gable roof',hip:'Hip roof',arc:'Arc roof'};
+function building(o){
+  const g=new THREE.Group();o.parts=[];o.g=g;scene.add(g);
+  o.vols.forEach(v=>{
+    if(o.roof==='arc'){
+      const s=box(v.w,.5,v.d,M(0xcfd6d4),v.x,.25,v.z,g);s.userData.need=1;o.parts.push(s);
+      const rv=o.rot?{w:v.d,d:v.w}:v;            // swap span and length when rotated
+      const r=roof(rv,'arc',o.rc,o.rise);
+      if(o.rot)r.rotation.y=Math.PI/2;           // turn the arch 90°
+      r.position.set(v.x,.5,v.z);g.add(r);r.userData.need=1;o.parts.push(r);return;}
+    const mx=wall(o.wall,Math.max(1,Math.round(v.d/3.2))),mz=wall(o.wall,Math.max(1,Math.round(v.w/3.2))),top=M(0xcfc8bd);
+    for(let f=0;f<o.floors;f++){
+      const m=box(v.w,H,v.d,[mx,mx,top,top,mz,mz],v.x,f*H+H/2,v.z,g);m.userData.need=f+1;o.parts.push(m);}
+    const r=roof(v,o.roof,o.rc);r.position.set(v.x,o.floors*H,v.z);g.add(r);r.userData.need=o.floors;o.parts.push(r);
+  });
+  const v=o.vols[0];o.p=new THREE.Vector3(v.x,0,v.z);o.top=o.roof==='arc'?o.rise+.5:o.floors*H;
+  g.traverse(n=>n.userData.b=o);label(o.name,o.p,o);
+}
+const RED=0xb5533c,MAR=0x8e2f45,TEAL=0x4a8f86;
+const B=[
+ {name:'Administration Bldg.',floors:3,vols:[R(500,570,690,1290)],wall:'#e3b98a',roof:'flat',rc:0xd9a877},
+ {name:'Engineering Bldg.',floors:3,vols:[R(1140,500,1335,1300)],wall:'#dfb487',roof:'flat',rc:0xcfa06f},
+ {name:'High School Bldg.',floors:2,vols:[R(735,690,880,1370)],wall:'#d9c3b0',roof:'gable',rc:MAR},
+ {name:'Technology Bldg.',floors:2,vols:[R(245,215,590,440),R(480,50,735,215)],wall:'#e6cfae',roof:'hip',rc:RED},
+ {name:'Criminology Building',floors:4,vols:[R(185,755,490,1145)],wall:'#d7e3df',roof:'flat',rc:TEAL},
+ {name:'Elementary Bldg.',floors:1,vols:[R(1060,50,1620,215)],wall:'#e6cfae',roof:'gable',rc:RED},
+ {name:'Canteen',floors:1,vols:[R(740,50,1060,215)],wall:'#e6cfae',roof:'gable',rc:RED},
+ {name:'Machine Shop',floors:2,vols:[R(1340,410,1650,575)],wall:'#ecd9b0',roof:'gable',rc:RED},
+ {name:'Clinic',floors:1,vols:[R(405,1285,595,1580)],wall:'#e6cfae',roof:'gable',rc:RED},
+ {name:'Guardhouse',floors:1,vols:[R(930,1880,1090,2000)],wall:'#e6cfae',roof:'gable',rc:RED},
+ {name:'Covered Court',floors:1,vols:[R(205,445,500,740)],roof:'arc',rc:TEAL,rise:7,rot:true},
+ {name:'Stage',floors:1,vols:[R(945,545,1090,690)],roof:'arc',rc:TEAL,rise:4.5},
+ {name:'Karate Rm.',floors:1,vols:[R(735,570,880,690)],wall:'#e6cfae',roof:'gable',rc:MAR}
+];
+
+const LX=0,LY=-90;                              // shift in pixels: +x = east, +y = south
+const LR=(a,b,c,d)=>R(a+LX,b+LY,c+LX,d+LY);
+
+// ---------- grounds ----------
+[R(150,30,1650,1300),R(380,1290,880,1660),R(860,1290,1130,2010)].forEach(r=>slab(r,.4,0x86a860,-.2)); // grass
+slab(R(600,470,1130,1480),.12,0xd5d3ce,.06);   // Quadrangle
+slab(R(880,1480,1000,1900),.12,0xd5d3ce,.06);  // path to guardhouse
+slab(LR(760,305,1065,405),.1,0xa8bf86,.05);    // Student Lounge area
+B.forEach(building);
+function pav(r){[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>box(.3,2.6,.3,M(0x7a5c3e),r.x+a*(r.w/2-.4),1.3,r.z+b*(r.d/2-.4)));
+  const x=roof(r,'gable',RED);x.position.set(r.x,2.6,r.z);scene.add(x);}
+pav(LR(780,320,900,390));pav(LR(915,320,1040,385));
+const W=R(1000,1240,1070,1900);box(W.w,.3,W.d,M(0xa63f3f),W.x,3,W.z); // covered walkway
+for(let z=W.z-W.d/2+1;z<W.z+W.d/2;z+=6)[-1,1].forEach(s=>box(.25,3,.25,M(0x7a5c3e),W.x+s*(W.w/2-.3),1.5,z));
+[[665,330],[170,730],[985,1440],[610,1520],[330,1210],[520,420]].forEach(([px,py])=>{
+  const x=(px-900)/S,z=(py-1000)/S;
+  box(.4,2,.4,M(0x6b4a2f),x,1,z);const f=new THREE.Mesh(new THREE.IcosahedronGeometry(2,0),M(0x4f7f3f));
+  f.position.set(x,3.6,z);f.castShadow=true;scene.add(f);});
+const GR=[{name:'Quadrangle',p:new THREE.Vector3(R(930,480,1120,1250).x,0,R(930,480,1120,1250).z)},
+          {name:'Student Lounge',p:new THREE.Vector3(LR(760,305,1065,405).x,0,LR(760,305,1065,405).z)}];
+GR.forEach(q=>label(q.name,q.p,null));
+
+// ================= ADMIN INTERIOR =================
+const AD=B[0],AV=AD.vols[0],K=AV.d/67.4,MIRROR=false; // MIRROR=true puts the ramp end in the south
+const PX=v=>AV.x+(v-8.05)*K, PZ=u=>MIRROR?AV.z-AV.d/2+u*K:AV.z+AV.d/2-u*K;
+// plan units are metres: u = along the building, v = across (top of plan = west side, hallway = east/quadrangle side)
+const TC={o:0xf3e3c3,c:0xbfe0ea,s:0xb4b4c2,h:0xe4e4e4,l:0xcfe0f5,b:0xe6d7f0,k:0xd9d1c0,t:0xf7f0df,r:0xcbd8c0,f:0xf7dfd0};
+// [name, type, u1, v1, u2, v2]   types: o office, c CR, s stairs, h hall, l lab, b library, k stock, t lobby, r ramp, f faculty
+const FL=[
+ [['ROTC Office','o',0,0,4,6.7],['','h',0,6.7,4.2,13.6],['Stairs','s',.1,6.8,4.2,10.9],["President's Office",'o',4.2,3,8.8,10.1],
+  ['CR','c',4.2,10.1,8.8,13.6],['Board Room','o',8.8,3,13.3,8.4],['Secretary Office','o',8.8,10.1,13.3,13.6],
+  ['Stock Room','k',13.3,3,15,6.3],['CR','c',15,3,17.7,6.3],['Office','o',17.7,3,22.2,6.5],
+  ["Administrator's Office",'o',13.3,6.5,22.4,10.5],['Asst. to the President','o',13.3,10.5,17.8,13.6],['Media Office','o',17.8,10.5,22.4,13.6],
+  ['Stock Room','k',22.2,0,26.7,3],['','o',22.2,3,26.8,6.5],['HR Office','o',22.4,6.5,26.8,10.5],['HR Office','o',24.3,10.5,26.8,13.6],
+  ["Registrar's Office",'o',26.8,3,31.2,10.5],['Lobby','t',31.2,0,35.4,13.6],['Office of the Treasurer','o',35.4,2.7,40,6.3],
+  ['Accounting Office','o',35.4,6.3,44.4,13],['CASS Faculty','f',44.4,5.9,53.3,13],['CCS Faculty','f',53.3,5.9,57.9,13],
+  ['Female CR','c',57.9,5.9,62.3,13],['Ramp','r',62.3,5.1,67.1,12.8],['Hallway','h',0,13.6,67.1,16.1]],
+ [['Registrar Stock Rm','k',0,0,4.1,3],['','h',0,3,4.1,13.6],['Stairs','s',1.9,5.3,4.1,13.6],['Computer Lab A201','l',4.1,3,13.1,13.6],
+  ['Computer Lab A202','l',13.1,3,22.2,13.6],['Computer Lab A203','l',22.2,3,32.2,13.6],['MIS Office','o',22.2,3,24.5,6.7],
+  ['Computer Lab A204','l',32.2,3,40.2,13.6],['Computer Lab A205','l',40.2,3,49.2,13.6],['Comp. Eng. Lab A206','l',49.2,3,58.3,13.6],
+  ['Male CR','c',58.3,3,62.7,13.6],['Ramp','r',62.7,5.1,67.4,12.8],['Hallway','h',0,13.6,67.4,16.1]],
+ [['Research Office','o',0,0,4.1,3],['','h',0,3,4.2,13.6],['Stairs','s',2.2,5.4,4.2,13.6],['E-Library Room','b',4.2,3,13.2,13.6],
+  ['Library Room','b',13.2,3,49,13.6],['Library Stockroom','k',49,3,58.2,13.6],['Female CR','c',58.2,3,62.7,13.6],
+  ['Ramp','r',62.7,5.1,67.5,12.8],['Hallway','h',0,13.6,67.5,16.1],['Canopy','r',0,16.1,6,19]]
+];
+// fe = fire extinguisher, el = emergency light, fh = fire house cabinet (u positions along the hallway)
+const MK=[{fe:[27.1,60.1],el:[10,19.1,50.2],fh:[62.2]},{fe:[10,27.9,55.1],el:[6.1,16.1,32.4,53.4],fh:[61.5]},{fe:[10.3,23.8,54.9],el:[8.1,20.7,36.7,52.9],fh:[61.2]}];
+const IF=[];let IN=false;
+FL.forEach((rooms,f)=>{
+  const g=new THREE.Group();g.visible=false;scene.add(g);IF.push(g);const y0=f*H+.2;
+  box(19*K,.04,67.5*K,M(0xf7f7f4),PX(9.5),y0,PZ(33.75),g);
+  rooms.forEach(([n,t,u1,v1,u2,v2],i)=>{
+    const w=(v2-v1)*K,d=(u2-u1)*K,x=PX((v1+v2)/2),z=PZ((u1+u2)/2);
+    box(w,.06,d,M(TC[t]),x,y0+.05+i*.004,z,g);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,2.6,d)),new THREE.LineBasicMaterial({color:0x3a3f47}));
+    e.position.set(x,y0+1.3,z);g.add(e);
+    if(n){const el=document.createElement('div');el.className='lbl rl';el.textContent=n;document.body.appendChild(el);
+      labels.push({el,p:new THREE.Vector3(x,0,z),f,r:1});}
+  });
+  const m=MK[f],RC=0xd0213a;
+  m.fe.forEach(u=>box(.45,1.1,.35,M(RC),PX(14.4),y0+.6,PZ(u),g));
+  m.el.forEach(u=>box(.6,.45,.12,M(0x2a63c9),PX(13.7),y0+2.1,PZ(u),g));
+  m.fh.forEach(u=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.2,16),M(RC));c.rotation.z=Math.PI/2;c.position.set(PX(13.7),y0+1.4,PZ(u));g.add(c);});
+  const pts=[[1,15.2],[66.5,15.2]].map(([u,v])=>new THREE.Vector3(PX(v),y0+.12,PZ(u)));
+  const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineDashedMaterial({color:RC,dashSize:.7,gapSize:.45}));
+  ln.computeLineDistances();g.add(ln);
+  if(f===0)[1.5,30.5,63.5].forEach(u=>{const a=new THREE.Mesh(new THREE.ConeGeometry(.45,1.1,8),M(RC)); // exits to the Quadrangle
+    a.rotation.z=-Math.PI/2;a.position.set(PX(16.6),y0+.2,PZ(u));g.add(a);});
+});
+function setIN(on){ // make the Admin shell see-through
+  AD.parts.forEach(p=>{p.castShadow=!on;(p.isGroup?[]:[].concat(p.material)).forEach(m=>{m.transparent=on;m.opacity=on?.12:1;m.depthWrite=!on;m.needsUpdate=true;});});
+}
+inb.onclick=()=>{
+  IN=!IN;inb.classList.toggle('on',IN);setIN(IN);setN(N);
+  if(IN){info.innerHTML='<b>Administration Bldg. – Interior</b><br>Use 1F / 2F / 3F to switch floors. Red = fire equipment, blue = emergency lights, dashed line = escape route.';
+    const t=new THREE.Vector3(AV.x,3,AV.z);fly(t,t.clone().add(new THREE.Vector3(22,46,30)));}
+};
+
+// ---------- UI ----------
+let N=99,tw=null;
+function setN(n){N=n;
+  B.forEach(o=>o.parts.forEach(p=>p.visible=p.userData.need<=N&&!(IN&&o===AD&&p.isGroup))); // hide Admin roof in interior mode
+  IF.forEach((g,f)=>g.visible=IN&&f+1<=N);}
+function fly(t,p){tw={t:0,t0:ctl.target.clone(),p0:cam.position.clone(),t1:t,p1:p};}
+function select(o){
+  info.innerHTML=`<b>${o.name}</b><br>${o.floors} floor${o.floors>1?'s':''} · ${RN[o.roof]}`;
+  const t=new THREE.Vector3(o.p.x,o.top/2,o.p.z);fly(t,t.clone().add(new THREE.Vector3(0,26,34)));}
+const side=document.getElementById('side');
+function group(t,items,fn){const h=document.createElement('h2');h.textContent=t;side.appendChild(h);
+  items.forEach(i=>{const b=document.createElement('button');b.textContent=i.txt;b.onclick=()=>fn(i.o);side.appendChild(b);});}
+group('Buildings',B.slice(0,7).map(o=>({o,txt:`${o.name} (${o.floors}F)`})),select);
+group('Facilities',B.slice(7).map(o=>({o,txt:`${o.name} (${o.floors}F)`})),select);
+group('Grounds',GR.map(q=>({o:q,txt:q.name})),q=>{info.innerHTML=`<b>${q.name}</b><br>Grounds`;fly(q.p.clone(),q.p.clone().add(new THREE.Vector3(0,30,38)));});
+document.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-n]').forEach(x=>x.classList.remove('on'));b.classList.add('on');setN(+b.dataset.n);});
+lb.onclick=()=>{showL=!showL;lb.classList.toggle('on',showL)};
+rot.onclick=()=>{ctl.autoRotate=!ctl.autoRotate;rot.classList.toggle('on',ctl.autoRotate)};
+reset.onclick=()=>fly(HOME.t.clone(),HOME.p.clone());
+
+// click-to-select
+const ray=new THREE.Raycaster(),pt=new THREE.Vector2();let dn=[0,0];
+renderer.domElement.addEventListener('pointerdown',e=>dn=[e.clientX,e.clientY]);
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>4)return;
+  pt.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(pt,cam);
+  const h=ray.intersectObjects(B.map(o=>o.g),true).find(i=>{let n=i.object;while(n){if(!n.visible)return false;n=n.parent}return true});
+  if(h&&h.object.userData.b)select(h.object.userData.b);});
+
+function rs(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();}
+addEventListener('resize',rs);rs();
+
+// ---------- loop ----------
+const v3=new THREE.Vector3();
+(function tick(){
+  requestAnimationFrame(tick);
+  if(tw){tw.t=Math.min(1,tw.t+.035);const e=1-Math.pow(1-tw.t,3);
+    ctl.target.lerpVectors(tw.t0,tw.t1,e);cam.position.lerpVectors(tw.p0,tw.p1,e);if(tw.t>=1)tw=null;}
+  ctl.update();renderer.render(scene,cam);
+  const w=innerWidth,h=innerHeight;
+  labels.forEach(l=>{
+    const o=l.o;let on=showL;
+    if(l.r){l.p.y=l.f*H+3;on=on&&IN&&l.f===Math.min(N,3)-1;}   // room labels: top visible floor only
+    else{l.p.y=o?(o.roof==='arc'?o.top+1.5:Math.min(N,o.floors)*H+4):1.5;if(IN&&o===AD)on=false;}
+    v3.copy(l.p).project(cam);
+    l.el.style.display=(on&&v3.z<1)?'':'none';
+    l.el.style.transform=`translate(${(v3.x*.5+.5)*w}px,${(-v3.y*.5+.5)*h}px) translate(-50%,-100%)`;});
+})();
+</script>
+</body>
+</html>
