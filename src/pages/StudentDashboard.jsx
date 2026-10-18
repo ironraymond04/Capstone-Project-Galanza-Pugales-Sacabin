@@ -8,6 +8,7 @@ import "../styles/theme.css";
 import { classifyTicket } from "../lib/ai";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
+import CampusMap from "../components/CampusMap";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -154,7 +155,7 @@ export default function StudentDashboard() {
               onSubmitted={loadTickets}
             />
           )}
-          {active === "map" && <CampusMap />}
+          {active === "map" && <CampusMapSection />}
           {active === "feedback" && (
             <Feedback
               session={session}
@@ -556,27 +557,19 @@ useEffect(() => {
   );
 }
 
-function CampusMap() {
+function CampusMapSection() {
   const isMobile = useIsMobile();
   const CAMPUS_LAT = 8.2318034;
   const CAMPUS_LNG = 124.2364283;
-  const mapSrc = `https://www.google.com/maps?q=${CAMPUS_LAT},${CAMPUS_LNG}&z=17&output=embed`;
   const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMPUS_LAT},${CAMPUS_LNG}`;
 
   return (
     <>
       <PageHeader title="Find your office" subtitle="This map helps you for your destination." />
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ height: isMobile ? 220 : 320, position: "relative" }}>
-          <iframe
-            title="Campus Map"
-            src={mapSrc}
-            width="100%"
-            height="100%"
-            style={{ border: 0, display: "block" }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+        {/* The 3D map fills whatever height its parent gives it */}
+        <div style={{ height: isMobile ? 480 : 620 }}>
+          <CampusMap />
         </div>
 
         <div
