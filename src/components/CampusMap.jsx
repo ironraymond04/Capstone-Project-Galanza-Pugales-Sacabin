@@ -35,7 +35,7 @@ const makeBuildings = () => [
   { name: "Criminology Building", floors: 3, vols: [R(185, 755, 490, 1145)], wall: "#d7e3df", roof: "flat", rc: TEAL },
   { name: "Elementary Bldg.", floors: 1, vols: [R(1060, 50, 1620, 215)], wall: "#e6cfae", roof: "gable", rc: MAR },
   { name: "Canteen", floors: 1, vols: [R(740, 50, 1060, 215)], wall: "#e6cfae", roof: "gable", rc: MAR },
-  { name: "Machine Shop", floors: 2, vols: [R(1340, 410, 1650, 575)], wall: "#ecd9b0", roof: "gable", rc: MAR },
+  { name: "Machine Shop", floors: 1, vols: [R(1340, 410, 1650, 500)], wall: "#ecd9b0", roof: "flat", rc: MAR },
   { name: "Clinic", floors: 1, vols: [R(405, 1285, 595, 1580)], wall: "#ffffff", roof: "gable", rc: MAR },
   { name: "Guardhouse", floors: 1, vols: [R(930, 1880, 1090, 2000)], wall: "#e6cfae", roof: "flat", rc: MAR },
   { name: "Covered Court", floors: 1, vols: [R(205, 445, 500, 740)], roof: "arc", rc: "#808080", rise: 7, rot: true },
@@ -49,7 +49,7 @@ const GROUND_NAMES = ["Quadrangle", "Student Lounge"];
 // Same order as INT inside createCampus()
 const INTERIOR_OPTIONS = [
   "Administration Bldg.", "Criminology Bldg.", "Engineering Bldg.",
-  "Technology Bldg.", "Canteen/Elementary Bldg.", "High School Bldg./Martial Arts Room",
+  "Technology Bldg.", "Canteen/Elementary Bldg.", "High School Bldg./Martial Arts Room", "Machine Shop",
 ];
 const DEFAULT_INFO = "Click a building to see its details. Floor buttons show floors up to the one you pick.";
 
@@ -391,7 +391,29 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     RT: [THRt({ l: [[[65.2, 7.9], [7, 7.9]]], a: [[7.5, 9.9, 'v+'], [36, 9.9, 'v+'], [54.7, 9.9, 'v+'], [64.9, 9.9, 'v+']] })]
   });
 
-  const INT = [IA, IC, IE, IT, IL, IH]; let CUR = null;
+// ---------- MACHINE SHOP (1 floor) ----------
+// Plan is 42 m long (14 bays x 3 m) and 7 m deep (2 m open strip + 5 m workshop). NOT rotated:
+// plan right = east (rear gate), plan left = west (Covered Court), plan top = north (Elementary Bldg.).
+// Plan is squeezed lengthwise to fit the 15.5 x 8.25 footprint. Helpers TR2 / TM2 / TRt2 are reused from the Canteen block.
+const MV = B[7].vols[0];
+const IM = interior({ b: B[7], name: 'Machine Shop', mir: true, U: 7, V: 42, vc: 21, kv: MV.w / 42, ku: MV.d / 7,
+  FL: [
+    TR2([['Carpentry Workshop', 'l', 0, 0, 18, 7], ['Mechanical Workshop', 'l', 18, 0, 42, 7],
+      ['Storage', 'k', 12.2, 4.4, 16.7, 7], ['PPD Office', 'o', 0, 3.6, 3, 7],
+      ['To Rear Gate', 'r', 39, 0, 42, 2]])
+  ],
+  MK: [TM2({ fe: [[2.2, 2.6], [32.5, 5.7]], el: [[10.4, 1.1], [27.3, 1.0]], fh: [] })],
+  RT: [TRt2({
+    l: [
+      [[41.7, -1.1], [-1.35, -1.1], [-1.35, 0.9], [-3.8, 0.9]],   // outer route
+      [[41.7, -0.5], [-0.7, -0.5], [-0.7, 1.5], [-3.8, 1.5]],     // inner route
+      [[34.6, -0.5], [34.6, -1.6]]                                // branch to Elementary Bldg.
+    ],
+    a: [[-3.8, 0.9, 'left'], [-3.8, 1.5, 'left'], [41.7, -1.1, 'right'], [41.7, -0.5, 'right'], [34.6, -1.8, 'up']]
+  })]
+});
+
+  const INT = [IA, IC, IE, IT, IL, IH, IM]; let CUR = null;
   function setIN(b, on) { // make a building's shell see-through (and back)
     b.parts.forEach(p => {
       p.castShadow = !on; if (p.userData.isRoof) return;
