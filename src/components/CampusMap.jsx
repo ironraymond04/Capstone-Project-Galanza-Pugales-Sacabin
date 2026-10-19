@@ -509,7 +509,7 @@ export default function CampusMap() {
   const [spin, setSpin] = useState(false);
   const [interior, setInterior] = useState("");
   const [info, setInfo] = useState(null);
-  const [listOpen, setListOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -530,8 +530,8 @@ export default function CampusMap() {
   const pickFloor = (n) => { setFloor(n); apiRef.current?.setFloor(n); };
   const toggleLabels = () => { const v = !labelsOn; setLabelsOn(v); apiRef.current?.setLabels(v); };
   const toggleSpin = () => { const v = !spin; setSpin(v); apiRef.current?.setAutoRotate(v); };
-  const pickBuilding = (i) => { apiRef.current?.selectBuilding(i); if (isMobile) setListOpen(false); };
-  const pickGround = (i) => { apiRef.current?.selectGround(i); if (isMobile) setListOpen(false); };
+  const pickBuilding = (i) => apiRef.current?.selectBuilding(i);
+  const pickGround = (i) => apiRef.current?.selectGround(i);
 
   return (
     <div className={`cmap-root${isMobile ? " cmap-m" : ""}`}>
@@ -543,7 +543,7 @@ export default function CampusMap() {
         <div className="cmap-error">{error}</div>
       ) : (
         <>
-          {(!isMobile || listOpen) && (
+          {!isMobile && (
             <div className="cmap-panel cmap-side">
               <h1>St. Peter's College</h1>
               <h2>Buildings</h2>
@@ -561,27 +561,80 @@ export default function CampusMap() {
             </div>
           )}
 
-          <div className="cmap-panel cmap-bar">
-            {isMobile && (
-              <button type="button" className={listOpen ? "on" : ""} onClick={() => setListOpen((o) => !o)}>Places</button>
-            )}
-            {FLOORS.map(([n, txt]) => (
-              <button key={n} type="button" className={floor === n ? "on" : ""} onClick={() => pickFloor(n)}>{txt}</button>
-            ))}
-            <button type="button" className={labelsOn ? "on" : ""} onClick={toggleLabels}>Labels</button>
-            <button type="button" className={spin ? "on" : ""} onClick={toggleSpin}>Auto-rotate</button>
-            <button type="button" onClick={() => apiRef.current?.resetView()}>Reset view</button>
-            <select
-              value={interior}
-              className={interior !== "" ? "on" : ""}
-              onChange={(e) => apiRef.current?.openInterior(e.target.value)}
-            >
-              <option value="">Interiors: Off</option>
-              {INTERIOR_OPTIONS.map((n, i) => <option key={n} value={String(i)}>{n}</option>)}
-            </select>
-          </div>
+          {isMobile ? (
+            <div className="cmap-panel cmap-mobile-menu">
+              <button
+                type="button"
+                className="cmap-mobile-menu-trigger"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                {menuOpen ? "Close map menu" : "Places & controls"}
+              </button>
+              {menuOpen && (
+                <div className="cmap-mobile-menu-content">
+                  <h2>Buildings</h2>
+                  <div className="cmap-mobile-menu-grid">
+                    {BUILDING_LIST.slice(0, 7).map((b, i) => (
+                      <button key={b.name} type="button" onClick={() => pickBuilding(i)}>{b.name} ({b.floors}F)</button>
+                    ))}
+                  </div>
+                  <h2>Facilities</h2>
+                  <div className="cmap-mobile-menu-grid">
+                    {BUILDING_LIST.slice(7).map((b, i) => (
+                      <button key={b.name} type="button" onClick={() => pickBuilding(i + 7)}>{b.name} ({b.floors}F)</button>
+                    ))}
+                  </div>
+                  <h2>Grounds</h2>
+                  <div className="cmap-mobile-menu-grid">
+                    {GROUND_NAMES.map((name, i) => (
+                      <button key={name} type="button" onClick={() => pickGround(i)}>{name}</button>
+                    ))}
+                  </div>
+                  <h2>Floors</h2>
+                  <div className="cmap-mobile-menu-grid cmap-floor-grid">
+                    {FLOORS.map(([n, txt]) => (
+                      <button key={n} type="button" className={floor === n ? "on" : ""} onClick={() => pickFloor(n)}>{txt}</button>
+                    ))}
+                  </div>
+                  <h2>Map controls</h2>
+                  <div className="cmap-mobile-menu-grid">
+                    <button type="button" className={labelsOn ? "on" : ""} onClick={toggleLabels}>Labels</button>
+                    <button type="button" className={spin ? "on" : ""} onClick={toggleSpin}>Auto-rotate</button>
+                    <button type="button" onClick={() => apiRef.current?.resetView()}>Reset view</button>
+                    <select
+                      aria-label="Select building interior"
+                      value={interior}
+                      className={interior !== "" ? "on" : ""}
+                      onChange={(e) => apiRef.current?.openInterior(e.target.value)}
+                    >
+                      <option value="">Interiors: Off</option>
+                      {INTERIOR_OPTIONS.map((name, i) => <option key={name} value={String(i)}>{name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="cmap-panel cmap-bar">
+              {FLOORS.map(([n, txt]) => (
+                <button key={n} type="button" className={floor === n ? "on" : ""} onClick={() => pickFloor(n)}>{txt}</button>
+              ))}
+              <button type="button" className={labelsOn ? "on" : ""} onClick={toggleLabels}>Labels</button>
+              <button type="button" className={spin ? "on" : ""} onClick={toggleSpin}>Auto-rotate</button>
+              <button type="button" onClick={() => apiRef.current?.resetView()}>Reset view</button>
+              <select
+                value={interior}
+                className={interior !== "" ? "on" : ""}
+                onChange={(e) => apiRef.current?.openInterior(e.target.value)}
+              >
+                <option value="">Interiors: Off</option>
+                {INTERIOR_OPTIONS.map((name, i) => <option key={name} value={String(i)}>{name}</option>)}
+              </select>
+            </div>
+          )}
 
-          {!(isMobile && listOpen) && (
+          {!(isMobile && menuOpen) && (
             <div className="cmap-panel cmap-info">
               {info ? <><b>{info.title}</b><br />{info.body}</> : DEFAULT_INFO}
             </div>
@@ -610,9 +663,17 @@ const CSS = `
 .cmap-root .cmap-bar button,.cmap-root .cmap-bar select{width:auto;margin:0;border:1px solid #c5d0dc;background:#fff;color:#222;border-radius:8px;padding:6px 10px;font:inherit;font-size:13px;font-weight:400;cursor:pointer;box-shadow:none}
 .cmap-root .cmap-bar button.on,.cmap-root .cmap-bar select.on{background:#1f4e79;color:#fff;border-color:#1f4e79}
 .cmap-root .cmap-bar select option{background:#fff;color:#222}
+.cmap-root .cmap-mobile-menu button,.cmap-root .cmap-mobile-menu select{width:100%;margin:0;border:1px solid #c5d0dc;background:#fff;color:#222;border-radius:8px;padding:7px 8px;font:inherit;font-size:12px;font-weight:400;cursor:pointer;box-shadow:none}
+.cmap-root .cmap-mobile-menu button.on,.cmap-root .cmap-mobile-menu select.on{background:#1f4e79;color:#fff;border-color:#1f4e79}
+.cmap-root .cmap-mobile-menu h2{grid-column:1/-1;margin:10px 0 3px;font-family:inherit;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#667}
 .cmap-info{bottom:12px;right:12px;width:230px}
 .cmap-error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#555}
-.cmap-m .cmap-bar{left:8px;right:8px;top:8px;max-width:none;justify-content:flex-start;padding:8px}
-.cmap-m .cmap-side{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:55%}
+.cmap-m .cmap-mobile-menu{top:8px;left:8px;right:8px;bottom:8px;padding:0;background:transparent;box-shadow:none;pointer-events:none}
+.cmap-m .cmap-mobile-menu>*{pointer-events:auto}
+.cmap-root .cmap-mobile-menu .cmap-mobile-menu-trigger{width:auto;min-width:150px;background:rgba(255,255,255,.96);box-shadow:0 4px 18px rgba(0,0,0,.18);font-weight:600}
+.cmap-mobile-menu-content{max-height:calc(100% - 48px);overflow:auto;margin-top:6px;padding:10px;background:rgba(255,255,255,.97);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.cmap-mobile-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.cmap-mobile-menu-grid button{text-align:left}
+.cmap-mobile-menu-grid.cmap-floor-grid button{text-align:center}
 .cmap-m .cmap-info{left:8px;right:8px;bottom:8px;width:auto}
 `;

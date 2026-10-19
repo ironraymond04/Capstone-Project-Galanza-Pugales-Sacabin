@@ -586,17 +586,8 @@ function CampusMapSection() {
           <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
             St. Peter's College - Main campus
           </span>
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary"
-            style={{ fontSize: 13, padding: "6px 14px" }}
-          >
-            Get directions ↗
-          </a>
         </div>
-
+        
         <div style={{ padding: isMobile ? 14 : 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 10 }}>
             {OFFICES.map((o) => (
