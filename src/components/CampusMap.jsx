@@ -192,8 +192,9 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     c.bs = c.bs || [c.b]; c.IF = [];
     c.FL.forEach((rooms, f) => {
       const g = new THREE.Group(); g.visible = false; scene.add(g); c.IF.push(g); const y0 = f * H + .2;
-      if (c.poly) {
-        const sg = new THREE.ShapeGeometry(new THREE.Shape(c.poly.map(([x, z]) => new THREE.Vector2(x, -z)))); sg.rotateX(-Math.PI / 2);
+      const pl = (c.polyF && c.polyF[f]) || c.poly;
+      if (pl) {
+        const sg = new THREE.ShapeGeometry(new THREE.Shape(pl.map(([x, z]) => new THREE.Vector2(x, -z)))); sg.rotateX(-Math.PI / 2);
         const bm = new THREE.Mesh(sg, M(0xf7f7f4, { side: THREE.DoubleSide })); bm.position.y = y0; g.add(bm);
       } else box(c.V * c.kv, .04, c.U * c.ku, M(0xf7f7f4), PX(c.V / 2), y0, PZ(c.U / 2), g);
       rooms.forEach(([n, t, u1, v1, u2, v2], i) => {
@@ -363,7 +364,7 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     RT: [TRt2({ l: [[[78.5, 8.1], [.5, 8.1]], [[78.5, 8.1], [80.6, 8.1], [80.6, 8.7]]], a: [[0, 8.1, 'left'], [80.6, 9.3, 'down']] })]
   });
 
-  // ---------- HIGH SCHOOL BLDG. + MARTIAL ARTS ROOM (ground floor only) ----------
+  // ---------- HIGH SCHOOL BLDG. + MARTIAL ARTS ROOM (1F and 2F) ----------
   // One plan (65.3 m long) covers both buildings. The plan is rotated 90° counter-clockwise onto the map:
   // plan right = north (the Martial Arts Room is at the north end), plan down = east (the hallway faces the Quadrangle).
   // Plan rows above the main wall (v < 0) hold the offices that stick out; every v is shifted by +3.1 m (HV) so nothing is negative.
@@ -375,7 +376,9 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
   const THRt = r => ({ l: r.l.map(pl => pl.map(H3)), a: r.a.map(([u, v, d]) => [u, v + HV, d]) });
   const IH = interior({ b: B[2], bs: [B[2], B[12]], name: 'High School Bldg. + Martial Arts Room', o: { x: -1, z: -1.5, d: 40 },
     kv: 40 / 65.3, ku: 40 / 65.3, vc: 12.1, U: 65.3, V: 12.1, mir: false, view: { x: -4.6, z: -1.5, w: 7.25, d: 40 },
+    polyF: [null, [[-8.4, -15.5], [-1, -15.5], [-1, 18.5], [-8.4, 18.5]]],   // 1F = full-length slab, 2F = High School part only
     FL: [
+      // ---- 1F ----
       THR([['Stairs', 's', 0, 7, 3, 9], ['HSO Office', 'o', 3, 7, 5.6, 9],
         ['Drawing Classroom', 'e', 0, 0, 6, 7], ['Graduate Studies Office', 'o', 6, 0, 12, 7], ['DSA Office', 'o', 12, 0, 15, 7],
         ['Office', 'o', 15, 0, 18, 3.7], ['BED Guidance Office', 'o', 15, 3.7, 18, 7],
@@ -385,12 +388,25 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
         ['Stock Room', 'k', 45, 0, 48, 4.5], ['PMSA', 'o', 45, 4.5, 48, 7], ['CCS', 'o', 48, 4.5, 51, 7],
         ['NSTP Office', 'o', 45, -3.1, 48, 0], ['SPC TESDA Office', 'o', 48, -3.1, 52.8, 2.4], ['', 'o', 48, 2.4, 51, 4.5], ['Stairs', 's', 51, 2.2, 52.6, 3.6],
         ['Parking Area', 'r', 52.8, -3.1, 56.3, 7], ['Martial Arts Room', 'b', 56.3, -1.7, 65.3, 7],
-        ['Hallway', 'h', 5.6, 7, 65.3, 9]])
+        ['Hallway', 'h', 5.6, 7, 65.3, 9]]),
+      // ---- 2F ----
+      THR([['HS201', 'e', 0, 0, 6, 7], ['HS202', 'e', 6, 0, 12, 7], ['HS203', 'e', 12, 0, 18, 7],
+        ['HS204', 'e', 18, 0, 25.4, 7], ['HS205', 'e', 25.4, 0, 33, 7],
+        ['Hallway', 'h', 0, 7, 36.9, 9], ['Stairs', 's', 3, 7, 4.7, 9], ['Stairs', 's', 36.9, 7, 39.6, 9],
+        ['Bedroom 1', 'f', 33, 3.7, 38, 7], ['Bedroom 2', 'f', 36, 0, 40.4, 3.4], ['Bedroom 3', 'f', 40.4, 0, 45, 3.4],
+        ['Punongbayan Residence', 'b', 38, 3.4, 45, 7], ['', 'b', 39.6, 7, 45, 9],
+        ['Dining Area', 't', 45, -3.1, 48, 4.5], ['Kitchen Area', 't', 48, -3.1, 52, 4.5], ['Stairs', 's', 51, -.5, 52, 3.1],
+        ['Bedroom 4', 'f', 45, 4.5, 48, 9], ['Bedroom 5', 'f', 48, 4.5, 51, 8]])
     ],
-    MK: [THM({ fe: [[15, 4.9], [22.9, 1.9], [34.2, 2.9], [32.8, 6.7], [28.3, 8.3], [44.8, 8.4]], el: [[13.3, 8.2], [47.7, 8.2]], fh: [] })],
-    RT: [THRt({ l: [[[65.2, 7.9], [7, 7.9]]], a: [[7.5, 9.9, 'v+'], [36, 9.9, 'v+'], [54.7, 9.9, 'v+'], [64.9, 9.9, 'v+']] })]
+    MK: [
+      THM({ fe: [[15, 4.9], [22.9, 1.9], [34.2, 2.9], [32.8, 6.7], [28.3, 8.3], [44.8, 8.4]], el: [[13.3, 8.2], [47.7, 8.2]], fh: [] }),
+      THM({ fe: [[8.2, 7.7], [14.1, 7.7], [24.6, 7.7], [32.1, 7.7], [50, -2.2], [43.9, 8.4]], el: [], fh: [] })
+    ],
+    RT: [
+      THRt({ l: [[[65.2, 7.9], [7, 7.9]]], a: [[7.5, 9.9, 'v+'], [36, 9.9, 'v+'], [54.7, 9.9, 'v+'], [64.9, 9.9, 'v+']] }),
+      THRt({ l: [[[4.2, 7.7], [36.5, 7.7]], [[36.5, 8.4], [4.2, 8.4]]], a: [[36.5, 7.7, 'u+'], [4.2, 8.4, 'u-']] })
+    ]
   });
-
 // ---------- MACHINE SHOP (1 floor) ----------
 // Plan is 42 m long (14 bays x 3 m) and 7 m deep (2 m open strip + 5 m workshop). NOT rotated:
 // plan right = east (rear gate), plan left = west (Covered Court), plan top = north (Elementary Bldg.).
