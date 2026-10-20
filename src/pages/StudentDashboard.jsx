@@ -20,24 +20,6 @@ const NAV_ITEMS = [
   { id: "notifications", label: "Notifications", icon: "•", code: "notif" },
 ];
 
-const OFFICES = ["Registrar", "Library", "Guidance Office", "Accounting", "DSA", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GS"];
-
-const OFFICE_LOCATIONS = {
-  Registrar: "Admin Bldg., Ground Flr.",
-  Library: "Admin Bldg., 3rd Flr.",
-  "Guidance Office": "Engineering Bldg., Ground Flr.",
-  Accounting: "Admin Bldg., Ground Flr.",
-  DSA: "High School Bldg., Ground Flr.",
-  CAS: "Admin Bldg., Ground Flr.",
-  COE: "Elementary Bldg., Ground Flr.",
-  CED: "High School Bldg., Ground Flr.",
-  CCS: "Admin Bldg., Ground Flr.",
-  COC: "Criminology Bldg., 2nd Flr.",
-  CBA: "Technology Bldg., 2nd Flr.",
-  BED: "High School Bldg., Ground Flr.",
-  GS: "High School Bldg., Ground Flr.",
-};
-
 /* ---------------- helpers ---------------- */
 
 function formatTicketCode(ticketId) {
@@ -559,9 +541,36 @@ useEffect(() => {
 
 function CampusMapSection() {
   const isMobile = useIsMobile();
-  const CAMPUS_LAT = 8.2318034;
-  const CAMPUS_LNG = 124.2364283;
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${CAMPUS_LAT},${CAMPUS_LNG}`;
+  const [offices, setOffices] = useState([]);
+  const [officesLoading, setOfficesLoading] = useState(true);
+  const [officesError, setOfficesError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOffices() {
+      setOfficesLoading(true);
+      setOfficesError("");
+
+      const { data, error } = await supabase
+        .from("offices")
+        .select("office_id, office_name, location, contact_email")
+        .order("office_name", { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("loadOffices error:", error);
+        setOfficesError("Unable to load the office directory. Please try again.");
+      } else {
+        setOffices(data || []);
+      }
+      setOfficesLoading(false);
+    }
+
+    loadOffices();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <>
@@ -587,16 +596,31 @@ function CampusMapSection() {
             St. Peter's College - Main campus
           </span>
         </div>
-        
+
         <div style={{ padding: isMobile ? 14 : 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 10 }}>
-            {OFFICES.map((o) => (
-              <div key={o} className="card" style={{ padding: 12 }}>
-                <strong style={{ fontSize: 13 }}>{o}</strong>
-                <p style={{ fontSize: 12, marginTop: 4 }}>{OFFICE_LOCATIONS[o]}</p>
-              </div>
-            ))}
-          </div>
+          {officesLoading ? (
+            <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading office directory...</p>
+          ) : officesError ? (
+            <p role="alert" style={{ fontSize: 13, color: "var(--danger, #b3261e)" }}>{officesError}</p>
+          ) : offices.length === 0 ? (
+            <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No offices found in the directory.</p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: 10 }}>
+              {offices.map((o) => (
+                <div key={o.office_id} className="card" style={{ padding: 12 }}>
+                  <strong style={{ fontSize: 13 }}>{o.office_name}</strong>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>
+                    {o.location || "Location not set"}
+                  </p>
+                  {o.contact_email && (
+                    <p style={{ fontSize: 12, marginTop: 2, color: "var(--ink-soft)", wordBreak: "break-all" }}>
+                      {o.contact_email}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

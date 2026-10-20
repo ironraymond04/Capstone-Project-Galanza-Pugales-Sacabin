@@ -42,19 +42,30 @@ export default function Login() {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, is_active")
       .eq("user_id", data.user.id)
       .single();
 
-    setLoading(false);
-
     if (profileError) {
+      await supabase.auth.signOut();
+      setLoading(false);
       setError("Couldn't load your account details. Please try again.");
       return;
     }
 
+    // Block suspended accounts
+    if (profile.is_active === false) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("Your account has been suspended. Please contact an administrator.");
+      return;
+    }
+
+    setLoading(false);
+
     const destination = ROLE_ROUTES[profile.role];
     if (!destination) {
+      await supabase.auth.signOut();
       setError("Your account role could not be recognized. Please contact an administrator.");
       return;
     }

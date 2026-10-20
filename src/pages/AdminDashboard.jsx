@@ -243,7 +243,8 @@ const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBott
 function Overview({ tickets, users, offices, loading, onSelect }) {
   const isMobile = useIsMobile();
   const transferredCount = tickets.filter((t) => t.status === "transferred").length;
-  const activeUsers = users.filter((u) => u.is_active).length;
+  // null/undefined is_active counts as active
+  const activeUsers = users.filter((u) => u.is_active !== false).length;
 
   const officeCounts = offices.map((o) => ({
     name: o.office_name,
@@ -466,10 +467,40 @@ const FILTERS = [
 ];
 
 function ManageUsers({ users, loading, onUpdated }) {
+  const { session } = useAuth();
   const [roleFilter, setRoleFilter] = useState("all");
+  const [actionError, setActionError] = useState("");
 
   const toggleStatus = async (userId, current) => {
-    await supabase.from("profiles").update({ is_active: !current }).eq("user_id", userId);
+    setActionError("");
+
+    if (userId === session?.user?.id) {
+      setActionError("You can't suspend your own account.");
+      return;
+    }
+
+    // Treat null/undefined as active, so `current` is always a real boolean
+    const isActive = current !== false;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ is_active: !isActive })
+      .eq("user_id", userId)
+      .select("user_id, is_active")
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error("toggleStatus failed:", error || "No row updated (check RLS policies).");
+      setActionError(error?.message || "Status was not saved. Check your update permissions on profiles.");
+      return;
+    }
+
+    const { error: logError } = await supabase.from("logs").insert({
+      action: `Admin ${isActive ? "suspended" : "reactivated"} user ${userId}`,
+      module: "User Management",
+    });
+    if (logError) console.error("Log insert failed:", logError);
+
     onUpdated?.();
   };
 
@@ -505,6 +536,10 @@ function ManageUsers({ users, loading, onUpdated }) {
           ))}
         </div>
 
+        {actionError && (
+          <p style={{ fontSize: 13, color: "var(--danger)", marginBottom: 14 }}>{actionError}</p>
+        )}
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : filteredUsers.length === 0 ? (
@@ -514,23 +549,31 @@ function ManageUsers({ users, loading, onUpdated }) {
             <table className="chd-table">
               <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
               <tbody>
-                {filteredUsers.map((u) => (
-                  <tr key={u.user_id}>
-                    <td>{u.name}</td>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
-                    <td style={{ textTransform: "capitalize" }}>{u.role === "staff" ? "Faculty & Staff" : u.role}</td>
-                    <td>
-                      <span className={u.is_active ? "badge badge-resolved" : "badge badge-transferred"}>
-                        {u.is_active ? "Active" : "Suspended"}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }} onClick={() => toggleStatus(u.user_id, u.is_active)}>
-                        {u.is_active ? "Suspend" : "Reactivate"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredUsers.map((u) => {
+                  const isActive = u.is_active !== false;
+                  return (
+                    <tr key={u.user_id}>
+                      <td>{u.name}</td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
+                      <td style={{ textTransform: "capitalize" }}>{u.role === "staff" ? "Faculty & Staff" : u.role}</td>
+                      <td>
+                        <span className={isActive ? "badge badge-resolved" : "badge badge-transferred"}>
+                          {isActive ? "Active" : "Suspended"}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+                          onClick={() => toggleStatus(u.user_id, isActive)}
+                          disabled={u.user_id === session?.user?.id}
+                        >
+                          {isActive ? "Suspend" : "Reactivate"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </TableScroll>
@@ -652,7 +695,7 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const staffOptions = users.filter((u) => u.role === "staff" && (u.is_active || u.user_id === editingOffice?.head_user_id));
+  const staffOptions = users.filter((u) => u.role === "staff" && (u.is_active !== false || u.user_id === editingOffice?.head_user_id));
 
   const handleAddOffice = async (payload) => {
     setSubmitting(true);

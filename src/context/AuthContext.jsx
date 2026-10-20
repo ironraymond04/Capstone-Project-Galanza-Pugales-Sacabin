@@ -8,29 +8,48 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId) => {
-const { data, error } = await supabase
-  .from("profiles")
-  .select("*, offices!profiles_office_id_fkey(office_name)")
-  .eq("user_id", userId)
-  .single(); 
+  const clearSessionState = useCallback(() => {
+    sessionStorage.removeItem("chd-admin-active-tab");
+    sessionStorage.removeItem("chd-staff-active-tab");
+    sessionStorage.removeItem("chd-student-active-tab");
+    setSession(null);
+    setProfile(null);
+  }, []);
 
-    if (error) {
-      console.error("fetchProfile failed:", error.message);
+  const fetchProfile = useCallback(async (userId) => {
+    let result = await supabase
+      .from("profiles")
+      .select("*, offices!profiles_office_id_fkey(office_name)")
+      .eq("user_id", userId)
+      .single();
+
+    if (result.error) {
+      console.error("fetchProfile failed:", result.error.message);
       // Fallback: retry without the office join so role-based routing
       // still works even if that join/RLS is broken for this account.
-      const { data: basic, error: basicError } = await supabase
+      result = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userId)
         .single();
-      if (!basicError) setProfile(basic);
-      else console.error("fetchProfile fallback also failed:", basicError.message);
-    } else {
-      setProfile(data);
+      if (result.error) {
+        console.error("fetchProfile fallback also failed:", result.error.message);
+        setLoading(false);
+        return;
+      }
     }
+
+    // Suspended account: kill the session immediately
+    if (result.data.is_active === false) {
+      await supabase.auth.signOut();
+      clearSessionState();
+      setLoading(false);
+      return;
+    }
+
+    setProfile(result.data);
     setLoading(false);
-  }, []);
+  }, [clearSessionState]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,13 +72,35 @@ const { data, error } = await supabase
     return () => listener.subscription.unsubscribe();
   }, [fetchProfile]);
 
+  // Instantly sign out the current user if an admin suspends them while they're logged in.
+  // Requires Realtime to be enabled for the `profiles` table in Supabase
+  // (Database > Replication, or: alter publication supabase_realtime add table profiles;)
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`profile-status-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${userId}` },
+        async (payload) => {
+          if (payload.new?.is_active === false) {
+            await supabase.auth.signOut();
+            clearSessionState();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id, clearSessionState]);
+
   async function signOut() {
     await supabase.auth.signOut();
-    sessionStorage.removeItem("chd-admin-active-tab");
-    sessionStorage.removeItem("chd-staff-active-tab");
-    sessionStorage.removeItem("chd-student-active-tab");
-    setSession(null);
-    setProfile(null);
+    clearSessionState();
   }
 
   return (
