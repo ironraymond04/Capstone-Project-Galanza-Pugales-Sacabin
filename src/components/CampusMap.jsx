@@ -115,6 +115,9 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     labels.push({ el: d, p: p.clone(), o });
   }
 
+  // ---------- interior wall panels (collected so the Walls button can show/hide them) ----------
+  const walls = []; let showW = true;
+
   // ---------- buildings ----------
   function building(o) {
     const g = new THREE.Group(); o.parts = []; o.g = g; scene.add(g);
@@ -182,10 +185,13 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
   // Room format: [name, type, u1, v1, u2, v2]
   // types: o office, c CR, s stairs, h hall, l lab, b special room, k stock/dark/control room, t lobby/canteen, r ramp/roof/parking, f faculty, e lecture/classroom
   // Options: mir = flip which end of the building u=0 sits at; fx = flip the plan's v direction (plan bottom faces west instead of east)
-  //          o = custom origin {x,z,d}; poly = footprint polygon (world x,z) used for the floor slab
+  //          o = custom origin {x,z,d}; poly = footprint polygon (world x,z) used for the floor slab and perimeter wall
+  //          polyF = per-floor footprint override (null = use poly / rectangle)
   //          PXf / PZf = custom mapping functions (used when one plan is stretched over more than one building)
   //          bs = list of buildings that open together; view = {x,z,w,d} camera focus
+  // WALLS: every room (except hallways 'h' and open areas 'r') gets thin translucent wall panels, and every floor gets a thicker perimeter wall.
   const TC = { o: 0xf3e3c3, c: 0xbfe0ea, s: 0xb4b4c2, h: 0xe4e4e4, l: 0xcfe0f5, b: 0xe6d7f0, k: 0xd9d1c0, t: 0xf7f0df, r: 0xcbd8c0, f: 0xf7dfd0, e: 0xf6edcf };
+  const WALL_H = 2.6, PERI_H = 3.0;
   function interior(c) {
     const v0 = c.o || c.b.vols[0], sx = c.fx ? -1 : 1,
       PX = c.PXf || (v => v0.x + sx * (v - c.vc) * c.kv), PZ = c.PZf || (u => c.mir ? v0.z - v0.d / 2 + u * c.ku : v0.z + v0.d / 2 - u * c.ku);
@@ -197,11 +203,33 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
         const sg = new THREE.ShapeGeometry(new THREE.Shape(pl.map(([x, z]) => new THREE.Vector2(x, -z)))); sg.rotateX(-Math.PI / 2);
         const bm = new THREE.Mesh(sg, M(0xf7f7f4, { side: THREE.DoubleSide })); bm.position.y = y0; g.add(bm);
       } else box(c.V * c.kv, .04, c.U * c.ku, M(0xf7f7f4), PX(c.V / 2), y0, PZ(c.U / 2), g);
+
+      // ---- wall panels (skeleton type: translucent panels + edge lines) ----
+      const roomMat = M(0x9aa4b2, { transparent: true, opacity: .35, depthWrite: false });
+      const periMat = M(0x5b6572, { transparent: true, opacity: .55, depthWrite: false });
+      const seen = new Set();
+      const wseg = (a, b, h, t, mat) => {
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) return;
+        const k = [a, b].map(p => p[0].toFixed(2) + ',' + p[1].toFixed(2)).sort().join('|');
+        if (seen.has(k)) return; seen.add(k);                                     // skip walls shared by two rooms
+        const m = new THREE.Mesh(new THREE.BoxGeometry(L + t, h, t), mat);
+        m.position.set((a[0] + b[0]) / 2, y0 + .05 + h / 2, (a[1] + b[1]) / 2);
+        m.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]);
+        m.visible = showW; g.add(m); walls.push(m);
+      };
+      // perimeter wall around the floor outline
+      const outline = pl ? pl.map(p => [p[0], p[1]]) : [[PX(0), PZ(0)], [PX(c.V), PZ(0)], [PX(c.V), PZ(c.U)], [PX(0), PZ(c.U)]];
+      outline.forEach((p, i) => wseg(p, outline[(i + 1) % outline.length], PERI_H, .3, periMat));
+
       rooms.forEach(([n, t, u1, v1, u2, v2], i) => {
         const xa = PX(v1), xb = PX(v2), za = PZ(u1), zb = PZ(u2), w = Math.abs(xb - xa), d = Math.abs(zb - za), x = (xa + xb) / 2, z = (za + zb) / 2;
         box(w, .06, d, M(TC[t]), x, y0 + .05 + i * .004, z, g);
-        const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, 2.6, d)), new THREE.LineBasicMaterial({ color: 0x3a3f47 }));
+        const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, WALL_H, d)), new THREE.LineBasicMaterial({ color: 0x3a3f47 }));
         e.position.set(x, y0 + 1.3, z); g.add(e);
+        if (t !== 'h' && t !== 'r') {                                              // room walls (hallways and open areas stay open)
+          const A = [xa, za], Bp = [xb, za], C = [xb, zb], D = [xa, zb];
+          wseg(A, Bp, WALL_H, .12, roomMat); wseg(Bp, C, WALL_H, .12, roomMat); wseg(C, D, WALL_H, .12, roomMat); wseg(D, A, WALL_H, .12, roomMat);
+        }
         if (n) {
           const d2 = document.createElement('div'); d2.className = 'cmap-lbl rl'; d2.textContent = n; labelHost.appendChild(d2);
           labels.push({ el: d2, p: new THREE.Vector3(x, 0, z), f, r: 1, ib: c });
@@ -214,8 +242,8 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
         const cy = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .2, 16), M(RC)); // fire house cabinet
         cy.rotation.z = Math.PI / 2; cy.position.set(PX(v), y0 + 1.4, PZ(u)); g.add(cy);
       });
-      rt.l.forEach(pl => {
-        const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pl.map(([u, v]) => new THREE.Vector3(PX(v), y0 + .3, PZ(u)))),
+      rt.l.forEach(pl2 => {
+        const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pl2.map(([u, v]) => new THREE.Vector3(PX(v), y0 + .3, PZ(u)))),
           new THREE.LineDashedMaterial({ color: RC, dashSize: .7, gapSize: .45 })); ln.computeLineDistances(); g.add(ln); // escape route
       });
       rt.a.forEach(([u, v, d]) => {
@@ -407,27 +435,28 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
       THRt({ l: [[[4.2, 7.7], [36.5, 7.7]], [[36.5, 8.4], [4.2, 8.4]]], a: [[36.5, 7.7, 'u+'], [4.2, 8.4, 'u-']] })
     ]
   });
-// ---------- MACHINE SHOP (1 floor) ----------
-// Plan is 42 m long (14 bays x 3 m) and 7 m deep (2 m open strip + 5 m workshop). NOT rotated:
-// plan right = east (rear gate), plan left = west (Covered Court), plan top = north (Elementary Bldg.).
-// Plan is squeezed lengthwise to fit the 15.5 x 8.25 footprint. Helpers TR2 / TM2 / TRt2 are reused from the Canteen block.
-const MV = B[7].vols[0];
-const IM = interior({ b: B[7], name: 'Machine Shop', mir: true, U: 7, V: 42, vc: 21, kv: MV.w / 42, ku: MV.d / 7,
-  FL: [
-    TR2([['Carpentry Workshop', 'l', 0, 0, 18, 7], ['Mechanical Workshop', 'l', 18, 0, 42, 7],
-      ['Storage', 'k', 12.2, 4.4, 16.7, 7], ['PPD Office', 'o', 0, 3.6, 3, 7],
-      ['To Rear Gate', 'r', 39, 0, 42, 2]])
-  ],
-  MK: [TM2({ fe: [[2.2, 2.6], [32.5, 5.7]], el: [[10.4, 1.1], [27.3, 1.0]], fh: [] })],
-  RT: [TRt2({
-    l: [
-      [[41.7, -1.1], [-1.35, -1.1], [-1.35, 0.9], [-3.8, 0.9]],   // outer route
-      [[41.7, -0.5], [-0.7, -0.5], [-0.7, 1.5], [-3.8, 1.5]],     // inner route
-      [[34.6, -0.5], [34.6, -1.6]]                                // branch to Elementary Bldg.
+
+  // ---------- MACHINE SHOP (1 floor) ----------
+  // Plan is 42 m long (14 bays x 3 m) and 7 m deep (2 m open strip + 5 m workshop). NOT rotated:
+  // plan right = east (rear gate), plan left = west (Covered Court), plan top = north (Elementary Bldg.).
+  // Plan is squeezed lengthwise to fit the 15.5 x 4.5 footprint. Helpers TR2 / TM2 / TRt2 are reused from the Canteen block.
+  const MV = B[7].vols[0];
+  const IM = interior({ b: B[7], name: 'Machine Shop', mir: true, U: 7, V: 42, vc: 21, kv: MV.w / 42, ku: MV.d / 7,
+    FL: [
+      TR2([['Carpentry Workshop', 'l', 0, 0, 18, 7], ['Mechanical Workshop', 'l', 18, 0, 42, 7],
+        ['Storage', 'k', 12.2, 4.4, 16.7, 7], ['PPD Office', 'o', 0, 3.6, 3, 7],
+        ['To Rear Gate', 'r', 39, 0, 42, 2]])
     ],
-    a: [[-3.8, 0.9, 'left'], [-3.8, 1.5, 'left'], [41.7, -1.1, 'right'], [41.7, -0.5, 'right'], [34.6, -1.8, 'up']]
-  })]
-});
+    MK: [TM2({ fe: [[2.2, 2.6], [32.5, 5.7]], el: [[10.4, 1.1], [27.3, 1.0]], fh: [] })],
+    RT: [TRt2({
+      l: [
+        [[41.7, -1.1], [-1.35, -1.1], [-1.35, 0.9], [-3.8, 0.9]],   // outer route
+        [[41.7, -0.5], [-0.7, -0.5], [-0.7, 1.5], [-3.8, 1.5]],     // inner route
+        [[34.6, -0.5], [34.6, -1.6]]                                // branch to Elementary Bldg.
+      ],
+      a: [[-3.8, 0.9, 'left'], [-3.8, 1.5, 'left'], [41.7, -1.1, 'right'], [41.7, -0.5, 'right'], [34.6, -1.8, 'up']]
+    })]
+  });
 
   const INT = [IA, IC, IE, IT, IL, IH, IM]; let CUR = null;
   function setIN(b, on) { // make a building's shell see-through (and back)
@@ -454,7 +483,7 @@ const IM = interior({ b: B[7], name: 'Machine Shop', mir: true, U: 7, V: 42, vc:
     onInterior(CUR ? String(INT.indexOf(CUR)) : '');
     setN(N);
     if (CUR) {
-      onInfo({ title: `${CUR.name} – Interior`, body: 'Use 1F / 2F / 3F to switch floors. Red = fire equipment, blue = emergency lights, dashed line = escape route.' });
+      onInfo({ title: `${CUR.name} – Interior`, body: 'Use 1F / 2F / 3F to switch floors. Red = fire equipment, blue = emergency lights, dashed line = escape route. Use Walls to show or hide wall panels.' });
       const v = CUR.view || CUR.b.vols[0], s = Math.max(v.w, v.d), t = new THREE.Vector3(v.x, 3, v.z);
       fly(t, t.clone().add(new THREE.Vector3(.6 * s, 1.3 * s, .9 * s)));
     }
@@ -519,6 +548,7 @@ const IM = interior({ b: B[7], name: 'Machine Shop', mir: true, U: 7, V: 42, vc:
   return {
     setFloor: setN,
     setLabels: v => { showL = v; },
+    setWalls: v => { showW = v; walls.forEach(m => { m.visible = v; }); },
     setAutoRotate: v => { ctl.autoRotate = v; },
     resetView: () => fly(HOME.t.clone(), HOME.p.clone()),
     openInterior: v => v === '' ? toggleI(CUR) : toggleI(INT[+v]),   // "" = Interiors: Off
@@ -544,6 +574,7 @@ export default function CampusMap() {
 
   const [floor, setFloor] = useState(99);
   const [labelsOn, setLabelsOn] = useState(true);
+  const [wallsOn, setWallsOn] = useState(true);
   const [spin, setSpin] = useState(false);
   const [interior, setInterior] = useState("");
   const [info, setInfo] = useState(null);
@@ -567,6 +598,7 @@ export default function CampusMap() {
 
   const pickFloor = (n) => { setFloor(n); apiRef.current?.setFloor(n); };
   const toggleLabels = () => { const v = !labelsOn; setLabelsOn(v); apiRef.current?.setLabels(v); };
+  const toggleWalls = () => { const v = !wallsOn; setWallsOn(v); apiRef.current?.setWalls(v); };
   const toggleSpin = () => { const v = !spin; setSpin(v); apiRef.current?.setAutoRotate(v); };
   const pickBuilding = (i) => apiRef.current?.selectBuilding(i);
   const pickGround = (i) => apiRef.current?.selectGround(i);
@@ -638,6 +670,7 @@ export default function CampusMap() {
                   <h2>Map controls</h2>
                   <div className="cmap-mobile-menu-grid">
                     <button type="button" className={labelsOn ? "on" : ""} onClick={toggleLabels}>Labels</button>
+                    <button type="button" className={wallsOn ? "on" : ""} onClick={toggleWalls}>Walls</button>
                     <button type="button" className={spin ? "on" : ""} onClick={toggleSpin}>Auto-rotate</button>
                     <button type="button" onClick={() => apiRef.current?.resetView()}>Reset view</button>
                     <select
@@ -659,6 +692,7 @@ export default function CampusMap() {
                 <button key={n} type="button" className={floor === n ? "on" : ""} onClick={() => pickFloor(n)}>{txt}</button>
               ))}
               <button type="button" className={labelsOn ? "on" : ""} onClick={toggleLabels}>Labels</button>
+              <button type="button" className={wallsOn ? "on" : ""} onClick={toggleWalls}>Walls</button>
               <button type="button" className={spin ? "on" : ""} onClick={toggleSpin}>Auto-rotate</button>
               <button type="button" onClick={() => apiRef.current?.resetView()}>Reset view</button>
               <select
