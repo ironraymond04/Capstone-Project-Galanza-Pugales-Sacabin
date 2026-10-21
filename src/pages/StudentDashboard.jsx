@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
@@ -31,6 +31,7 @@ function toDisplayStatus(status) {
     pending: "Open",
     in_progress: "In Progress",
     resolved: "Resolved",
+    transferred: "Transferred",
     closed: "Closed",
   };
   return map[status] || status;
@@ -273,8 +274,13 @@ function Overview({ tickets, loading, profile, onSelect }) {
   );
 }
 
+const FILTER_OPTIONS = ["All", "Open", "In Progress", "Resolved", "Transferred", "Closed"];
+
 function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [filter, setFilter] = useState("All");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const filterRef = useRef(null);
 
   useEffect(() => {
     if (!selectedTicketId) {
@@ -284,14 +290,104 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
     setSelectedTicket(tickets.find((t) => t.ticket_id === selectedTicketId) || null);
   }, [selectedTicketId, tickets]);
 
+  // Close the dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  const countFor = (option) =>
+    option === "All"
+      ? tickets.length
+      : tickets.filter((t) => toDisplayStatus(t.status) === option).length;
+
+  const filteredTickets =
+    filter === "All"
+      ? tickets
+      : tickets.filter((t) => toDisplayStatus(t.status) === filter);
+
   return (
     <>
       <PageHeader title="Your tickets" subtitle="This section displays the status of your ticket submitted." />
       <div className="card">
+        {/* Filter by */}
+        <div
+          ref={filterRef}
+          style={{ position: "relative", display: "flex", justifyContent: "flex-end", marginBottom: 12 }}
+        >
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={menuOpen}
+          >
+            Filter by: {filter} ▾
+          </button>
+
+          {menuOpen && (
+            <ul
+              role="listbox"
+              aria-label="Filter tickets by status"
+              style={{
+                position: "absolute",
+                top: "100%",
+                right: 0,
+                marginTop: 4,
+                minWidth: 190,
+                padding: 4,
+                listStyle: "none",
+                background: "var(--surface, #fff)",
+                border: "1px solid var(--line)",
+                borderRadius: 6,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                zIndex: 20,
+              }}
+            >
+              {FILTER_OPTIONS.map((option) => (
+                <li key={option} role="option" aria-selected={filter === option}>
+                  <button
+                    type="button"
+                    onClick={() => { setFilter(option); setMenuOpen(false); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "8px 10px",
+                      background: filter === option ? "var(--maroon-050)" : "transparent",
+                      color: "var(--ink)",
+                      fontWeight: filter === option ? 700 : 400,
+                      fontSize: 13,
+                      borderRadius: 4,
+                      textAlign: "left",
+                    }}
+                  >
+                    <span>{option}</span>
+                    <span style={{ color: "var(--ink-soft)" }}>{countFor(option)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading tickets...</p>
         ) : tickets.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+        ) : filteredTickets.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            No {filter.toLowerCase()} tickets found.
+          </p>
         ) : (
           <TableScroll>
             <table className="chd-table">
@@ -299,7 +395,7 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
                 <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
+                {filteredTickets.map((t) => (
                   <tr key={t.ticket_id} onClick={() => { setSelectedTicket(t); onTicketSelected?.(t.ticket_id); }} style={{ cursor: "pointer" }}>
                     <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                     <td>{t.concern_text.slice(0, 60)}{t.concern_text.length > 60 ? "..." : ""}</td>
