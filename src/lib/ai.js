@@ -46,7 +46,7 @@ Read the student's concern and decide which office should handle it. Offices and
 
 - LIBRARY: The Library takes care of book borrowing, library fines, and library access. Students go here to borrow materials, settle overdue or lost-item charges, and get access to library services and facilities.
 
-- GUIDANCE: The Guidance Office provides counseling and addresses behavioral or mental health concerns. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
+- GUIDANCE: The Guidance Office provides counseling and addresses behavioral or mental health concerns. It also handles enrollment for incoming freshmen sudents to enroll at any courses. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
 
 - ACCOUNTING: The Accounting Office manages everything related to money owed to or from the school, including tuition, fees, payments, and refunds. Students go here for billing questions, payment concerns, and refund requests.
 
