@@ -40,6 +40,13 @@ function timeAgo(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+function replaceUserIds(text, userMap) {
+  if (!text) return text;
+  return text.replace(UUID_RE, (id) => userMap.get(id.toLowerCase()) || id);
+}
+
 function getStoredTicketReadIds(storageKey) {
   try {
     return new Set(JSON.parse(localStorage.getItem(storageKey) || "[]"));
@@ -153,7 +160,7 @@ export default function AdminDashboard() {
       <div className="chd-main" style={isMobile ? { marginLeft: 0, width: "100%" } : undefined}>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
           {active === "overview" && (<Overview tickets={tickets} users={users} offices={offices} loading={ticketsLoading || usersLoading || officesLoading} onSelect={setActive} />)}
-          {active === "logs" && <SystemLogs logs={logs} loading={logsLoading} />}
+          {active === "logs" && <SystemLogs logs={logs} users={users} loading={logsLoading} />}
           {active === "tickets" && (
             <ManageTickets tickets={tickets} loading={ticketsLoading} offices={offices} onUpdated={loadTickets} />
           )}
@@ -301,8 +308,13 @@ function Overview({ tickets, users, offices, loading, onSelect }) {
   );
 }
 
-function SystemLogs({ logs, loading }) {
+function SystemLogs({ logs, users, loading }) {
   const [selectedLog, setSelectedLog] = useState(null);
+
+  const userMap = useMemo(
+    () => new Map(users.map((u) => [String(u.user_id).toLowerCase(), u.name])),
+    [users]
+  );
 
   return (
     <>
@@ -320,7 +332,9 @@ function SystemLogs({ logs, loading }) {
               onClick={() => setSelectedLog(l)}
               style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: "1px solid var(--line)", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
             >
-              <span style={{ fontSize: 14 }}><strong>{l.profiles?.name || "System"}</strong> - {l.action}</span>
+              <span style={{ fontSize: 14 }}>
+                <strong>{l.profiles?.name || "System"}</strong> - {replaceUserIds(l.action, userMap)}
+              </span>
               <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{timeAgo(l.created_at)}</span>
             </button>
           ))
@@ -329,36 +343,17 @@ function SystemLogs({ logs, loading }) {
 
       {selectedLog && (
         <Modal title="System log details" onClose={() => setSelectedLog(null)} width={520}>
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Performed by</span>
-              <strong style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.profiles?.name || "System"}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Module</span>
-              <span style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.module || "—"}</span>
-            </div>
-            {selectedLog.ticket_id && (
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket ID</span>
-                <span style={{ fontSize: 14, fontFamily: "var(--font-mono)", textAlign: "right" }}>{formatTicketCode(selectedLog.ticket_id)}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Action</span>
-              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>{selectedLog.action}</span>
-            </div>
-            {selectedLog.description && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Description</span>
-                <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>{selectedLog.description}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
-              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Date & time</span>
-              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(selectedLog.created_at).toLocaleString()}</span>
-            </div>
-          </div>
+          {/* ...keep everything the same, but change these two lines: */}
+
+          {/* Action */}
+          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
+            {replaceUserIds(selectedLog.action, userMap)}
+          </span>
+
+          {/* Description */}
+          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
+            {replaceUserIds(selectedLog.description, userMap)}
+          </span>
         </Modal>
       )}
     </>
