@@ -487,22 +487,36 @@ const handleSubmit = async (e) => {
     if (officesError) {
       console.error("Failed to load offices table:", officesError);
     } else {
-      const normalize = (s) => s?.trim().toLowerCase();
-
-      const candidateOffices = [
-        classification?.office,
-        ...(classification?.labels || []),
-      ].filter(Boolean);
-
-      for (const officeName of candidateOffices) {
-        const match = allOffices.find(
-          (row) => normalize(row.office_name) === normalize(officeName)
-        );
-        if (match) {
-          assignedOfficeId = match.office_id;
-          break;
+      // ---------- ML (NEW) ----------
+      // ML result already carries the DB office_id, so no name matching is needed
+      if (classification?.officeId) {
+        const byId = allOffices.find((o) => o.office_id === classification.officeId);
+        if (byId) {
+          assignedOfficeId = byId.office_id;
+          classification.office = byId.office_name;
         }
       }
+
+      // Gemini path (or ML id not found): match by office name
+      if (!assignedOfficeId) {
+        const normalize = (s) => s?.trim().toLowerCase();
+
+        const candidateOffices = [
+          classification?.office,
+          ...(classification?.labels || []),
+        ].filter(Boolean);
+
+        for (const officeName of candidateOffices) {
+          const match = allOffices.find(
+            (row) => normalize(row.office_name) === normalize(officeName)
+          );
+          if (match) {
+            assignedOfficeId = match.office_id;
+            break;
+          }
+        }
+      }
+      // ---------- end ML (NEW) ----------
 
       if (!assignedOfficeId) {
         console.warn(

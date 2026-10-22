@@ -46,7 +46,7 @@ Read the student's concern and decide which office should handle it. Offices and
 
 - LIBRARY: The Library takes care of book borrowing, library fines, and library access. Students go here to borrow materials, settle overdue or lost-item charges, and get access to library services and facilities.
 
-- GUIDANCE: The Guidance Office provides counseling and addresses behavioral or mental health concerns. It also handles enrollment for incoming freshmen sudents to enroll at any courses. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
+- GUIDANCE: The Guidance Office provides counseling and addresses behavioral or mental health concerns. It also handles non-financial scholarships, so students go here for support with personal or social issues and for scholarship matters that don't involve payments or fees.
 
 - ACCOUNTING: The Accounting Office manages everything related to money owed to or from the school, including tuition, fees, payments, and refunds. Students go here for billing questions, payment concerns, and refund requests.
 
@@ -78,7 +78,7 @@ Read the student's concern and decide which office should handle it. Offices and
 
 - PENWOOD: Handles the college's student publication and creative media. Route tickets about article, feature, photo, or graphic submissions, requests to cover an event or announcement, publication membership and tryouts, issue releases and distribution, corrections or editorial concerns, and press or media inquiries. Do NOT route research publication concerns (RESEARCH AND CREATIVE WORKS) here.
 
-- MIS: The Management Information Systems office, which handles all campus technology and information systems. Route tickets about student, faculty, and staff account issues (login problems, password resets, email, portal access), WiFi and network problems, computer laboratory and workstation faults, projector or presentation equipment issues, software installation and licenses, enrollment, grading, or other system errors, website and online services, and data or system access requests. Do NOT route physical room repairs (PHYSICAL PLANT) here.
+- MIS: The Management Information Systems office, which handles all campus technology and information systems. Route tickets about student, faculty, and staff account issues (login problems, password resets, email, portal access), Wi-Fi and network problems, computer laboratory and workstation faults, projector or presentation equipment issues, software installation and licenses, enrollment, grading, or other system errors, website and online services, and data or system access requests. Do NOT route physical room repairs (PHYSICAL PLANT) here.
 
 - HUMAN RESOURCE: Handles employee-related concerns for faculty and staff. Route tickets about employment records and contracts, payroll and salary concerns, leave applications and balances, attendance and DTR corrections, benefits and government contributions (SSS, PhilHealth, Pag-IBIG), recruitment and applications, certificates of employment, faculty and staff performance or conduct concerns, and onboarding or separation processing. Do NOT route student concerns here.
 
@@ -95,7 +95,51 @@ General rules:
 - confidence reflects how certain you are about primary_office, not the whole ticket.
 - Keep reasoning to one sentence.`;
 
+/* ===================== ML (NEW) ===================== */
+
+const ML_URL = import.meta.env.VITE_ML_API_URL || "/ml";
+const ML_MIN_CONFIDENCE = Number(import.meta.env.VITE_ML_MIN_CONFIDENCE || 50);
+
+// TF-IDF + One-vs-Rest Logistic Regression model served by ml_service (FastAPI)
+async function classifyWithML(text) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const res = await fetch(`${ML_URL}/classify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null; // service down or slow -> fall back to Gemini
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Hybrid: use the ML model when it is confident, otherwise fall back to Gemini.
 export async function classifyTicket(concernText) {
+  const ml = await classifyWithML(concernText);
+  if (ml && ml.confidence >= ML_MIN_CONFIDENCE) {
+    return {
+      office: ml.office,
+      officeId: ml.office_id,
+      labels: ml.top3.filter((r) => r.score >= 0.2).map((r) => r.office),
+      priority: "medium", // the ML model only predicts the office
+      confidence: ml.confidence,
+      reasoning: "Routed by the TF-IDF + Logistic Regression model.",
+      source: "ml",
+    };
+  }
+  return classifyTicketGemini(concernText);
+}
+
+/* =================== end ML (NEW) =================== */
+
+export async function classifyTicketGemini(concernText) {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
