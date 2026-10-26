@@ -117,6 +117,7 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
 
   // ---------- interior wall panels (collected so the Walls button can show/hide them) ----------
   const walls = []; let showW = true;
+  const hoverable = [];   // room floor meshes that can be highlighted on hover
 
   // ---------- buildings ----------
   function building(o) {
@@ -223,7 +224,8 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
 
       rooms.forEach(([n, t, u1, v1, u2, v2], i) => {
         const xa = PX(v1), xb = PX(v2), za = PZ(u1), zb = PZ(u2), w = Math.abs(xb - xa), d = Math.abs(zb - za), x = (xa + xb) / 2, z = (za + zb) / 2;
-        box(w, .06, d, M(TC[t]), x, y0 + .05 + i * .004, z, g);
+        const fl = box(w, .06, d, M(TC[t]), x, y0 + .05 + i * .004, z, g);
+        if (t !== 'h' && t !== 'r') { fl.userData.base = TC[t]; hoverable.push(fl); }   // hallways/ramps are skipped
         const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, WALL_H, d)), new THREE.LineBasicMaterial({ color: 0x3a3f47 }));
         e.position.set(x, y0 + 1.3, z); g.add(e);
         if (t !== 'h' && t !== 'r') {                                              // room walls (hallways and open areas stay open)
@@ -476,6 +478,7 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
   }
   function fly(t, p) { tw = { t: 0, t0: ctl.target.clone(), p0: cam.position.clone(), t1: t, p1: p }; }
   function toggleI(c) {
+    setHover(null);   // clear any yellow highlight when switching or closing an interior
     const off = CUR === c;
     if (CUR) CUR.bs.forEach(b => setIN(b, false));
     CUR = off ? null : c;
@@ -504,6 +507,28 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     if (h && h.object.userData.b) select(h.object.userData.b);
   };
   el.addEventListener('pointerdown', onDown); el.addEventListener('pointerup', onUp);
+
+  // hover highlight (yellow)
+  const HOVER = 0xffe14d; let hov = null;
+  function setHover(m) {
+    if (hov === m) return;
+    if (hov) hov.material.color.setHex(hov.userData.base);
+    hov = m;
+    if (hov) hov.material.color.setHex(HOVER);
+    el.style.cursor = hov ? 'pointer' : '';
+  }
+  const onMove = e => {
+    if (!CUR) { setHover(null); return; }
+    const r = el.getBoundingClientRect();
+    pt.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(pt, cam);
+    const hit = ray.intersectObjects(hoverable, false).find(i => {
+      let n = i.object; while (n) { if (!n.visible) return false; n = n.parent } return true;   // ignore hidden floors
+    });
+    setHover(hit ? hit.object : null);
+  };
+  const onLeave = () => setHover(null);
+  el.addEventListener('pointermove', onMove); el.addEventListener('pointerleave', onLeave);
 
   // resize with the container (not the window)
   const rs = () => {
@@ -535,6 +560,7 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
   function dispose() {
     cancelAnimationFrame(raf); ro.disconnect();
     el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointerup', onUp);
+    el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave);
     ctl.dispose();
     scene.traverse(n => {
       if (n.geometry) n.geometry.dispose();
