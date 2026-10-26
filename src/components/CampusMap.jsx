@@ -316,7 +316,7 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
   const IE = interior({ b: B[1], name: 'Engineering Bldg.', kv: EV.d / 63.2, ku: EV.d / 63.2, vc: 6.8, U: 63.2, V: 13.6, mir: true, fx: true,
     FL: [
       [['Ramp', 'r', 0, 3.8, 4.7, 13.1], ['Male CR', 'c', 4.7, 2.7, 7.7, 7.3], ['Female CR', 'c', 4.7, 7.3, 7.7, 11.8],
-        ['CE Laboratory Room 1', 'l', 7.7, 2.7, 14.3, 11.8], ['Audio Visual Room', 'b', 14.3, 2.7, 23.4, 11.8], ['Audio Visual Room', 'b', 23.4, 2.7, 32.3, 11.8],
+        ['CE Laboratory Room 1', 'l', 7.7, 2.7, 14.3, 11.8], ['Audio Visual Room', 'b', 14.3, 2.7, 32.3, 11.8],
         ['Control Room', 'k', 23.4, 0, 32.3, 2.7], ['E104', 'e', 32.3, 2.7, 41.1, 11.8], ['E105', 'e', 41.1, 2.7, 50, 11.8],
         ['Counseling Room', 'o', 50, 2.7, 53.2, 7.2], ['Guidance Office', 'o', 53.2, 2.7, 58.8, 7.5], ['Receiving Area', 'o', 50, 7.2, 54.3, 11.8],
         ['Testing Area', 'o', 54.3, 7.5, 58.8, 11.8], ['', 'h', 58.8, 2.7, 63.2, 4.9], ['Stairs', 's', 58.8, 4.9, 63.2, 9.2], ['E.S.O. Office', 'o', 58.8, 9.2, 63.2, 11.8],
