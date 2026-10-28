@@ -40,6 +40,58 @@ function timeAgo(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function escapeCsv(value) {
+  if (value == null) return "";
+  let str = String(value);
+  // Prevent spreadsheet formula injection (=, +, -, @ at the start of a cell)
+  if (/^[=+\-@]/.test(str)) str = `'${str}`;
+  // Wrap in quotes if it contains commas, quotes, or line breaks
+  return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function downloadTicketsCsv(tickets, filename = "tickets.csv") {
+  const headers = [
+    "Ticket",
+    "Submitted by",
+    "Concern",
+    "Office",
+    "AI confidence (%)",
+    "Status",
+    "Escalation level",
+    "Transfer reason",
+    "Submitted",
+    "Resolved",
+  ];
+
+  const rows = tickets.map((t) => [
+    formatTicketCode(t.ticket_id),
+    t.profiles?.name || "Unknown user",
+    t.concern_text,
+    t.offices?.office_name || "Unassigned",
+    t.classification_confidence ?? "",
+    toDisplayStatus(t.status),
+    t.escalation_level || "",
+    t.transfer_reason || "",
+    t.created_at ? new Date(t.created_at).toLocaleString() : "",
+    t.resolved_at ? new Date(t.resolved_at).toLocaleString() : "",
+  ]);
+
+  const csv = [headers, ...rows]
+    .map((row) => row.map(escapeCsv).join(","))
+    .join("\r\n");
+
+  // "\uFEFF" (BOM) makes Excel read UTF-8 characters correctly
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 function replaceUserIds(text, userMap) {
@@ -343,17 +395,32 @@ function SystemLogs({ logs, users, loading }) {
 
       {selectedLog && (
         <Modal title="System log details" onClose={() => setSelectedLog(null)} width={520}>
-          {/* ...keep everything the same, but change these two lines: */}
-
-          {/* Action */}
-          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
-            {replaceUserIds(selectedLog.action, userMap)}
-          </span>
-
-          {/* Description */}
-          <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
-            {replaceUserIds(selectedLog.description, userMap)}
-          </span>
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>User</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.profiles?.name || "System"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Action</span>
+              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
+                {replaceUserIds(selectedLog.action, userMap)}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Description</span>
+              <span style={{ fontSize: 14, textAlign: "right", maxWidth: 340 }}>
+                {replaceUserIds(selectedLog.description, userMap) || "—"}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Module</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.module || "—"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+              <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Time</span>
+              <span style={{ fontSize: 14, textAlign: "right" }}>{new Date(selectedLog.created_at).toLocaleString()}</span>
+            </div>
+          </div>
         </Modal>
       )}
     </>
@@ -383,17 +450,29 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
         subtitle="List of all submitted tickets and their offices. Open a ticket to transfer it to another office."
       />
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-        {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={filter === f ? "btn btn-primary" : "btn btn-ghost"}
-            style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}
-          >
-            {f}
-          </button>
-        ))}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={filter === f ? "btn btn-primary" : "btn btn-ghost"}
+              style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+          onClick={() => downloadTicketsCsv(filtered, "tickets.csv")}
+          disabled={loading || filtered.length === 0}
+        >
+          ⬇ Download CSV
+        </button>
       </div>
 
       <div className="card">
@@ -773,19 +852,19 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
         <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
-        {offices.map((o) => (
-         <div key={o.office_id} className="card">
-           <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
-           <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
-           <p style={{ fontSize: 13, margin: "4px 0" }}>Location: {o.location || "—"}</p>
-           <p style={{ fontSize: 13, margin: "4px 0", wordBreak: "break-word" }}>
-              Email: {o.contact_email || "—"}
-           </p>
-           <button type="button" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: 12, marginTop: 10 }} onClick={() => { setEditingOffice(o); setSubmitError(""); setModalOpen(true); }}>
-             Edit office
-           </button>
-        </div>
-        ))}
+          {offices.map((o) => (
+            <div key={o.office_id} className="card">
+              <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
+              <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
+              <p style={{ fontSize: 13, margin: "4px 0" }}>Location: {o.location || "—"}</p>
+              <p style={{ fontSize: 13, margin: "4px 0", wordBreak: "break-word" }}>
+                Email: {o.contact_email || "—"}
+              </p>
+              <button type="button" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: 12, marginTop: 10 }} onClick={() => { setEditingOffice(o); setSubmitError(""); setModalOpen(true); }}>
+                Edit office
+              </button>
+            </div>
+          ))}
           <div className="card" style={{ display: "grid", placeItems: "center", border: "1.5px dashed var(--line)" }}>
             <button className="btn btn-primary" onClick={() => { setEditingOffice(null); setSubmitError(""); setModalOpen(true); }}>+ Add office</button>
           </div>
