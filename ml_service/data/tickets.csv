@@ -76,7 +76,7 @@ I would appreciate your assistance regarding this matter. Thank you very much.",
 67,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there a BSCE course in SPC?,3,resolved,2026-10-14 10:10:15.728058+00,2026-10-16 04:02:23.95+00,,low,90
 68,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Andress Bonifacio is bullying me. ",5,in_progress,2026-10-15 09:12:33.261249+00,,This must be OSAS,medium,
 69,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the criminology department office?,9,pending,2026-10-15 09:20:31.454036+00,,,low,95
-70,4b9c1680-0474-4e11-ad1a-78d836f57a81,I don't know where is the LR1.,,pending,2026-10-15 09:26:53.159835+00,,,medium,
+70,4b9c1680-0474-4e11-ad1a-78d836f57a81,I don't know where is the LR1.,15,transferred,2026-10-15 09:26:53.159835+00,,Inquiries regarding campus room locations and facilities are routed to the Physical Plant office.,medium,
 71,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where's the graduate studies office?,10,resolved,2026-10-15 09:27:16.887073+00,2026-10-16 03:57:50.056+00,graduate studies,low,90
 72,4b9c1680-0474-4e11-ad1a-78d836f57a81,where's the CCS office?,1,resolved,2026-10-15 09:27:58.485227+00,2026-10-16 03:20:26.389+00,,low,95
 73,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the Graduate Studies office?,10,resolved,2026-10-15 09:28:44.376671+00,2026-10-16 03:57:48.284+00,graduate studies,low,95
@@ -106,8 +106,8 @@ I would like to raise a concern regarding the student publication of St. Peterâ€
 96,06c895b3-ffae-48ba-a8bb-132de41b742c,"Good day CCS Office! I want to know the exact location for my subject load, thank you!",1,resolved,2026-10-16 03:02:46.447324+00,2026-10-16 03:04:56.185+00,That must be CCS office.,low,85
 97,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What is the first step for enrollment? ",7,transferred,2026-10-16 06:05:34.791171+00,,this must be guidance office where a freshmen should enroll as a first step,medium,
 98,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What is the working hours of guidance office? ",7,transferred,2026-10-16 06:07:03.436044+00,,Guidance office,medium,
-99,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the Penwood Office?,,pending,2026-10-21 03:10:43.193808+00,,,medium,
-100,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I can't connect to SPC Student WIFI.,,pending,2026-10-21 03:14:07.938583+00,,,medium,
+99,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the Penwood Office?,20,transferred,2026-10-21 03:10:43.193808+00,,Penwood office,medium,
+100,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I can't connect to SPC Student WIFI.,16,transferred,2026-10-21 03:14:07.938583+00,,MIS,medium,
 101,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the security office?,14,pending,2026-10-21 03:14:31.897981+00,,,low,95
 102,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My computer #3 is broken,16,pending,2026-10-21 03:15:41.39286+00,,,medium,95
 103,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The wifi is broken too,16,pending,2026-10-21 03:15:56.055512+00,,,medium,95
@@ -117,3 +117,21 @@ I would like to raise a concern regarding the student publication of St. Peterâ€
 107,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my school ID?,5,pending,2026-10-22 03:28:30.534962+00,,,medium,69
 108,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What services offers by the guidance? ",7,pending,2026-10-22 11:39:43.145284+00,,,low,100
 109,4b9c1680-0474-4e11-ad1a-78d836f57a81,"I feel so anxious today and also having mixed emotions. ",7,pending,2026-10-22 11:40:25.418352+00,,,high,95
+110,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Pila'y balance nako sa akong tuition?,11,pending,2026-10-26 02:49:58.394452+00,,,medium,100
+111,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Naay pusil diri sa campus,14,pending,2026-10-26 02:51:19.595858+00,,,high,100
+112,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student applying extreme hair color in campus,14,pending,2026-10-26 02:52:28.036536+00,,,medium,60
+113,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay gi-bully sa 3rd floor sa engineering bldg.,7,transferred,2026-10-26 03:00:55.693075+00,,This must be guidance office,medium,50
+114,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in capstone 1,1,pending,2026-10-26 03:06:40.871534+00,,,medium,60
+115,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CED office?,12,pending,2026-10-26 03:11:06.402418+00,,,low,90
+116,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CAS office?,2,transferred,2026-10-26 03:11:45.587296+00,,The inquiry is asking for the location of the College of Arts and Sciences (CAS) office.,medium,
+117,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the NSTP office?,19,pending,2026-10-26 03:12:09.603951+00,,,low,95
+118,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay bazooka gidala sa campus,14,pending,2026-10-26 03:12:53.14674+00,,,high,100
+119,4b9c1680-0474-4e11-ad1a-78d836f57a81,"I am feeling embarassed and a little bit upset about whats happen sa among relationship with my gf.
+",7,pending,2026-10-26 10:04:31.762362+00,,,medium,95
+120,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I need my NSTP serial number,19,transferred,2026-10-28 00:14:16.544218+00,,Requests for NSTP serial numbers are directly handled by the NSTP office.,medium,
+121,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The aircon in Room LR1 is broken,15,transferred,2026-10-28 00:20:50.186261+00,,Maintenance and repair of facility air conditioning units fall under Physical Plant's jurisdiction.,medium,51
+122,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How do I apply for a research grant?,18,transferred,2026-10-28 00:21:11.716457+00,,Inquiries regarding research grant applications and funding are handled by the Research and Creative Works office.,medium,21
+123,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to pay my overdue book fine,6,transferred,2026-10-28 00:21:32.841451+00,,Settling overdue book charges and fines is directly managed by the Library Office.,medium,21
+124,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CCS office?,1,pending,2026-10-28 00:21:46.755748+00,,,medium,64
+125,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student bringing a bolo knife to school,14,pending,2026-10-28 00:22:09.180792+00,,,medium,52
+126,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My fellow classmate keeps bullying me and I need help,5,pending,2026-10-28 00:22:58.043722+00,,,medium,52
