@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import pipeline  # noqa: F401
 
 MODEL_PATH = Path(__file__).parent / "model.joblib"
-LABEL_THRESHOLD = 0.20   # extra offices returned in "labels" (multi-label view)
+LABEL_THRESHOLD = 0.15   # offices at or above this score are saved as predicted_offices
 
 bundle = joblib.load(MODEL_PATH)
 pipe = bundle["pipeline"]

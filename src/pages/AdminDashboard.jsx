@@ -8,6 +8,7 @@ import { generateTicketReport, suggestTransferOffice } from "../lib/ai";
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
+import { otherPredictedOffices } from "../lib/offices";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -1808,6 +1809,14 @@ function TicketStatusModal({ ticket, onClose, offices = [], onUpdated }) {
               <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                 <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>AI confidence</span>
                 <span style={{ fontSize: 14, textAlign: "right" }}>{ticket.classification_confidence}%</span>
+              </div>
+            )}
+            {otherPredictedOffices(ticket).length > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Also predicted</span>
+                <span style={{ fontSize: 14, textAlign: "right", maxWidth: 360 }}>
+                  {otherPredictedOffices(ticket).join(", ")}
+                </span>
               </div>
             )}
             {ticket.transfer_reason && (

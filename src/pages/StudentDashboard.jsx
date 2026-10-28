@@ -469,104 +469,106 @@ function SubmitTicket({ session, ticketText, setTicketText, selectedOffice, setS
   const [errorMsg, setErrorMsg] = useState("");
 
 const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!ticketText.trim()) return;
-    setSubmitting(true);
-    setErrorMsg("");
+  e.preventDefault();
+  if (!ticketText.trim()) return;
+  setSubmitting(true);
+  setErrorMsg("");
 
-    // 1. Send the concern to the Python ML service (TF-IDF + Logistic Regression)
-    //    Returns null if the service is unreachable -> ticket is saved unassigned
-    const classification = await classifyTicket(ticketText);
+  // 1. Send the concern to the Python ML service (TF-IDF + Logistic Regression)
+  //    Returns null if the service is unreachable -> ticket is saved unassigned
+  const classification = await classifyTicket(ticketText);
 
-    // 2. Resolve the office the ML model returned into an office_id
-    let assignedOfficeId = null;
+  // 2. Resolve the office the ML model returned into an office_id
+  let assignedOfficeId = null;
+  let predictedOffices = [];
 
-    const { data: allOffices, error: officesError } = await supabase
-      .from("offices")
-      .select("office_id, office_name");
+  const { data: allOffices, error: officesError } = await supabase
+    .from("offices")
+    .select("office_id, office_name");
 
-    if (officesError) {
-      console.error("Failed to load offices table:", officesError);
-    } else {
-      // ML result carries the office_id, so match by id first
-      if (classification?.officeId) {
-        const byId = allOffices.find((o) => o.office_id === classification.officeId);
-        if (byId) {
-          assignedOfficeId = byId.office_id;
-          classification.office = byId.office_name;
-        }
+  if (officesError) {
+    console.error("Failed to load offices table:", officesError);
+  } else {
+    // ML result carries the office_id, so match by id first
+    if (classification?.officeId) {
+      const byId = allOffices.find((o) => o.office_id === classification.officeId);
+      if (byId) {
+        assignedOfficeId = byId.office_id;
+        classification.office = byId.office_name;
       }
+    }
 
-      // Fallback: match by office name if the id wasn't found in the DB
-      if (!assignedOfficeId) {
-        const normalize = (s) => s?.trim().toLowerCase();
+    // Fallback: match by office name if the id wasn't found in the DB
+    if (!assignedOfficeId) {
+      const normalize = (s) => s?.trim().toLowerCase();
 
-        const candidateOffices = [
-          classification?.office,
-          ...(classification?.labels || []),
-        ].filter(Boolean);
+      const candidateOffices = [
+        classification?.office,
+        ...(classification?.labels || []),
+      ].filter(Boolean);
 
-        for (const officeName of candidateOffices) {
-          const match = allOffices.find(
-            (row) => normalize(row.office_name) === normalize(officeName)
-          );
-          if (match) {
-            assignedOfficeId = match.office_id;
-            break;
-          }
-        }
-      }
-
-      if (!assignedOfficeId) {
-        console.warn(
-          "Ticket could not be matched to an office row. ML classification:",
-          classification,
-          "Available offices in DB:",
-          allOffices.map((o) => o.office_name)
+      for (const officeName of candidateOffices) {
+        const match = allOffices.find(
+          (row) => normalize(row.office_name) === normalize(officeName)
         );
+        if (match) {
+          assignedOfficeId = match.office_id;
+          break;
+        }
       }
     }
 
-    const validIds = new Set((allOffices || []).map((o) => o.office_id));
-    const predictedOffices = (classification?.predictedOfficeIds || []).filter((id) =>
-    validIds.has(id)
+    if (!assignedOfficeId) {
+      console.warn(
+        "Ticket could not be matched to an office row. ML classification:",
+        classification,
+        "Available offices in DB:",
+        allOffices.map((o) => o.office_name)
+      );
+    }
+
+    // Keep only predicted IDs that really exist in the offices table
+    const validIds = new Set(allOffices.map((o) => o.office_id));
+    predictedOffices = (classification?.predictedOfficeIds || []).filter((id) =>
+      validIds.has(id)
     );
+  }
 
-    // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
-    const { data: inserted, error } = await supabase
-      .from("tickets")
-      .insert({
-        user_id: session.user.id,
-        concern_text: ticketText,
-        assigned_office: assignedOfficeId,
-        priority: classification?.priority || "medium",
-        classification_confidence: classification?.confidence ?? null,
-        predicted_offices: predictedOffices,
-      })
-      .select()
-      .single();
+  // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
+  const { data: inserted, error } = await supabase
+    .from("tickets")
+    .insert({
+      user_id: session.user.id,
+      concern_text: ticketText,
+      assigned_office: assignedOfficeId,
+      priority: classification?.priority || "medium",
+      classification_confidence: classification?.confidence ?? null,
+      predicted_offices: predictedOffices,
+    })
+    .select()
+    .single();
 
-    if (error) {
-      setSubmitting(false);
-      setErrorMsg("Something went wrong submitting your ticket. Please try again.");
-      return;
-    }
-
-    // 4. Log the ML routing decision for the office's activity log
-    if (assignedOfficeId) {
-      await supabase.from("logs").insert({
-        ticket_id: inserted.ticket_id,
-        office_id: assignedOfficeId,
-        action: `ML routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
-        module: "ML Routing",
-      });
-    }
-
+  if (error) {
     setSubmitting(false);
-    setSubmitted(true);
-    setTicketText("");
-    setSelectedOffice("");
-    onSubmitted?.();
+    setErrorMsg("Something went wrong submitting your ticket. Please try again.");
+    return;
+  }
+
+  // 4. Log the ML routing decision for the office's activity log
+  if (assignedOfficeId) {
+    await supabase.from("logs").insert({
+      ticket_id: inserted.ticket_id,
+      office_id: assignedOfficeId,
+      action: `ML routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
+      module: "ML Routing",
+    });
+  }
+
+  setSubmitting(false);
+  setSubmitted(true);
+  setTicketText("");
+  setSelectedOffice("");
+  onSubmitted?.();
 };
 
 const DRAFT_KEY = `ticket_draft_${session?.user?.id}`;

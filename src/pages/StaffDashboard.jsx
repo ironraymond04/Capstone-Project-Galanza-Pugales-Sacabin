@@ -7,6 +7,7 @@ import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNot
 import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
+import { otherPredictedOffices } from "../lib/offices";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -528,6 +529,9 @@ function TicketDetailModal({ ticket, onClose }) {
     { label: "Priority", value: <PriorityDot level={toDisplayPriority(ticket.priority)} /> },
     { label: "Status", value: <StatusBadge status={toDisplayStatus(ticket.status)} /> },
     { label: "AI confidence", value: ticket.classification_confidence != null ? `${ticket.classification_confidence}%` : "Not yet classified" },
+    ...(otherPredictedOffices(ticket).length
+      ? [{ label: "Also predicted", value: otherPredictedOffices(ticket).join(", ") }]
+      : []),
     { label: "Concern", value: ticket.concern_text },
     ...(ticket.created_at ? [{ label: "Submitted", value: new Date(ticket.created_at).toLocaleString() }] : []),
     ...(ticket.resolved_at ? [{ label: "Resolved", value: new Date(ticket.resolved_at).toLocaleString() }] : []),

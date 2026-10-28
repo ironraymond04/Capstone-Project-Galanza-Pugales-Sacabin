@@ -114,7 +114,7 @@ export async function classifyTicket(concernText) {
     return {
       office: ml.office,
       officeId: ml.office_id,
-      labels: ml.top3.filter((r) => r.score >= 0.2).map((r) => r.office),
+      labels: ml.top3.filter((r) => r.score >= 0.15).map((r) => r.office),
       predictedOfficeIds: ml.labels ?? [ml.office_id],
       priority: "medium", // the model only predicts the office
       confidence: ml.confidence,
