@@ -1,149 +1,149 @@
-ticket_id,user_id,concern_text,assigned_office,status,created_at,resolved_at,transfer_reason,priority,classification_confidence
-1,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in programming 1,1,resolved,2026-09-18 02:20:22.846055+00,2026-09-18 03:09:39.439+00,,medium,
-2,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My computer account is not working,1,resolved,2026-09-18 03:22:01.128422+00,2026-09-18 03:24:36.364+00,,medium,80
-3,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing Grade in Information Technology Fundamentals,1,resolved,2026-09-25 01:39:32.425408+00,2026-10-16 03:20:45.988+00,,medium,95
-4,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to know the requirements for enrolling in an Engineering Subject.,3,resolved,2026-09-25 02:00:24.623407+00,2026-10-16 04:02:26.281+00,,medium,
-5,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day. Reporting a technical issue in Lab Room A202, Workstation PC4. The machine suffers from network disconnection, affecting our laboratory sessions.",1,resolved,2026-09-25 02:24:51.866485+00,2026-10-16 03:20:43.889+00,,medium,
-6,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Dear CCS Office, our Capstone group 1 is requesting permission to access the computer lab resources on October 12, 2026 (1:30PM) to start our project deployment.",1,resolved,2026-09-25 02:28:41.652293+00,2026-10-16 03:20:41.789+00,,medium,
-7,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Good day CCS Office. I would like to report a concern regarding Database 1. I am having difficulty understanding some of the database concepts and completing the required activities. I would appreciate assistance or clarification regarding the topic and the requirements for the course. Thank you.,1,resolved,2026-09-25 02:42:57.538719+00,2026-10-16 03:20:38.606+00,,medium,98
-8,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Where to find the library? 
-",6,resolved,2026-09-26 02:04:24.147893+00,2026-09-26 02:42:23.276+00,,medium,
-9,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Can you please where do I find the CCS office?,1,resolved,2026-09-26 02:09:37.20626+00,2026-10-16 03:20:36.325+00,,low,95
-10,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my Student ID?,5,resolved,2026-09-26 02:28:05.744446+00,2026-09-27 09:59:44.336+00,,medium,95
-11,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where do I find the library?,6,resolved,2026-09-26 02:28:49.626082+00,2026-09-26 02:42:25.052+00,,low,95
-12,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I find my Transcript of Records (TOR)?,4,resolved,2026-09-26 02:30:16.069355+00,2026-09-26 02:43:52.606+00,,low,98
-13,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my clearance?,5,resolved,2026-09-26 02:30:47.060275+00,2026-09-27 09:59:40.694+00,,medium,95
-14,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to apply a scholarship?,7,resolved,2026-09-26 02:32:52.555716+00,2026-09-26 02:51:06.033+00,,low,85
-15,4b9c1680-0474-4e11-ad1a-78d836f57a81,i am very depressed,7,resolved,2026-09-26 06:58:26.729623+00,2026-10-16 03:38:50.147+00,,medium,
-16,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where to ask for tuition fee?,11,resolved,2026-09-26 13:28:03.424717+00,2026-10-16 04:36:20.975+00,,medium,
-17,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to shift to another program?,4,resolved,2026-09-28 05:23:45.840758+00,2026-10-16 04:21:41.371+00,,medium,95
-18,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Can I ask where can I find my tuition fee?,11,resolved,2026-09-28 05:24:14.374782+00,2026-10-16 04:36:19.032+00,,low,95
-19,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day CCS Office, where can I find my prospectus in BSIT?",1,resolved,2026-09-28 05:25:29.925941+00,2026-10-16 03:20:33.037+00,,low,95
-20,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day accounting office, can I ask for my Assessment of fees?",11,resolved,2026-09-28 05:26:47.42277+00,2026-10-16 04:36:16.816+00,,medium,98
-21,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to report a concern regarding bullying that has been occurring. I hope this matter can be addressed promptly to ensure a safe and respectful environment for everyone.,7,resolved,2026-09-28 05:30:23.979191+00,2026-10-16 03:38:47.939+00,,high,90
-22,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to raise a concern regarding the availability and condition of books in the library. I hope additional or updated books can be provided to support students’ learning and research needs.,6,resolved,2026-09-28 05:47:50.320226+00,2026-10-15 09:38:57.478+00,,low,98
-23,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where to find the registrar's office?,4,resolved,2026-10-01 02:49:11.843465+00,2026-10-16 04:04:32.704+00,,low,98
-24,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the accounting office?,11,resolved,2026-10-01 03:08:08.535701+00,2026-10-16 04:36:15.052+00,,low,95
-25,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in data structures and algorithms,1,resolved,2026-10-01 08:38:15.945906+00,2026-10-16 03:20:30.365+00,,medium,
-26,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there any new books available at the library?,6,resolved,2026-10-01 08:39:20.276627+00,2026-10-15 02:03:27.464+00,,medium,
+﻿cd ticket_id,user_id,concern_text,assigned_office,status,created_at,resolved_at,transfer_reason,priority,classification_confidence
+138,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Nagsuka si John Michael.,21,pending,2026-10-28T01:51:46.842185+00:00,,,medium,56
+137,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Gihilanat ko,7,pending,2026-10-28T01:51:36.107245+00:00,,,medium,18
+136,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,A student fainted in the hallway and no one knew where the clinic is.,14,pending,2026-10-28T01:51:20.858241+00:00,,,medium,32
+135,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The library’s air conditioning is too cold and students are uncomfortable.,6,pending,2026-10-28T01:50:54.097329+00:00,,,medium,53
+134,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I pay my fees if I’m not on campus?,11,transferred,2026-10-28T01:49:35.010253+00:00,,Inquiries regarding tuition and fee payment channels are handled by the Accounting Office.,medium,31
+133,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,one of my fellow students brought pyrotechnics (fireworks to school),14,pending,2026-10-28T01:47:14.535961+00:00,,,medium,28
+132,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a fire in a covered court.,14,transferred,2026-10-28T01:46:48.69357+00:00,,An active fire on campus is an urgent safety emergency that must be routed to the Security office.,medium,41
+131,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the COE faculty office?,3,pending,2026-10-28T01:46:25.486158+00:00,,,medium,12
+130,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I got an “INC” in Database 2 and I don’t know how to complete it.,1,transferred,2026-10-28T01:46:01.344119+00:00,,Inquiries regarding incomplete grades in specific IT subjects like Database 2 fall under the purview of the College of Computer Studies.,medium,21
+129,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I need career guidance on choosing between web development and cybersecurity.,7,pending,2026-10-28T00:50:55.946399+00:00,,,medium,47
+128,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The CCTV near the parking lot doesn’t seem to be working.,1,pending,2026-10-28T00:50:24.78076+00:00,,,medium,24
+127,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Some chairs in Room E201 are broken.,15,pending,2026-10-28T00:50:00.881308+00:00,,,medium,24
+126,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My fellow classmate keeps bullying me and I need help,5,pending,2026-10-28T00:22:58.043722+00:00,,,medium,52
+125,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student bringing a bolo knife to school,14,pending,2026-10-28T00:22:09.180792+00:00,,,medium,52
+124,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CCS office?,1,pending,2026-10-28T00:21:46.755748+00:00,,,medium,64
+123,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to pay my overdue book fine,6,transferred,2026-10-28T00:21:32.841451+00:00,,Settling overdue book charges and fines is directly managed by the Library Office.,medium,21
+122,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How do I apply for a research grant?,18,transferred,2026-10-28T00:21:11.716457+00:00,,Inquiries regarding research grant applications and funding are handled by the Research and Creative Works office.,medium,21
+121,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The aircon in Room LR1 is broken,15,transferred,2026-10-28T00:20:50.186261+00:00,,Maintenance and repair of facility air conditioning units fall under Physical Plant's jurisdiction.,medium,51
+120,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I need my NSTP serial number,19,transferred,2026-10-28T00:14:16.544218+00:00,,Requests for NSTP serial numbers are directly handled by the NSTP office.,medium,
+119,4b9c1680-0474-4e11-ad1a-78d836f57a81,"I am feeling embarassed and a little bit upset about whats happen sa among relationship with my gf.
+",7,pending,2026-10-26T10:04:31.762362+00:00,,,medium,95
+118,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay bazooka gidala sa campus,14,pending,2026-10-26T03:12:53.14674+00:00,,,high,100
+117,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the NSTP office?,19,pending,2026-10-26T03:12:09.603951+00:00,,,low,95
+116,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CAS office?,2,transferred,2026-10-26T03:11:45.587296+00:00,,The inquiry is asking for the location of the College of Arts and Sciences (CAS) office.,medium,
+115,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CED office?,12,pending,2026-10-26T03:11:06.402418+00:00,,,low,90
+114,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in capstone 1,1,pending,2026-10-26T03:06:40.871534+00:00,,,medium,60
+113,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay gi-bully sa 3rd floor sa engineering bldg.,7,transferred,2026-10-26T03:00:55.693075+00:00,,This must be guidance office,medium,50
+112,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student applying extreme hair color in campus,14,pending,2026-10-26T02:52:28.036536+00:00,,,medium,60
+111,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Naay pusil diri sa campus,14,pending,2026-10-26T02:51:19.595858+00:00,,,high,100
+110,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Pila'y balance nako sa akong tuition?,11,pending,2026-10-26T02:49:58.394452+00:00,,,medium,100
+109,4b9c1680-0474-4e11-ad1a-78d836f57a81,I feel so anxious today and also having mixed emotions. ,7,pending,2026-10-22T11:40:25.418352+00:00,,,high,95
+108,4b9c1680-0474-4e11-ad1a-78d836f57a81,What services offers by the guidance? ,7,pending,2026-10-22T11:39:43.145284+00:00,,,low,100
+107,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my school ID?,5,pending,2026-10-22T03:28:30.534962+00:00,,,medium,69
+106,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Hello! I have a mental health problem.,7,pending,2026-10-22T00:58:33.160048+00:00,,,high,100
+105,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a fire on the grass.,14,pending,2026-10-22T00:55:18.907321+00:00,,,high,95
+104,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CCS office?,1,pending,2026-10-22T00:51:01.949554+00:00,,,medium,64
+103,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The wifi is broken too,16,pending,2026-10-21T03:15:56.055512+00:00,,,medium,95
+102,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My computer #3 is broken,16,pending,2026-10-21T03:15:41.39286+00:00,,,medium,95
+101,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the security office?,14,pending,2026-10-21T03:14:31.897981+00:00,,,low,95
+100,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I can't connect to SPC Student WIFI.,16,transferred,2026-10-21T03:14:07.938583+00:00,,MIS,medium,
+99,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the Penwood Office?,20,transferred,2026-10-21T03:10:43.193808+00:00,,Penwood office,medium,
+98,4b9c1680-0474-4e11-ad1a-78d836f57a81,What is the working hours of guidance office? ,7,transferred,2026-10-16T06:07:03.436044+00:00,,Guidance office,medium,
+97,4b9c1680-0474-4e11-ad1a-78d836f57a81,What is the first step for enrollment? ,7,transferred,2026-10-16T06:05:34.791171+00:00,,this must be guidance office where a freshmen should enroll as a first step,medium,
+96,06c895b3-ffae-48ba-a8bb-132de41b742c,"Good day CCS Office! I want to know the exact location for my subject load, thank you!",1,resolved,2026-10-16T03:02:46.447324+00:00,2026-10-16T03:04:56.185+00:00,That must be CCS office.,low,85
+95,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Good day! I would like to request a counseling session with the Guidance Office to discuss some personal concerns and receive guidance and support. I hope to arrange a convenient time for a consultation. Thank you for your understanding and assistance.,7,resolved,2026-10-16T00:32:40.72538+00:00,2026-10-16T03:31:29.001+00:00,,medium,99
+94,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day, Penwood Team!
+I would like to raise a concern regarding the student publication of St. Peter’s College. I hope Penwood can provide more opportunities for students to share their ideas, express their opinions, and stay informed about school events and important announcements. Thank you for your time and for your continued efforts to inform and represent the student community.",20,pending,2026-10-16T00:32:04.981708+00:00,,,low,98
+93,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Help us find the right location of physical plant,15,resolved,2026-10-15T10:04:40.642726+00:00,2026-10-16T03:26:53.768+00:00,physical plant,medium,
+92,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the security office? There's a group of student carrying firearms near the student lounge.,14,resolved,2026-10-15T10:01:18.437379+00:00,2026-10-16T03:51:21.561+00:00,security office,medium,
+91,4b9c1680-0474-4e11-ad1a-78d836f57a81,I am so upset and anxious right now.,7,resolved,2026-10-15T10:01:09.217673+00:00,2026-10-16T03:32:12.232+00:00,guidance office,medium,
+90,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to get the Transcript of Records (TOR) for my job application.,4,resolved,2026-10-15T09:58:38.800478+00:00,2026-10-16T04:05:15.332+00:00,that must be registrar's office,medium,
+89,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There are students bringing knives to school.,14,resolved,2026-10-15T09:57:02.349683+00:00,2026-10-16T03:51:23.253+00:00,That must be security office,medium,
+88,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the penwood office?,20,transferred,2026-10-15T09:56:09.170914+00:00,,penwood,medium,
+87,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt depressed.,7,resolved,2026-10-15T09:55:51.875874+00:00,2026-10-16T03:38:16.388+00:00,guidance,medium,
+86,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15T09:54:30.610788+00:00,2026-10-16T03:38:18.108+00:00,guidance,medium,
+85,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the research and creative works office?,18,pending,2026-10-15T09:51:13.166808+00:00,,,low,95
+84,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the guidance office?,7,resolved,2026-10-15T09:50:47.891906+00:00,2026-10-16T03:38:20.731+00:00,guidance,medium,
+83,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the exact location of library?,6,pending,2026-10-15T09:50:21.450667+00:00,,,low,95
+82,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to find the exact location of guidance office,7,resolved,2026-10-15T09:49:16.092998+00:00,2026-10-16T03:38:23.327+00:00,guidance,medium,
+81,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt anxious at the moment.,7,resolved,2026-10-15T09:47:36.995718+00:00,2026-10-16T03:38:25.875+00:00,guidance,high,95
+80,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the guidance office?,7,resolved,2026-10-15T09:43:08.562436+00:00,2026-10-16T03:38:29.452+00:00,guidance,medium,
+79,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15T09:42:35.457333+00:00,2026-10-16T03:38:31.315+00:00,guidance,medium,
+78,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the registrar?,4,resolved,2026-10-15T09:42:21.622611+00:00,2026-10-16T04:07:04.927+00:00,,low,98
+77,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt depressed,7,resolved,2026-10-15T09:41:40.731666+00:00,2026-10-16T03:38:33.288+00:00,guidance,high,95
+76,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15T09:40:09.40963+00:00,2026-10-16T03:38:35.364+00:00,guidance,medium,
+75,4b9c1680-0474-4e11-ad1a-78d836f57a81,What courses does COE offers?,3,resolved,2026-10-15T09:33:36.07611+00:00,2026-10-16T03:59:37.255+00:00,,low,95
+74,4b9c1680-0474-4e11-ad1a-78d836f57a81,What masters does Graduate studies offers?,10,resolved,2026-10-15T09:31:19.658261+00:00,2026-10-16T03:57:46.492+00:00,,low,98
+73,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the Graduate Studies office?,10,resolved,2026-10-15T09:28:44.376671+00:00,2026-10-16T03:57:48.284+00:00,graduate studies,low,95
+72,4b9c1680-0474-4e11-ad1a-78d836f57a81,where's the CCS office?,1,resolved,2026-10-15T09:27:58.485227+00:00,2026-10-16T03:20:26.389+00:00,,low,95
+71,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where's the graduate studies office?,10,resolved,2026-10-15T09:27:16.887073+00:00,2026-10-16T03:57:50.056+00:00,graduate studies,low,90
+70,4b9c1680-0474-4e11-ad1a-78d836f57a81,I don't know where is the LR1.,15,transferred,2026-10-15T09:26:53.159835+00:00,,Inquiries regarding campus room locations and facilities are routed to the Physical Plant office.,medium,
+69,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the criminology department office?,9,pending,2026-10-15T09:20:31.454036+00:00,,,low,95
+68,4b9c1680-0474-4e11-ad1a-78d836f57a81,Andress Bonifacio is bullying me. ,5,in_progress,2026-10-15T09:12:33.261249+00:00,,This must be OSAS,medium,
+67,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there a BSCE course in SPC?,3,resolved,2026-10-14T10:10:15.728058+00:00,2026-10-16T04:02:23.95+00:00,,low,90
+66,4b9c1680-0474-4e11-ad1a-78d836f57a81,Is there a BSCS course in the SPC? ,1,resolved,2026-10-14T09:58:19.363316+00:00,2026-10-16T03:20:28.665+00:00,That must be through CCS office because the CS means Computer Science.,medium,
+65,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"I am experiencing academic stress and difficulties managing my studies. I would like to seek guidance and support to improve my study habits, manage my time effectively, and cope with school-related pressure. I hope the Guidance Office can help me find ways to handle these challenges. Thank you.",7,resolved,2026-10-14T09:48:55.113653+00:00,2026-10-16T03:38:37.748+00:00,He had a mental health problem. That must be go through Guidance Office.,medium,
+64,4b9c1680-0474-4e11-ad1a-78d836f57a81,I can't find where the Engineering departmen is located.,3,resolved,2026-10-14T09:05:59.110837+00:00,2026-10-16T04:02:25.104+00:00,This is a office location concern.,medium,
+63,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Nagsuka si paz,21,pending,2026-10-12T07:25:20.552138+00:00,,,high,95
+62,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,gadala ang studyante ug 'bazooka',14,resolved,2026-10-12T07:24:43.049952+00:00,2026-10-16T03:51:25.487+00:00,,high,95
+61,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"there are too many gay are in St. Peter's College
+",5,pending,2026-10-12T07:23:52.250296+00:00,,,low,80
+60,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the security office?,14,resolved,2026-10-12T03:39:27.099971+00:00,2026-10-16T03:51:27.898+00:00,,low,95
+59,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My classmate fought me during breaktime.,5,transferred,2026-10-12T02:22:15.692375+00:00,,This is a bullying concern. Not the MIS office!,medium,
+58,4b9c1680-0474-4e11-ad1a-78d836f57a81,Is there a HRM course in SPC?,8,resolved,2026-10-08T13:03:46.027887+00:00,2026-10-09T09:31:20.109+00:00,,medium,
+57,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the CBA office located?,8,resolved,2026-10-08T13:02:42.755483+00:00,2026-10-09T09:31:22.309+00:00,,low,95
+56,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There is a male student applying extreme hair color in a campus,14,resolved,2026-10-05T11:17:32.326946+00:00,2026-10-16T03:51:30.298+00:00,,medium,95
+55,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There is a female student inside a campus wearing see-through blouse,14,resolved,2026-10-05T11:15:06.172928+00:00,2026-10-16T03:51:32.334+00:00,,medium,
+54,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Help! I have a cough!,21,pending,2026-10-05T11:14:20.985317+00:00,,,medium,95
+53,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i would like to report mr. galanza for bullying me.,5,resolved,2026-10-05T03:05:31.799372+00:00,2026-10-05T03:10:12.069+00:00,,high,90
+52,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the guardhouse located?,14,resolved,2026-10-03T04:32:18.929711+00:00,2026-10-15T02:34:54.702+00:00,,low,90
+51,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the NSTP office located? I want to pass my project portfolio here.,19,resolved,2026-10-03T04:31:47.08589+00:00,2026-10-12T13:15:28.59+00:00,,medium,95
+50,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a falling lightbulb in a covered court.,15,resolved,2026-10-03T04:30:58.037954+00:00,2026-10-16T03:25:08.753+00:00,,high,95
+49,4b9c1680-0474-4e11-ad1a-78d836f57a81,I have seen some students here in the campus that wearing earings in the admin building can someone put an action on it.,14,resolved,2026-10-03T04:17:17.178281+00:00,2026-10-03T04:47:22.721+00:00,,medium,
+48,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the human resource office located?,17,resolved,2026-10-03T04:10:44.252488+00:00,2026-10-16T03:28:44.247+00:00,,medium,
+47,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Is there any scholarship programs here in spc?
+",5,resolved,2026-10-03T04:07:36.763362+00:00,2026-10-07T14:16:00.308+00:00,,medium,
+46,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the MIS located?,16,resolved,2026-10-03T03:54:59.47626+00:00,2026-10-12T13:13:43.931+00:00,,medium,
+45,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Help! There are knives here at the student lounge, and I’m concerned someone could get seriously hurt. Please send someone to check the area immediately.",14,resolved,2026-10-03T03:42:38.320834+00:00,2026-10-16T03:51:35.738+00:00,,high,98
+44,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i saw a man carrying a gun at the canteen.,14,resolved,2026-10-03T02:37:25.68912+00:00,2026-10-16T03:51:37.67+00:00,,medium,
+43,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i saw some student in the comfort room doing vape.,5,resolved,2026-10-03T02:36:32.627382+00:00,2026-10-07T14:16:51.199+00:00,,medium,95
+42,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i can't connect to the school wifi,16,transferred,2026-10-03T02:32:10.999482+00:00,,That must be MIS Office. Since it handles school wifi for this entire campus.,medium,80
+41,4b9c1680-0474-4e11-ad1a-78d836f57a81,I can't find where the OSAS is located.,5,resolved,2026-10-03T01:28:03.723817+00:00,2026-10-03T01:39:13.93+00:00,,medium,
+40,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How much fees for the Capstone Project 2 defense?,11,closed,2026-10-02T09:34:55.346899+00:00,2026-10-16T04:36:11.768+00:00,,low,95
+39,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How is my tuition fee as of now?,11,resolved,2026-10-02T06:16:09.827956+00:00,2026-10-16T04:36:13.104+00:00,,medium,98
+38,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there a clearance available at this moment?,5,resolved,2026-10-02T06:14:05.038705+00:00,2026-10-07T14:18:33.46+00:00,,low,85
+37,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to apply school ID?,5,in_progress,2026-10-02T06:07:34.070717+00:00,,,medium,95
+36,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is Grade 7 room?,13,resolved,2026-10-02T06:06:20.86831+00:00,2026-10-03T01:04:00.035+00:00,,low,95
+35,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my school ID?,5,in_progress,2026-10-02T06:02:52.939475+00:00,,,medium,95
+34,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to inquire about the available scholarships for students and the requirements needed to apply. Financial assistance would greatly help me with my educational expenses. Thank you!,7,resolved,2026-10-02T06:01:24.14179+00:00,2026-10-16T03:38:39.763+00:00,,low,90
+33,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the CED office?,12,resolved,2026-10-02T06:01:12.684742+00:00,2026-10-16T03:58:14.976+00:00,,low,95
+32,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I am very depressed.,7,resolved,2026-10-02T06:00:51.228058+00:00,2026-10-16T03:38:41.968+00:00,,high,98
+31,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to inquire about the available scholarships for students and the requirements needed to apply. Financial assistance would greatly help me with my educational expenses. Thank you!,7,resolved,2026-10-02T05:59:06.794199+00:00,2026-10-16T03:38:45.263+00:00,,medium,
+30,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the CAS office?,2,resolved,2026-10-01T09:02:03.141758+00:00,2026-10-12T01:18:02.953+00:00,,medium,
+29,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day, Registrar’s Office.
+I would like to inquire about my Certificate of Registration. I have not yet received/accessed my Certificate of Registration and would like to know if it is already available for release or if there are any requirements or steps I need to complete.
+I would appreciate your assistance regarding this matter. Thank you very much.",4,resolved,2026-10-01T08:56:48.445761+00:00,2026-10-16T04:21:36.307+00:00,,medium,95
+28,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there old books available at the library?,6,resolved,2026-10-01T08:56:04.973398+00:00,2026-10-07T00:50:50.437+00:00,,low,98
 27,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day, Registrar’s Office.
 I would like to inquire about the certification of authentication verification for my documents. May I kindly ask for an update on the status of my request and whether there are any additional requirements or steps that I need to complete?
 I would appreciate your assistance and guidance regarding this matter.
-Thank you very much for your time and assistance.",4,resolved,2026-10-01 08:53:42.060676+00,2026-10-16 04:27:26.778+00,That must be registrar's office,medium,
-28,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there old books available at the library?,6,resolved,2026-10-01 08:56:04.973398+00,2026-10-07 00:50:50.437+00,,low,98
-29,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day, Registrar’s Office.
-I would like to inquire about my Certificate of Registration. I have not yet received/accessed my Certificate of Registration and would like to know if it is already available for release or if there are any requirements or steps I need to complete.
-I would appreciate your assistance regarding this matter. Thank you very much.",4,resolved,2026-10-01 08:56:48.445761+00,2026-10-16 04:21:36.307+00,,medium,95
-30,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the CAS office?,2,resolved,2026-10-01 09:02:03.141758+00,2026-10-12 01:18:02.953+00,,medium,
-31,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to inquire about the available scholarships for students and the requirements needed to apply. Financial assistance would greatly help me with my educational expenses. Thank you!,7,resolved,2026-10-02 05:59:06.794199+00,2026-10-16 03:38:45.263+00,,medium,
-32,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I am very depressed.,7,resolved,2026-10-02 06:00:51.228058+00,2026-10-16 03:38:41.968+00,,high,98
-33,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the CED office?,12,resolved,2026-10-02 06:01:12.684742+00,2026-10-16 03:58:14.976+00,,low,95
-34,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to inquire about the available scholarships for students and the requirements needed to apply. Financial assistance would greatly help me with my educational expenses. Thank you!,7,resolved,2026-10-02 06:01:24.14179+00,2026-10-16 03:38:39.763+00,,low,90
-35,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my school ID?,5,in_progress,2026-10-02 06:02:52.939475+00,,,medium,95
-36,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is Grade 7 room?,13,resolved,2026-10-02 06:06:20.86831+00,2026-10-03 01:04:00.035+00,,low,95
-37,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to apply school ID?,5,in_progress,2026-10-02 06:07:34.070717+00,,,medium,95
-38,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there a clearance available at this moment?,5,resolved,2026-10-02 06:14:05.038705+00,2026-10-07 14:18:33.46+00,,low,85
-39,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How is my tuition fee as of now?,11,resolved,2026-10-02 06:16:09.827956+00,2026-10-16 04:36:13.104+00,,medium,98
-40,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How much fees for the Capstone Project 2 defense?,11,closed,2026-10-02 09:34:55.346899+00,2026-10-16 04:36:11.768+00,,low,95
-41,4b9c1680-0474-4e11-ad1a-78d836f57a81,I can't find where the OSAS is located.,5,resolved,2026-10-03 01:28:03.723817+00,2026-10-03 01:39:13.93+00,,medium,
-42,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i can't connect to the school wifi,16,transferred,2026-10-03 02:32:10.999482+00,,That must be MIS Office. Since it handles school wifi for this entire campus.,medium,80
-43,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i saw some student in the comfort room doing vape.,5,resolved,2026-10-03 02:36:32.627382+00,2026-10-07 14:16:51.199+00,,medium,95
-44,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i saw a man carrying a gun at the canteen.,14,resolved,2026-10-03 02:37:25.68912+00,2026-10-16 03:51:37.67+00,,medium,
-45,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Help! There are knives here at the student lounge, and I’m concerned someone could get seriously hurt. Please send someone to check the area immediately.",14,resolved,2026-10-03 03:42:38.320834+00,2026-10-16 03:51:35.738+00,,high,98
-46,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the MIS located?,16,resolved,2026-10-03 03:54:59.47626+00,2026-10-12 13:13:43.931+00,,medium,
-47,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Is there any scholarship programs here in spc?
-",5,resolved,2026-10-03 04:07:36.763362+00,2026-10-07 14:16:00.308+00,,medium,
-48,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the human resource office located?,17,resolved,2026-10-03 04:10:44.252488+00,2026-10-16 03:28:44.247+00,,medium,
-49,4b9c1680-0474-4e11-ad1a-78d836f57a81,I have seen some students here in the campus that wearing earings in the admin building can someone put an action on it.,14,resolved,2026-10-03 04:17:17.178281+00,2026-10-03 04:47:22.721+00,,medium,
-50,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a falling lightbulb in a covered court.,15,resolved,2026-10-03 04:30:58.037954+00,2026-10-16 03:25:08.753+00,,high,95
-51,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the NSTP office located? I want to pass my project portfolio here.,19,resolved,2026-10-03 04:31:47.08589+00,2026-10-12 13:15:28.59+00,,medium,95
-52,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the guardhouse located?,14,resolved,2026-10-03 04:32:18.929711+00,2026-10-15 02:34:54.702+00,,low,90
-53,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,i would like to report mr. galanza for bullying me.,5,resolved,2026-10-05 03:05:31.799372+00,2026-10-05 03:10:12.069+00,,high,90
-54,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Help! I have a cough!,21,pending,2026-10-05 11:14:20.985317+00,,,medium,95
-55,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There is a female student inside a campus wearing see-through blouse,14,resolved,2026-10-05 11:15:06.172928+00,2026-10-16 03:51:32.334+00,,medium,
-56,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There is a male student applying extreme hair color in a campus,14,resolved,2026-10-05 11:17:32.326946+00,2026-10-16 03:51:30.298+00,,medium,95
-57,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the CBA office located?,8,resolved,2026-10-08 13:02:42.755483+00,2026-10-09 09:31:22.309+00,,low,95
-58,4b9c1680-0474-4e11-ad1a-78d836f57a81,Is there a HRM course in SPC?,8,resolved,2026-10-08 13:03:46.027887+00,2026-10-09 09:31:20.109+00,,medium,
-59,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My classmate fought me during breaktime.,5,transferred,2026-10-12 02:22:15.692375+00,,This is a bullying concern. Not the MIS office!,medium,
-60,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the security office?,14,resolved,2026-10-12 03:39:27.099971+00,2026-10-16 03:51:27.898+00,,low,95
-61,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"there are too many gay are in St. Peter's College
-",5,pending,2026-10-12 07:23:52.250296+00,,,low,80
-62,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,gadala ang studyante ug 'bazooka',14,resolved,2026-10-12 07:24:43.049952+00,2026-10-16 03:51:25.487+00,,high,95
-63,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Nagsuka si paz,21,pending,2026-10-12 07:25:20.552138+00,,,high,95
-64,4b9c1680-0474-4e11-ad1a-78d836f57a81,I can't find where the Engineering departmen is located.,3,resolved,2026-10-14 09:05:59.110837+00,2026-10-16 04:02:25.104+00,This is a office location concern.,medium,
-65,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"I am experiencing academic stress and difficulties managing my studies. I would like to seek guidance and support to improve my study habits, manage my time effectively, and cope with school-related pressure. I hope the Guidance Office can help me find ways to handle these challenges. Thank you.",7,resolved,2026-10-14 09:48:55.113653+00,2026-10-16 03:38:37.748+00,He had a mental health problem. That must be go through Guidance Office.,medium,
-66,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Is there a BSCS course in the SPC? ",1,resolved,2026-10-14 09:58:19.363316+00,2026-10-16 03:20:28.665+00,That must be through CCS office because the CS means Computer Science.,medium,
-67,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there a BSCE course in SPC?,3,resolved,2026-10-14 10:10:15.728058+00,2026-10-16 04:02:23.95+00,,low,90
-68,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Andress Bonifacio is bullying me. ",5,in_progress,2026-10-15 09:12:33.261249+00,,This must be OSAS,medium,
-69,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the criminology department office?,9,pending,2026-10-15 09:20:31.454036+00,,,low,95
-70,4b9c1680-0474-4e11-ad1a-78d836f57a81,I don't know where is the LR1.,15,transferred,2026-10-15 09:26:53.159835+00,,Inquiries regarding campus room locations and facilities are routed to the Physical Plant office.,medium,
-71,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where's the graduate studies office?,10,resolved,2026-10-15 09:27:16.887073+00,2026-10-16 03:57:50.056+00,graduate studies,low,90
-72,4b9c1680-0474-4e11-ad1a-78d836f57a81,where's the CCS office?,1,resolved,2026-10-15 09:27:58.485227+00,2026-10-16 03:20:26.389+00,,low,95
-73,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where is the Graduate Studies office?,10,resolved,2026-10-15 09:28:44.376671+00,2026-10-16 03:57:48.284+00,graduate studies,low,95
-74,4b9c1680-0474-4e11-ad1a-78d836f57a81,What masters does Graduate studies offers?,10,resolved,2026-10-15 09:31:19.658261+00,2026-10-16 03:57:46.492+00,,low,98
-75,4b9c1680-0474-4e11-ad1a-78d836f57a81,What courses does COE offers?,3,resolved,2026-10-15 09:33:36.07611+00,2026-10-16 03:59:37.255+00,,low,95
-76,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15 09:40:09.40963+00,2026-10-16 03:38:35.364+00,guidance,medium,
-77,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt depressed,7,resolved,2026-10-15 09:41:40.731666+00,2026-10-16 03:38:33.288+00,guidance,high,95
-78,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the registrar?,4,resolved,2026-10-15 09:42:21.622611+00,2026-10-16 04:07:04.927+00,,low,98
-79,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15 09:42:35.457333+00,2026-10-16 03:38:31.315+00,guidance,medium,
-80,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the guidance office?,7,resolved,2026-10-15 09:43:08.562436+00,2026-10-16 03:38:29.452+00,guidance,medium,
-81,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt anxious at the moment.,7,resolved,2026-10-15 09:47:36.995718+00,2026-10-16 03:38:25.875+00,guidance,high,95
-82,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to find the exact location of guidance office,7,resolved,2026-10-15 09:49:16.092998+00,2026-10-16 03:38:23.327+00,guidance,medium,
-83,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the exact location of library?,6,pending,2026-10-15 09:50:21.450667+00,,,low,95
-84,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the guidance office?,7,resolved,2026-10-15 09:50:47.891906+00,2026-10-16 03:38:20.731+00,guidance,medium,
-85,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the research and creative works office?,18,pending,2026-10-15 09:51:13.166808+00,,,low,95
-86,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the guidance office?,7,resolved,2026-10-15 09:54:30.610788+00,2026-10-16 03:38:18.108+00,guidance,medium,
-87,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I felt depressed.,7,resolved,2026-10-15 09:55:51.875874+00,2026-10-16 03:38:16.388+00,guidance,medium,
-88,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the penwood office?,20,transferred,2026-10-15 09:56:09.170914+00,,penwood,medium,
-89,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There are students bringing knives to school.,14,resolved,2026-10-15 09:57:02.349683+00,2026-10-16 03:51:23.253+00,That must be security office,medium,
-90,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to get the Transcript of Records (TOR) for my job application.,4,resolved,2026-10-15 09:58:38.800478+00,2026-10-16 04:05:15.332+00,that must be registrar's office,medium,
-91,4b9c1680-0474-4e11-ad1a-78d836f57a81,I am so upset and anxious right now.,7,resolved,2026-10-15 10:01:09.217673+00,2026-10-16 03:32:12.232+00,guidance office,medium,
-92,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the security office? There's a group of student carrying firearms near the student lounge.,14,resolved,2026-10-15 10:01:18.437379+00,2026-10-16 03:51:21.561+00,security office,medium,
-93,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Help us find the right location of physical plant,15,resolved,2026-10-15 10:04:40.642726+00,2026-10-16 03:26:53.768+00,physical plant,medium,
-94,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day, Penwood Team!
-I would like to raise a concern regarding the student publication of St. Peter’s College. I hope Penwood can provide more opportunities for students to share their ideas, express their opinions, and stay informed about school events and important announcements. Thank you for your time and for your continued efforts to inform and represent the student community.",20,pending,2026-10-16 00:32:04.981708+00,,,low,98
-95,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Good day! I would like to request a counseling session with the Guidance Office to discuss some personal concerns and receive guidance and support. I hope to arrange a convenient time for a consultation. Thank you for your understanding and assistance.,7,resolved,2026-10-16 00:32:40.72538+00,2026-10-16 03:31:29.001+00,,medium,99
-96,06c895b3-ffae-48ba-a8bb-132de41b742c,"Good day CCS Office! I want to know the exact location for my subject load, thank you!",1,resolved,2026-10-16 03:02:46.447324+00,2026-10-16 03:04:56.185+00,That must be CCS office.,low,85
-97,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What is the first step for enrollment? ",7,transferred,2026-10-16 06:05:34.791171+00,,this must be guidance office where a freshmen should enroll as a first step,medium,
-98,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What is the working hours of guidance office? ",7,transferred,2026-10-16 06:07:03.436044+00,,Guidance office,medium,
-99,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the Penwood Office?,20,transferred,2026-10-21 03:10:43.193808+00,,Penwood office,medium,
-100,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I can't connect to SPC Student WIFI.,16,transferred,2026-10-21 03:14:07.938583+00,,MIS,medium,
-101,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the security office?,14,pending,2026-10-21 03:14:31.897981+00,,,low,95
-102,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My computer #3 is broken,16,pending,2026-10-21 03:15:41.39286+00,,,medium,95
-103,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The wifi is broken too,16,pending,2026-10-21 03:15:56.055512+00,,,medium,95
-104,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CCS office?,1,pending,2026-10-22 00:51:01.949554+00,,,medium,64
-105,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a fire on the grass.,14,pending,2026-10-22 00:55:18.907321+00,,,high,95
-106,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Hello! I have a mental health problem.,7,pending,2026-10-22 00:58:33.160048+00,,,high,100
-107,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my school ID?,5,pending,2026-10-22 03:28:30.534962+00,,,medium,69
-108,4b9c1680-0474-4e11-ad1a-78d836f57a81,"What services offers by the guidance? ",7,pending,2026-10-22 11:39:43.145284+00,,,low,100
-109,4b9c1680-0474-4e11-ad1a-78d836f57a81,"I feel so anxious today and also having mixed emotions. ",7,pending,2026-10-22 11:40:25.418352+00,,,high,95
-110,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Pila'y balance nako sa akong tuition?,11,pending,2026-10-26 02:49:58.394452+00,,,medium,100
-111,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Naay pusil diri sa campus,14,pending,2026-10-26 02:51:19.595858+00,,,high,100
-112,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student applying extreme hair color in campus,14,pending,2026-10-26 02:52:28.036536+00,,,medium,60
-113,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay gi-bully sa 3rd floor sa engineering bldg.,7,transferred,2026-10-26 03:00:55.693075+00,,This must be guidance office,medium,50
-114,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in capstone 1,1,pending,2026-10-26 03:06:40.871534+00,,,medium,60
-115,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CED office?,12,pending,2026-10-26 03:11:06.402418+00,,,low,90
-116,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CAS office?,2,transferred,2026-10-26 03:11:45.587296+00,,The inquiry is asking for the location of the College of Arts and Sciences (CAS) office.,medium,
-117,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,where's the NSTP office?,19,pending,2026-10-26 03:12:09.603951+00,,,low,95
-118,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,naay bazooka gidala sa campus,14,pending,2026-10-26 03:12:53.14674+00,,,high,100
-119,4b9c1680-0474-4e11-ad1a-78d836f57a81,"I am feeling embarassed and a little bit upset about whats happen sa among relationship with my gf.
-",7,pending,2026-10-26 10:04:31.762362+00,,,medium,95
-120,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I need my NSTP serial number,19,transferred,2026-10-28 00:14:16.544218+00,,Requests for NSTP serial numbers are directly handled by the NSTP office.,medium,
-121,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The aircon in Room LR1 is broken,15,transferred,2026-10-28 00:20:50.186261+00,,Maintenance and repair of facility air conditioning units fall under Physical Plant's jurisdiction.,medium,51
-122,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How do I apply for a research grant?,18,transferred,2026-10-28 00:21:11.716457+00,,Inquiries regarding research grant applications and funding are handled by the Research and Creative Works office.,medium,21
-123,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I want to pay my overdue book fine,6,transferred,2026-10-28 00:21:32.841451+00,,Settling overdue book charges and fines is directly managed by the Library Office.,medium,21
-124,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the CCS office?,1,pending,2026-10-28 00:21:46.755748+00,,,medium,64
-125,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a student bringing a bolo knife to school,14,pending,2026-10-28 00:22:09.180792+00,,,medium,52
-126,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My fellow classmate keeps bullying me and I need help,5,pending,2026-10-28 00:22:58.043722+00,,,medium,52
-127,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Some chairs in Room E201 are broken.,15,pending,2026-10-28 00:50:00.881308+00,,,medium,24
-128,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The CCTV near the parking lot doesn’t seem to be working.,1,pending,2026-10-28 00:50:24.78076+00,,,medium,24
-129,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I need career guidance on choosing between web development and cybersecurity.,7,pending,2026-10-28 00:50:55.946399+00,,,medium,47
-130,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I got an “INC” in Database 2 and I don’t know how to complete it.,1,transferred,2026-10-28 01:46:01.344119+00,,Inquiries regarding incomplete grades in specific IT subjects like Database 2 fall under the purview of the College of Computer Studies.,medium,21
-131,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where's the COE faculty office?,3,pending,2026-10-28 01:46:25.486158+00,,,medium,12
-132,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,There's a fire in a covered court.,14,transferred,2026-10-28 01:46:48.69357+00,,An active fire on campus is an urgent safety emergency that must be routed to the Security office.,medium,41
-133,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,one of my fellow students brought pyrotechnics (fireworks to school),14,pending,2026-10-28 01:47:14.535961+00,,,medium,28
-134,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I pay my fees if I’m not on campus?,11,transferred,2026-10-28 01:49:35.010253+00,,Inquiries regarding tuition and fee payment channels are handled by the Accounting Office.,medium,31
-135,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,The library’s air conditioning is too cold and students are uncomfortable.,6,pending,2026-10-28 01:50:54.097329+00,,,medium,53
-136,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,A student fainted in the hallway and no one knew where the clinic is.,14,pending,2026-10-28 01:51:20.858241+00,,,medium,32
-137,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Gihilanat ko,7,pending,2026-10-28 01:51:36.107245+00,,,medium,18
-138,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Nagsuka si John Michael.,21,pending,2026-10-28 01:51:46.842185+00,,,medium,56
+Thank you very much for your time and assistance.",4,resolved,2026-10-01T08:53:42.060676+00:00,2026-10-16T04:27:26.778+00:00,That must be registrar's office,medium,
+26,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Is there any new books available at the library?,6,resolved,2026-10-01T08:39:20.276627+00:00,2026-10-15T02:03:27.464+00:00,,medium,
+25,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in data structures and algorithms,1,resolved,2026-10-01T08:38:15.945906+00:00,2026-10-16T03:20:30.365+00:00,,medium,
+24,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where is the accounting office?,11,resolved,2026-10-01T03:08:08.535701+00:00,2026-10-16T04:36:15.052+00:00,,low,95
+23,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where to find the registrar's office?,4,resolved,2026-10-01T02:49:11.843465+00:00,2026-10-16T04:04:32.704+00:00,,low,98
+22,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to raise a concern regarding the availability and condition of books in the library. I hope additional or updated books can be provided to support students’ learning and research needs.,6,resolved,2026-09-28T05:47:50.320226+00:00,2026-10-15T09:38:57.478+00:00,,low,98
+21,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to report a concern regarding bullying that has been occurring. I hope this matter can be addressed promptly to ensure a safe and respectful environment for everyone.,7,resolved,2026-09-28T05:30:23.979191+00:00,2026-10-16T03:38:47.939+00:00,,high,90
+20,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day accounting office, can I ask for my Assessment of fees?",11,resolved,2026-09-28T05:26:47.42277+00:00,2026-10-16T04:36:16.816+00:00,,medium,98
+19,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day CCS Office, where can I find my prospectus in BSIT?",1,resolved,2026-09-28T05:25:29.925941+00:00,2026-10-16T03:20:33.037+00:00,,low,95
+18,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Can I ask where can I find my tuition fee?,11,resolved,2026-09-28T05:24:14.374782+00:00,2026-10-16T04:36:19.032+00:00,,low,95
+17,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to shift to another program?,4,resolved,2026-09-28T05:23:45.840758+00:00,2026-10-16T04:21:41.371+00:00,,medium,95
+16,4b9c1680-0474-4e11-ad1a-78d836f57a81,Where to ask for tuition fee?,11,resolved,2026-09-26T13:28:03.424717+00:00,2026-10-16T04:36:20.975+00:00,,medium,
+15,4b9c1680-0474-4e11-ad1a-78d836f57a81,i am very depressed,7,resolved,2026-09-26T06:58:26.729623+00:00,2026-10-16T03:38:50.147+00:00,,medium,
+14,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,How to apply a scholarship?,7,resolved,2026-09-26T02:32:52.555716+00:00,2026-09-26T02:51:06.033+00:00,,low,85
+13,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my clearance?,5,resolved,2026-09-26T02:30:47.060275+00:00,2026-09-27T09:59:40.694+00:00,,medium,95
+12,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I find my Transcript of Records (TOR)?,4,resolved,2026-09-26T02:30:16.069355+00:00,2026-09-26T02:43:52.606+00:00,,low,98
+11,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where do I find the library?,6,resolved,2026-09-26T02:28:49.626082+00:00,2026-09-26T02:42:25.052+00:00,,low,95
+10,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Where can I get my Student ID?,5,resolved,2026-09-26T02:28:05.744446+00:00,2026-09-27T09:59:44.336+00:00,,medium,95
+9,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Can you please where do I find the CCS office?,1,resolved,2026-09-26T02:09:37.20626+00:00,2026-10-16T03:20:36.325+00:00,,low,95
+8,4b9c1680-0474-4e11-ad1a-78d836f57a81,"Where to find the library? 
+",6,resolved,2026-09-26T02:04:24.147893+00:00,2026-09-26T02:42:23.276+00:00,,medium,
+7,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Good day CCS Office. I would like to report a concern regarding Database 1. I am having difficulty understanding some of the database concepts and completing the required activities. I would appreciate assistance or clarification regarding the topic and the requirements for the course. Thank you.,1,resolved,2026-09-25T02:42:57.538719+00:00,2026-10-16T03:20:38.606+00:00,,medium,98
+6,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Dear CCS Office, our Capstone group 1 is requesting permission to access the computer lab resources on October 12, 2026 (1:30PM) to start our project deployment.",1,resolved,2026-09-25T02:28:41.652293+00:00,2026-10-16T03:20:41.789+00:00,,medium,
+5,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,"Good day. Reporting a technical issue in Lab Room A202, Workstation PC4. The machine suffers from network disconnection, affecting our laboratory sessions.",1,resolved,2026-09-25T02:24:51.866485+00:00,2026-10-16T03:20:43.889+00:00,,medium,
+4,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,I would like to know the requirements for enrolling in an Engineering Subject.,3,resolved,2026-09-25T02:00:24.623407+00:00,2026-10-16T04:02:26.281+00:00,,medium,
+3,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing Grade in Information Technology Fundamentals,1,resolved,2026-09-25T01:39:32.425408+00:00,2026-10-16T03:20:45.988+00:00,,medium,95
+2,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,My computer account is not working,1,resolved,2026-09-18T03:22:01.128422+00:00,2026-09-18T03:24:36.364+00:00,,medium,80
+1,eddc1acb-c69d-44b0-ac2b-e3590ebd6ab6,Missing grade in programming 1,1,resolved,2026-09-18T02:20:22.846055+00:00,2026-09-18T03:09:39.439+00:00,,medium,
