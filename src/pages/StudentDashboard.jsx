@@ -474,10 +474,11 @@ const handleSubmit = async (e) => {
     setSubmitting(true);
     setErrorMsg("");
 
-    // 1. Ask the AI model to classify + route the concern
+    // 1. Send the concern to the Python ML service (TF-IDF + Logistic Regression)
+    //    Returns null if the service is unreachable -> ticket is saved unassigned
     const classification = await classifyTicket(ticketText);
 
-    // 2. Resolve the office name the AI returned into an office_id
+    // 2. Resolve the office the ML model returned into an office_id
     let assignedOfficeId = null;
 
     const { data: allOffices, error: officesError } = await supabase
@@ -487,8 +488,7 @@ const handleSubmit = async (e) => {
     if (officesError) {
       console.error("Failed to load offices table:", officesError);
     } else {
-      // ---------- ML (NEW) ----------
-      // ML result already carries the DB office_id, so no name matching is needed
+      // ML result carries the office_id, so match by id first
       if (classification?.officeId) {
         const byId = allOffices.find((o) => o.office_id === classification.officeId);
         if (byId) {
@@ -497,7 +497,7 @@ const handleSubmit = async (e) => {
         }
       }
 
-      // Gemini path (or ML id not found): match by office name
+      // Fallback: match by office name if the id wasn't found in the DB
       if (!assignedOfficeId) {
         const normalize = (s) => s?.trim().toLowerCase();
 
@@ -516,11 +516,10 @@ const handleSubmit = async (e) => {
           }
         }
       }
-      // ---------- end ML (NEW) ----------
 
       if (!assignedOfficeId) {
         console.warn(
-          "Ticket could not be matched to an office row. AI classification:",
+          "Ticket could not be matched to an office row. ML classification:",
           classification,
           "Available offices in DB:",
           allOffices.map((o) => o.office_name)
@@ -528,7 +527,7 @@ const handleSubmit = async (e) => {
       }
     }
 
-    // 3. Insert the ticket with the AI-assigned fields (falls back safely if AI failed)
+    // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
     const { data: inserted, error } = await supabase
       .from("tickets")
       .insert({
@@ -547,13 +546,13 @@ const handleSubmit = async (e) => {
       return;
     }
 
-    // 4. Log the AI routing decision for the office's activity log
+    // 4. Log the ML routing decision for the office's activity log
     if (assignedOfficeId) {
       await supabase.from("logs").insert({
         ticket_id: inserted.ticket_id,
         office_id: assignedOfficeId,
-        action: `AI routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
-        module: "AI Routing",
+        action: `ML routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
+        module: "ML Routing",
       });
     }
 

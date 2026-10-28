@@ -1,9 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Gemini is still used for admin reports and transfer suggestions (not for submitting concerns)
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-
-console.log("Gemini key loaded:", import.meta.env.VITE_GEMINI_API_KEY ? "YES" : "NO");
-console.log("Key preview:", import.meta.env.VITE_GEMINI_API_KEY?.slice(0, 6) + "...");
 
 // Keep this in sync with the OFFICES array in your dashboards
 const OFFICE_LABELS = [
@@ -95,77 +93,42 @@ General rules:
 - confidence reflects how certain you are about primary_office, not the whole ticket.
 - Keep reasoning to one sentence.`;
 
-/* ===================== ML (NEW) ===================== */
+/* ===================== ML routing ===================== */
 
 const ML_URL = import.meta.env.VITE_ML_API_URL || "/ml";
-const ML_MIN_CONFIDENCE = Number(import.meta.env.VITE_ML_MIN_CONFIDENCE || 50);
 
-// TF-IDF + One-vs-Rest Logistic Regression model served by ml_service (FastAPI)
-async function classifyWithML(text) {
+// TF-IDF + One-vs-Rest Logistic Regression served by ml_service (FastAPI)
+export async function classifyTicket(concernText) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 4000);
+  const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
     const res = await fetch(`${ML_URL}/classify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text: concernText }),
       signal: ctrl.signal,
     });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null; // service down or slow -> fall back to Gemini
+    if (!res.ok) throw new Error(`ML service responded ${res.status}`);
+    const ml = await res.json();
+
+    return {
+      office: ml.office,
+      officeId: ml.office_id,
+      labels: ml.top3.filter((r) => r.score >= 0.2).map((r) => r.office),
+      priority: "medium", // the model only predicts the office
+      confidence: ml.confidence,
+      reasoning: "Routed by the TF-IDF + Logistic Regression model.",
+      source: "ml",
+    };
+  } catch (err) {
+    console.error("ML classification failed:", err);
+    return null; // ticket is saved unassigned so an admin can route it
   } finally {
     clearTimeout(timer);
   }
 }
 
-// Hybrid: use the ML model when it is confident, otherwise fall back to Gemini.
-export async function classifyTicket(concernText) {
-  const ml = await classifyWithML(concernText);
-  if (ml && ml.confidence >= ML_MIN_CONFIDENCE) {
-    return {
-      office: ml.office,
-      officeId: ml.office_id,
-      labels: ml.top3.filter((r) => r.score >= 0.2).map((r) => r.office),
-      priority: "medium", // the ML model only predicts the office
-      confidence: ml.confidence,
-      reasoning: "Routed by the TF-IDF + Logistic Regression model.",
-      source: "ml",
-    };
-  }
-  return classifyTicketGemini(concernText);
-}
-
-/* =================== end ML (NEW) =================== */
-
-export async function classifyTicketGemini(concernText) {
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: concernText,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        responseMimeType: "application/json",
-        responseSchema: CLASSIFICATION_SCHEMA,
-        temperature: 0.2,
-      },
-    });
-
-    const result = JSON.parse(response.text);
-
-    return {
-      office: result.primary_office,
-      labels: result.labels,
-      priority: result.priority,
-      confidence: Math.round(result.confidence),
-      reasoning: result.reasoning,
-    };
-  } catch (err) {
-    console.error("AI classification failed:", err);
-    return null; // caller should fall back gracefully
-  }
-}
+/* ================= end ML routing ================= */
 
 const REPORT_SCHEMA = {
   type: Type.OBJECT,
