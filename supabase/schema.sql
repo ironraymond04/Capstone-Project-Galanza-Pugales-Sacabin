@@ -258,6 +258,7 @@ CREATE TABLE IF NOT EXISTS "public"."tickets" (
     "transfer_reason" "text",
     "priority" "public"."ticket_priority" DEFAULT 'medium'::"public"."ticket_priority" NOT NULL,
     "classification_confidence" smallint,
+    "predicted_offices" bigint[] DEFAULT '{}'::bigint[] NOT NULL,
     CONSTRAINT "tickets_classification_confidence_check" CHECK ((("classification_confidence" >= 0) AND ("classification_confidence" <= 100)))
 );
 

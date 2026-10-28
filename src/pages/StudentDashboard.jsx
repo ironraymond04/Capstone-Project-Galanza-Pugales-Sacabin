@@ -527,6 +527,11 @@ const handleSubmit = async (e) => {
       }
     }
 
+    const validIds = new Set((allOffices || []).map((o) => o.office_id));
+    const predictedOffices = (classification?.predictedOfficeIds || []).filter((id) =>
+    validIds.has(id)
+    );
+
     // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
     const { data: inserted, error } = await supabase
       .from("tickets")
@@ -536,6 +541,7 @@ const handleSubmit = async (e) => {
         assigned_office: assignedOfficeId,
         priority: classification?.priority || "medium",
         classification_confidence: classification?.confidence ?? null,
+        predicted_offices: predictedOffices,
       })
       .select()
       .single();
