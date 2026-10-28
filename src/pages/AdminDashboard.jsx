@@ -51,29 +51,29 @@ function escapeCsv(value) {
 
 function downloadTicketsCsv(tickets, filename = "tickets.csv") {
   const headers = [
-    "Ticket",
-    "Submitted by",
-    "Concern",
-    "Office",
-    "AI confidence (%)",
-    "Status",
-    "Escalation level",
-    "Transfer reason",
-    "Submitted",
-    "Resolved",
+    "ticket_id",
+    "user_id",
+    "concern_text",
+    "assigned_office",
+    "status",
+    "created_at",
+    "resolved_at",
+    "transfer_reason",
+    "priority",
+    "classification_confidence",
   ];
 
   const rows = tickets.map((t) => [
-    formatTicketCode(t.ticket_id),
-    t.profiles?.name || "Unknown user",
-    t.concern_text,
-    t.offices?.office_name || "Unassigned",
+    t.ticket_id ?? "",
+    t.user_id ?? "",
+    t.concern_text ?? "",
+    t.assigned_office ?? "",
+    t.status ?? "",
+    t.created_at ?? "",
+    t.resolved_at ?? "",
+    t.transfer_reason ?? "",
+    t.priority ?? "",
     t.classification_confidence ?? "",
-    toDisplayStatus(t.status),
-    t.escalation_level || "",
-    t.transfer_reason || "",
-    t.created_at ? new Date(t.created_at).toLocaleString() : "",
-    t.resolved_at ? new Date(t.resolved_at).toLocaleString() : "",
   ]);
 
   const csv = [headers, ...rows]
@@ -91,7 +91,6 @@ function downloadTicketsCsv(tickets, filename = "tickets.csv") {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 function replaceUserIds(text, userMap) {
