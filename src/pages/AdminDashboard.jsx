@@ -354,7 +354,7 @@ function Overview({ tickets, users, offices, loading, onSelect }) {
               <table className="chd-table">
                 <thead><tr><th>Ticket</th><th>Office</th><th>Status</th></tr></thead>
                 <tbody>
-                  {tickets.slice(0, 4).map((t) => (
+                  {tickets.slice(0, 13).map((t) => (
                     <tr key={t.ticket_id}>
                       <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                       <td>{t.offices?.office_name || "Unassigned"}</td>
