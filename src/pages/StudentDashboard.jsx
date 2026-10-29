@@ -995,17 +995,161 @@ function Feedback({ session, tickets, selectedTicketId, onTicketSelected, onFeed
   );
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function FilterDropdown({ label, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const current = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className="btn btn-ghost"
+        style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {label}: {current.label} ▾
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          aria-label={`Filter by ${label.toLowerCase()}`}
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            marginTop: 4,
+            minWidth: 190,
+            maxHeight: 280,
+            overflowY: "auto",
+            padding: 4,
+            listStyle: "none",
+            background: "var(--surface, #fff)",
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+            zIndex: 20,
+          }}
+        >
+          {options.map((o) => (
+            <li key={o.value} role="option" aria-selected={value === o.value}>
+              <button
+                type="button"
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "8px 10px",
+                  background: value === o.value ? "var(--maroon-050)" : "transparent",
+                  color: "var(--ink)",
+                  fontWeight: value === o.value ? 700 : 400,
+                  fontSize: 13,
+                  borderRadius: 4,
+                  textAlign: "left",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <span>{o.label}</span>
+                <span style={{ color: "var(--ink-soft)" }}>{o.count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function History({ tickets, loading }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [yearFilter, setYearFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+
+  const matchesYear = (t, year) =>
+    year === "all" || new Date(t.created_at).getFullYear() === Number(year);
+  const matchesMonth = (t, month) =>
+    month === "all" || new Date(t.created_at).getMonth() === Number(month);
+
+  // Years that actually have tickets, newest first
+  const years = [...new Set(tickets.map((t) => new Date(t.created_at).getFullYear()))].sort((a, b) => b - a);
+
+  // Each dropdown's counts respect the other dropdown's selection
+  const yearOptions = [
+    { value: "all", label: "All", count: tickets.filter((t) => matchesMonth(t, monthFilter)).length },
+    ...years.map((y) => ({
+      value: String(y),
+      label: String(y),
+      count: tickets.filter((t) => matchesYear(t, y) && matchesMonth(t, monthFilter)).length,
+    })),
+  ];
+
+  const monthOptions = [
+    { value: "all", label: "All", count: tickets.filter((t) => matchesYear(t, yearFilter)).length },
+    ...MONTH_NAMES.map((name, i) => ({
+      value: String(i),
+      label: name,
+      count: tickets.filter((t) => matchesYear(t, yearFilter) && matchesMonth(t, i)).length,
+    })),
+  ];
+
+  const filteredTickets = tickets.filter(
+    (t) => matchesYear(t, yearFilter) && matchesMonth(t, monthFilter)
+  );
+  const filtersActive = yearFilter !== "all" || monthFilter !== "all";
 
   return (
     <>
       <PageHeader title="Full ticket history" subtitle="This section displays all the tickets you have submitted." />
       <div className="card">
+        {/* Filter by month / year */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <FilterDropdown label="Year" value={yearFilter} options={yearOptions} onChange={setYearFilter} />
+          <FilterDropdown label="Month" value={monthFilter} options={monthOptions} onChange={setMonthFilter} />
+          {filtersActive && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "8px 14px", fontSize: 13 }}
+              onClick={() => { setYearFilter("all"); setMonthFilter("all"); }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading tickets...</p>
         ) : tickets.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+        ) : filteredTickets.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets found for the selected month and year.</p>
         ) : (
           <TableScroll>
             <table className="chd-table">
@@ -1013,7 +1157,7 @@ function History({ tickets, loading }) {
                 <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th><th>Submitted</th></tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
+                {filteredTickets.map((t) => (
                   <tr key={t.ticket_id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
                     <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                     <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
