@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 // Keep this in sync with the OFFICES array in your dashboards
 const OFFICE_LABELS = [
-  "REGISTRAR", "LIBRARY", "GUIDANCE", "ACCOUNTING", "DSA/OSAS", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC",
+  "REGISTRAR", "LIBRARY", "GUIDANCE", "ACCOUNTING", "DSA/OSAS", "CAS", "COE", "CED", "CCS", "COC", "CBA", "BED", "GRADUATE STUDIES", "SECURITY", "PHYSICAL PLANT", "NSTP", "RESEARCH AND CREATIVE WORKS", "PENWOOD", "MIS", "HUMAN RESOURCE", "CLINIC", "TESDA",
 ];
 
 const CLASSIFICATION_SCHEMA = {
@@ -81,6 +81,8 @@ Read the student's concern and decide which office should handle it. Offices and
 - HUMAN RESOURCE: Handles employee-related concerns for faculty and staff. Route tickets about employment records and contracts, payroll and salary concerns, leave applications and balances, attendance and DTR corrections, benefits and government contributions (SSS, PhilHealth, Pag-IBIG), recruitment and applications, certificates of employment, faculty and staff performance or conduct concerns, and onboarding or separation processing. Do NOT route student concerns here.
 
 -CLINIC: Handles health and medical concerns for students, faculty, and staff within the campus. Route tickets about medical consultations and first aid, illness or injury incidents on campus, medical and dental check-ups, health certificates and medical clearances (enrollment, OJT/internship, sports, and events), medical excuse slips and validation of illness-related absences, health records and immunization or vaccination requirements, medicine and supply requests, health and wellness programs or drives, infirmary or rest-room use, and reports of communicable diseases or health hazards. Do NOT route counseling, guidance, or mental health concerns (route to GUIDANCE), campus facility or sanitation repairs, or academic, payroll, and enrollment concerns here.
+
+- TESDA: The TESDA office handles technical-vocational programs and training at the college. Route tickets about TESDA enrollment and scholarships (e.g. TWSP, STEP), NC assessment and certification, vocational course schedules, training allowances, and requests for TESDA-related documents. Do NOT route regular college enrollment or grade concerns here unless they are specifically about a TESDA program.
 
 Critical routing rule for grades:
 - If the concern names a SPECIFIC SUBJECT or COURSE (e.g. "missing grade in Information Technology Fundamentals", "incomplete grade in Data Structures", "wrong grade in Thesis Writing"), route it to the COLLEGE that teaches that subject, NOT Registrar. Use the subject name to infer the program/college (e.g. any IT/Computer Science/Programming/Networking/Systems subject → CCS; any Engineering subject → COE; general education, English, Math, Filipino → CAS; Business, Marketing, Accounting-as-a-subject → CBA; Education/Teaching methods subjects → CED; Criminology/Law Enforcement subjects → COC).

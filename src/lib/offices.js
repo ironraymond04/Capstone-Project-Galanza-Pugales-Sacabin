@@ -4,7 +4,7 @@ export const OFFICE_NAMES = {
   7: "GUIDANCE", 8: "CBA", 9: "COC", 10: "GRADUATE STUDIES", 11: "ACCOUNTING",
   12: "CED", 13: "BED", 14: "SECURITY", 15: "PHYSICAL PLANT", 16: "MIS",
   17: "HUMAN RESOURCE", 18: "RESEARCH AND CREATIVE WORKS", 19: "NSTP",
-  20: "PENWOOD", 21: "CLINIC",
+  20: "PENWOOD", 21: "CLINIC", 22: "TESDA"
 };
 
 // Names of the predicted offices, excluding the one the ticket is assigned to
