@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabaseClient";
 import { applyStoredReadNotifications, clearStoredReadNotification, storeReadNotification } from "../lib/notificationReadState";
 import "../styles/theme.css";
-import { classifyTicket } from "../lib/ai";
+import { classifyTicket, generateConcernText } from "../lib/ai";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
 import CampusMap from "../components/CampusMap";
@@ -60,7 +60,7 @@ function formatDate(dateStr) {
 export default function StudentDashboard() {
   const { session, profile } = useAuth();
   const [active, setActive] = useState(
-  () => sessionStorage.getItem("chd-student-active-tab") || "overview"
+    () => sessionStorage.getItem("chd-student-active-tab") || "overview"
   );
   const [ticketText, setTicketText] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
@@ -419,6 +419,13 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
 function TicketDetailModal({ ticket, onClose }) {
   const { session, profile } = useAuth();
 
+  // Close on Escape
+  useEffect(() => {
+    const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
     <div className="ticket-modal-overlay" onClick={onClose}>
       <div className="ticket-detail-box ticket-conversation-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Ticket details">
@@ -467,141 +474,159 @@ function SubmitTicket({ session, ticketText, setTicketText, selectedOffice, setS
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [generating, setGenerating] = useState(false);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!ticketText.trim()) return;
-  setSubmitting(true);
-  setErrorMsg("");
-
-  // 1. Send the concern to the Python ML service (TF-IDF + Logistic Regression)
-  //    Returns null if the service is unreachable -> ticket is saved unassigned
-  const classification = await classifyTicket(ticketText);
-
-  // 2. Resolve the office the ML model returned into an office_id
-  let assignedOfficeId = null;
-  let predictedOffices = [];
-
-  const { data: allOffices, error: officesError } = await supabase
-    .from("offices")
-    .select("office_id, office_name");
-
-  if (officesError) {
-    console.error("Failed to load offices table:", officesError);
-  } else {
-    // ML result carries the office_id, so match by id first
-    if (classification?.officeId) {
-      const byId = allOffices.find((o) => o.office_id === classification.officeId);
-      if (byId) {
-        assignedOfficeId = byId.office_id;
-        classification.office = byId.office_name;
-      }
+  // AI: rewrite the student's rough note into a clear, complete concern
+  const handleGenerate = async () => {
+    if (!ticketText.trim() || generating) return;
+    setGenerating(true);
+    setErrorMsg("");
+    const generated = await generateConcernText(ticketText);
+    setGenerating(false);
+    if (generated) {
+      setTicketText(generated);
+      setSubmitted(false);
+    } else {
+      setErrorMsg("AI couldn't generate text right now. Please try again.");
     }
+  };
 
-    // Fallback: match by office name if the id wasn't found in the DB
-    if (!assignedOfficeId) {
-      const normalize = (s) => s?.trim().toLowerCase();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!ticketText.trim()) return;
+    setSubmitting(true);
+    setErrorMsg("");
 
-      const candidateOffices = [
-        classification?.office,
-        ...(classification?.labels || []),
-      ].filter(Boolean);
+    // 1. Send the concern to the Python ML service (TF-IDF + Logistic Regression)
+    //    Returns null if the service is unreachable -> ticket is saved unassigned
+    const classification = await classifyTicket(ticketText);
 
-      for (const officeName of candidateOffices) {
-        const match = allOffices.find(
-          (row) => normalize(row.office_name) === normalize(officeName)
-        );
-        if (match) {
-          assignedOfficeId = match.office_id;
-          break;
+    // 2. Resolve the office the ML model returned into an office_id
+    let assignedOfficeId = null;
+    let predictedOffices = [];
+
+    const { data: allOffices, error: officesError } = await supabase
+      .from("offices")
+      .select("office_id, office_name");
+
+    if (officesError) {
+      console.error("Failed to load offices table:", officesError);
+    } else {
+      // ML result carries the office_id, so match by id first
+      if (classification?.officeId) {
+        const byId = allOffices.find((o) => o.office_id === classification.officeId);
+        if (byId) {
+          assignedOfficeId = byId.office_id;
+          classification.office = byId.office_name;
         }
       }
-    }
 
-    if (!assignedOfficeId) {
-      console.warn(
-        "Ticket could not be matched to an office row. ML classification:",
-        classification,
-        "Available offices in DB:",
-        allOffices.map((o) => o.office_name)
+      // Fallback: match by office name if the id wasn't found in the DB
+      if (!assignedOfficeId) {
+        const normalize = (s) => s?.trim().toLowerCase();
+
+        const candidateOffices = [
+          classification?.office,
+          ...(classification?.labels || []),
+        ].filter(Boolean);
+
+        for (const officeName of candidateOffices) {
+          const match = allOffices.find(
+            (row) => normalize(row.office_name) === normalize(officeName)
+          );
+          if (match) {
+            assignedOfficeId = match.office_id;
+            break;
+          }
+        }
+      }
+
+      if (!assignedOfficeId) {
+        console.warn(
+          "Ticket could not be matched to an office row. ML classification:",
+          classification,
+          "Available offices in DB:",
+          allOffices.map((o) => o.office_name)
+        );
+      }
+
+      // Keep only predicted IDs that really exist in the offices table
+      const validIds = new Set(allOffices.map((o) => o.office_id));
+      predictedOffices = (classification?.predictedOfficeIds || []).filter((id) =>
+        validIds.has(id)
       );
     }
 
-    // Keep only predicted IDs that really exist in the offices table
-    const validIds = new Set(allOffices.map((o) => o.office_id));
-    predictedOffices = (classification?.predictedOfficeIds || []).filter((id) =>
-      validIds.has(id)
-    );
-  }
+    // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
+    const { data: inserted, error } = await supabase
+      .from("tickets")
+      .insert({
+        user_id: session.user.id,
+        concern_text: ticketText,
+        assigned_office: assignedOfficeId,
+        priority: classification?.priority || "medium",
+        classification_confidence: classification?.confidence ?? null,
+        predicted_offices: predictedOffices,
+      })
+      .select()
+      .single();
 
-  // 3. Insert the ticket with the ML-assigned fields (saved unassigned if the ML service failed)
-  const { data: inserted, error } = await supabase
-    .from("tickets")
-    .insert({
-      user_id: session.user.id,
-      concern_text: ticketText,
-      assigned_office: assignedOfficeId,
-      priority: classification?.priority || "medium",
-      classification_confidence: classification?.confidence ?? null,
-      predicted_offices: predictedOffices,
-    })
-    .select()
-    .single();
+    if (error) {
+      setSubmitting(false);
+      setErrorMsg("Something went wrong submitting your ticket. Please try again.");
+      return;
+    }
 
-  if (error) {
+    // 4. Log the ML routing decision for the office's activity log
+    if (assignedOfficeId) {
+      await supabase.from("logs").insert({
+        ticket_id: inserted.ticket_id,
+        office_id: assignedOfficeId,
+        action: `ML routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
+        module: "ML Routing",
+      });
+    }
+
     setSubmitting(false);
-    setErrorMsg("Something went wrong submitting your ticket. Please try again.");
-    return;
-  }
-
-  // 4. Log the ML routing decision for the office's activity log
-  if (assignedOfficeId) {
-    await supabase.from("logs").insert({
-      ticket_id: inserted.ticket_id,
-      office_id: assignedOfficeId,
-      action: `ML routed ${formatTicketCode(inserted.ticket_id)} to ${classification.office} (${classification.confidence}% confidence)`,
-      module: "ML Routing",
-    });
-  }
-
-  setSubmitting(false);
-  setSubmitted(true);
-  setTicketText("");
-  setSelectedOffice("");
-  onSubmitted?.();
-};
-
-const DRAFT_KEY = `ticket_draft_${session?.user?.id}`;
-
-// 1. Restore a saved draft when the page loads (only if the box is empty)
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved && !ticketText) setTicketText(saved);
-  } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-
-// 2. Save the draft as the user types; clear it when the box is emptied/submitted
-useEffect(() => {
-  try {
-    if (ticketText.trim()) localStorage.setItem(DRAFT_KEY, ticketText);
-    else localStorage.removeItem(DRAFT_KEY);
-  } catch {}
-}, [ticketText, DRAFT_KEY]);
-
-// 3. Warn before closing/refreshing the tab while there's unsent text
-useEffect(() => {
-  if (!ticketText.trim() || submitting) return;
-
-  const handleBeforeUnload = (e) => {
-    e.preventDefault();
-    e.returnValue = ""; // required for Chrome to show the prompt
+    setSubmitted(true);
+    setTicketText("");
+    setSelectedOffice("");
+    onSubmitted?.();
   };
 
-  window.addEventListener("beforeunload", handleBeforeUnload);
-  return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-}, [ticketText, submitting]);
+  const DRAFT_KEY = `ticket_draft_${session?.user?.id}`;
+
+  // 1. Restore a saved draft when the page loads (only if the box is empty)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved && !ticketText) setTicketText(saved);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2. Save the draft as the user types; clear it when the box is emptied/submitted
+  useEffect(() => {
+    try {
+      if (ticketText.trim()) localStorage.setItem(DRAFT_KEY, ticketText);
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+  }, [ticketText, DRAFT_KEY]);
+
+  // 3. Warn before closing/refreshing the tab while there's unsent text
+  useEffect(() => {
+    if (!ticketText.trim() || submitting) return;
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = ""; // required for Chrome to show the prompt
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [ticketText, submitting]);
+
+  const generateDisabled = generating || submitting || !ticketText.trim();
 
   return (
     <>
@@ -620,7 +645,45 @@ useEffect(() => {
               onChange={(e) => { setTicketText(e.target.value); setSubmitted(false); }}
             />
           </div>
-          
+
+          {/* AI: Generate text */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              flexWrap: "wrap",
+              marginBottom: 16,
+            }}
+          >
+            <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+              Type a short note, then let AI polish it.
+            </span>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generateDisabled}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 14px",
+                background: "#1e8e3e",
+                color: "#fff",
+                border: "none",
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: generateDisabled ? "not-allowed" : "pointer",
+                opacity: generateDisabled ? 0.6 : 1,
+              }}
+            >
+              <span aria-hidden="true" style={{ fontSize: 16 }}>✧</span>
+              {generating ? "Generating..." : "Generate text"}
+            </button>
+          </div>
+
           {errorMsg && <p style={{ color: "var(--danger, #b3261e)", fontSize: 13, marginBottom: 12 }}>{errorMsg}</p>}
 
           <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} disabled={submitting}>
@@ -976,6 +1039,8 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [reviewedTicketIds, setReviewedTicketIds] = useState([]);
   const [feedbackStatus, setFeedbackStatus] = useState("loading");
+  const [checkedIds, setCheckedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1014,6 +1079,52 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedNotification]);
 
+  const checkedItems = notifications.filter((n) => checkedIds.has(n.notif_id));
+  const allChecked = notifications.length > 0 && checkedItems.length === notifications.length;
+  // Any unread notification selected -> "Mark as read", otherwise "Mark as unread"
+  const bulkAction = checkedItems.some((n) => !n.is_read) ? "read" : "unread";
+
+  const toggleOne = (id) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setCheckedIds(allChecked ? new Set() : new Set(notifications.map((n) => n.notif_id)));
+  };
+
+  const handleBulkMark = async () => {
+    if (checkedItems.length === 0 || bulkBusy) return;
+    const markAsRead = bulkAction === "read";
+    const userId = session?.user?.id;
+    const notifIds = checkedItems.map((n) => n.notif_id);
+    setBulkBusy(true);
+
+    if (markAsRead) notifIds.forEach((id) => storeReadNotification(userId, id));
+    else notifIds.forEach((id) => clearStoredReadNotification(userId, id));
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .update({ is_read: markAsRead })
+      .in("notif_id", notifIds)
+      .eq("user_id", userId)
+      .select("notif_id");
+
+    if (error) {
+      console.error("bulk mark student notifications error:", error);
+    } else if (markAsRead && data?.length) {
+      data.forEach((row) => clearStoredReadNotification(userId, row.notif_id));
+    }
+
+    onRead?.();
+    setCheckedIds(new Set());
+    setBulkBusy(false);
+  };
+
   const openNotification = async (n) => {
     setSelectedNotification({ ...n, is_read: true });
     if (!n.is_read) {
@@ -1043,45 +1154,89 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
         ) : notifications.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
         ) : (
-          notifications.map((n, i) => (
-            <button
-              key={n.notif_id}
-              type="button"
-              onClick={() => openNotification(n)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                background: n.is_read ? "transparent" : "var(--maroon-050)",
-                borderRadius: 4,
-                padding: "12px 8px",
-                borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none",
-                color: "var(--ink)",
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-                gap: 6,
-                fontWeight: n.is_read ? 400 : 700,
-              }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                {!n.is_read && (
-                  <span
-                    aria-label="Unread notification"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: "#ff5a5f",
-                      boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                <span style={{ fontSize: 14 }}>{n.message}</span>
-              </span>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
-            </button>
-          ))
+          <>
+            {/* Toolbar: select all + mark as read/unread */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 8px 12px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+              <input
+                type="checkbox"
+                checked={allChecked}
+                onChange={toggleAll}
+                aria-label="Select all notifications"
+                style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+                onClick={handleBulkMark}
+                disabled={checkedItems.length === 0 || bulkBusy}
+              >
+                {bulkBusy ? "Saving..." : bulkAction === "read" ? "Mark as read" : "Mark as unread"}
+              </button>
+              {checkedItems.length > 0 && (
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{checkedItems.length} selected</span>
+              )}
+            </div>
+
+            {notifications.map((n, i) => (
+              <div
+                key={n.notif_id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: n.is_read ? "transparent" : "var(--maroon-050)",
+                  borderRadius: 4,
+                  borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checkedIds.has(n.notif_id)}
+                  onChange={() => toggleOne(n.notif_id)}
+                  aria-label={`Select ${n.message.slice(0, 40)}`}
+                  style={{ width: 16, height: 16, margin: "0 4px 0 8px", flexShrink: 0, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => openNotification(n)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: "left",
+                    background: "transparent",
+                    border: "none",
+                    padding: "12px 8px",
+                    color: "var(--ink)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                    gap: 6,
+                    fontWeight: n.is_read ? 400 : 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    {!n.is_read && (
+                      <span
+                        aria-label="Unread notification"
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#ff5a5f",
+                          boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <span style={{ fontSize: 14 }}>{n.message}</span>
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(n.created_at)}</span>
+                </button>
+              </div>
+            ))}
+          </>
         )}
       </div>
 

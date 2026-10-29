@@ -309,3 +309,38 @@ export async function suggestTransferOffice({ concernText, transferReason, curre
     return null;
   }
 }
+
+const CONCERN_WRITER_PROMPT = `You help students at St. Peter's College write clear helpdesk concerns.
+
+Rewrite the student's rough note into a clear, polite, complete concern of 2-4 sentences.
+
+Rules:
+- Use ONLY the facts the student gave. Never invent names, dates, subjects, ticket numbers, or details.
+- Keep the same language the student used (English, Filipino, Bisaya, or mixed).
+- Write in first person, as the student.
+- Make it specific so the right office can understand it: what happened, what is affected, and what help is needed.
+- Output plain text only. No quotes, markdown, greetings, or explanations.`;
+
+export async function generateConcernText(roughText) {
+  const input = (roughText || "").trim();
+  if (!input) return null;
+
+  for (const model of REPORT_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: input,
+        config: {
+          systemInstruction: CONCERN_WRITER_PROMPT,
+          temperature: 0.4,
+          maxOutputTokens: 512,
+        },
+      });
+      const text = (response.text || "").trim();
+      if (text) return text;
+    } catch (err) {
+      console.error(`Concern generation failed (model=${model}):`, err);
+    }
+  }
+  return null; // caller shows an error message
+}

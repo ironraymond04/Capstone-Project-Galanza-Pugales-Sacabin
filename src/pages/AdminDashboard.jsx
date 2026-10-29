@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
@@ -280,7 +280,31 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+// Tracks open modals so Esc only closes the top-most one
+const modalStack = [];
+
 function Modal({ title, onClose, children, width = 420, className = "" }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const entry = {};
+    modalStack.push(entry);
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape" && modalStack[modalStack.length - 1] === entry) {
+        onCloseRef.current?.();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      const i = modalStack.indexOf(entry);
+      if (i !== -1) modalStack.splice(i, 1);
+    };
+  }, []);
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20, 10, 10, 0.45)", display: "grid", placeItems: "center", zIndex: 1000, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className={`card ${className}`} style={{ width: "100%", maxWidth: width, background: "var(--paper, #fff)" }}>
@@ -427,9 +451,13 @@ function SystemLogs({ logs, users, loading }) {
   );
 }
 
+const TICKET_FILTER_OPTIONS = ["All", "Open", "In Progress", "Resolved", "Transferred"];
+
 function ManageTickets({ tickets, loading, offices, onUpdated }) {
   const [filter, setFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const filterRef = useRef(null);
 
   const filterMap = {
     Open: ["pending"],
@@ -437,6 +465,26 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
     Resolved: ["resolved", "closed"],
     Transferred: ["transferred"],
   };
+
+  // Close the dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  const countFor = (option) =>
+    option === "All"
+      ? tickets.length
+      : tickets.filter((t) => filterMap[option].includes(t.status)).length;
 
   const filtered =
     filter === "All"
@@ -451,17 +499,65 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
       />
 
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
-          {["All", "Open", "In Progress", "Resolved", "Transferred"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={filter === f ? "btn btn-primary" : "btn btn-ghost"}
-              style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap", flexShrink: 0 }}
+        {/* Filter dropdown */}
+        <div ref={filterRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={menuOpen}
+          >
+            Filter by: {filter} ▾
+          </button>
+
+          {menuOpen && (
+            <ul
+              role="listbox"
+              aria-label="Filter tickets by status"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                marginTop: 4,
+                minWidth: 190,
+                padding: 4,
+                listStyle: "none",
+                background: "var(--surface, #fff)",
+                border: "1px solid var(--line)",
+                borderRadius: 6,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                zIndex: 20,
+              }}
             >
-              {f}
-            </button>
-          ))}
+              {TICKET_FILTER_OPTIONS.map((option) => (
+                <li key={option} role="option" aria-selected={filter === option}>
+                  <button
+                    type="button"
+                    onClick={() => { setFilter(option); setMenuOpen(false); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "8px 10px",
+                      background: filter === option ? "var(--maroon-050)" : "transparent",
+                      color: "var(--ink)",
+                      fontWeight: filter === option ? 700 : 400,
+                      fontSize: 13,
+                      borderRadius: 4,
+                      textAlign: "left",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span>{option}</span>
+                    <span style={{ color: "var(--ink-soft)" }}>{countFor(option)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <button
@@ -544,6 +640,23 @@ function ManageUsers({ users, loading, onUpdated }) {
   const { session } = useAuth();
   const [roleFilter, setRoleFilter] = useState("all");
   const [actionError, setActionError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const filterRef = useRef(null);
+
+  // Close the dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   const toggleStatus = async (userId, current) => {
     setActionError("");
@@ -586,28 +699,76 @@ function ManageUsers({ users, loading, onUpdated }) {
     return result;
   }, [users]);
 
-  const filteredUsers = useMemo(() => {
-    const active = FILTERS.find((f) => f.key === roleFilter) || FILTERS[0];
-    return users.filter((u) => active.match(u.role));
-  }, [users, roleFilter]);
+  const activeFilter = FILTERS.find((f) => f.key === roleFilter) || FILTERS[0];
+
+  const filteredUsers = useMemo(
+    () => users.filter((u) => activeFilter.match(u.role)),
+    [users, activeFilter]
+  );
 
   return (
     <>
       <PageHeader title="Users" subtitle="Saved to and retrieved from the User data store." />
       <div className="card">
-        {/* Filter buttons */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              className={roleFilter === f.key ? "btn btn-primary" : "btn btn-ghost"}
-              style={{ padding: "6px 14px", fontSize: 12, whiteSpace: "nowrap" }}
-              onClick={() => setRoleFilter(f.key)}
-              aria-pressed={roleFilter === f.key}
+        {/* Filter dropdown */}
+        <div ref={filterRef} style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={menuOpen}
+          >
+            Filter by: {activeFilter.label} ▾
+          </button>
+
+          {menuOpen && (
+            <ul
+              role="listbox"
+              aria-label="Filter users by role"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                marginTop: 4,
+                minWidth: 200,
+                padding: 4,
+                listStyle: "none",
+                background: "var(--surface, #fff)",
+                border: "1px solid var(--line)",
+                borderRadius: 6,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                zIndex: 20,
+              }}
             >
-              {f.label} ({counts[f.key]})
-            </button>
-          ))}
+              {FILTERS.map((f) => (
+                <li key={f.key} role="option" aria-selected={roleFilter === f.key}>
+                  <button
+                    type="button"
+                    onClick={() => { setRoleFilter(f.key); setMenuOpen(false); }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "8px 10px",
+                      background: roleFilter === f.key ? "var(--maroon-050)" : "transparent",
+                      color: "var(--ink)",
+                      fontWeight: roleFilter === f.key ? 700 : 400,
+                      fontSize: 13,
+                      borderRadius: 4,
+                      textAlign: "left",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span>{f.label}</span>
+                    <span style={{ color: "var(--ink-soft)" }}>{counts[f.key]}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {actionError && (
@@ -1460,6 +1621,8 @@ function Transfers({ tickets, offices, loading, onUpdated }) {
 
 function Notifications({ userId, tickets, ticketsLoading, notifications, notificationsLoading, onRead, readTicketStorageKey, readTicketIds, setReadTicketIds, offices, onTicketsUpdated }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const feedItems = [
     ...notifications.map((notification) => ({
@@ -1480,16 +1643,79 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
     })),
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  const selectedItems = feedItems.filter((f) => selectedIds.has(f.id));
+  const allSelected = feedItems.length > 0 && selectedItems.length === feedItems.length;
+  // If any selected item is unread -> offer "Mark as read", otherwise "Mark as unread"
+  const bulkAction = selectedItems.some((f) => f.isUnread) ? "read" : "unread";
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(feedItems.map((f) => f.id)));
+  };
+
+  const saveReadTicketIds = (nextIds) => {
+    setReadTicketIds(nextIds);
+    try {
+      localStorage.setItem(readTicketStorageKey, JSON.stringify([...nextIds]));
+    } catch (error) {
+      console.error("save read ticket state error:", error);
+    }
+  };
+
+  const handleBulkMark = async () => {
+    if (selectedItems.length === 0 || bulkBusy) return;
+    const markRead = bulkAction === "read";
+    setBulkBusy(true);
+
+    // 1. Ticket rows (stored locally)
+    const ticketItems = selectedItems.filter((f) => f.type === "ticket");
+    if (ticketItems.length > 0) {
+      const nextIds = new Set(readTicketIds);
+      ticketItems.forEach((f) => (markRead ? nextIds.add(f.id) : nextIds.delete(f.id)));
+      saveReadTicketIds(nextIds);
+    }
+
+    // 2. Real notifications (stored in Supabase)
+    const notifIds = selectedItems
+      .filter((f) => f.type === "notification")
+      .map((f) => f.item.notif_id);
+
+    if (notifIds.length > 0) {
+      if (markRead) notifIds.forEach((id) => storeReadNotification(userId, id));
+      else notifIds.forEach((id) => clearStoredReadNotification(userId, id));
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .update({ is_read: markRead })
+        .in("notif_id", notifIds)
+        .eq("user_id", userId)
+        .select("notif_id");
+
+      if (error) {
+        console.error("bulk mark notifications error:", error);
+      } else if (markRead && data?.length) {
+        data.forEach((row) => clearStoredReadNotification(userId, row.notif_id));
+      }
+      onRead?.();
+    }
+
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+  };
+
   const openFeedItem = async (feedItem) => {
     if (feedItem.type === "ticket") {
       const nextReadIds = new Set(readTicketIds);
       nextReadIds.add(feedItem.id);
-      setReadTicketIds(nextReadIds);
-      try {
-        localStorage.setItem(readTicketStorageKey, JSON.stringify([...nextReadIds]));
-      } catch (error) {
-        console.error("save read ticket state error:", error);
-      }
+      saveReadTicketIds(nextReadIds);
       setSelectedTicket(feedItem.item);
       return;
     }
@@ -1521,35 +1747,78 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
         ) : feedItems.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
         ) : (
-          feedItems.map((feedItem, i) => (
-            <button
-              key={feedItem.id}
-              type="button"
-              onClick={() => void openFeedItem(feedItem)}
-              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
-            >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                {feedItem.isUnread && (
-                  <span
-                    aria-label="Unread notification"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: "#ff5a5f",
-                      boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
-                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
-              </span>
-            </button>
-          ))
+          <>
+            {/* Toolbar: select all + mark as read/unread */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 8px 12px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleAll}
+                aria-label="Select all notifications"
+                style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+                onClick={handleBulkMark}
+                disabled={selectedItems.length === 0 || bulkBusy}
+              >
+                {bulkBusy ? "Saving..." : bulkAction === "read" ? "Mark as read" : "Mark as unread"}
+              </button>
+              {selectedItems.length > 0 && (
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{selectedItems.length} selected</span>
+              )}
+            </div>
+
+            {feedItems.map((feedItem, i) => (
+              <div
+                key={feedItem.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none",
+                  borderRadius: 4,
+                  background: feedItem.isUnread ? "var(--maroon-050)" : "transparent",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(feedItem.id)}
+                  onChange={() => toggleOne(feedItem.id)}
+                  aria-label={`Select ${feedItem.message.slice(0, 40)}`}
+                  style={{ width: 16, height: 16, margin: "0 4px 0 8px", flexShrink: 0, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void openFeedItem(feedItem)}
+                  style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    {feedItem.isUnread && (
+                      <span
+                        aria-label="Unread notification"
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#ff5a5f",
+                          boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                    <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
+                    <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
+                  </span>
+                </button>
+              </div>
+            ))}
+          </>
         )}
       </div>
       {selectedTicket && (

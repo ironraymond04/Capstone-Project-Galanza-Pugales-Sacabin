@@ -1003,6 +1003,8 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [checkedIds, setCheckedIds] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const markRead = async (n) => {
     if (n.is_read) return;
@@ -1054,6 +1056,74 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
 
   const feedLoading = loading || (hasOffice && (ticketsLoading || logsLoading));
 
+  const checkedItems = feedItems.filter((f) => checkedIds.has(f.id));
+  const allChecked = feedItems.length > 0 && checkedItems.length === feedItems.length;
+  // Any unread item selected -> "Mark as read", otherwise "Mark as unread"
+  const bulkAction = checkedItems.some((f) => f.isUnread) ? "read" : "unread";
+
+  const toggleOne = (id) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setCheckedIds(allChecked ? new Set() : new Set(feedItems.map((f) => f.id)));
+  };
+
+  const saveReadFeedIds = (nextIds) => {
+    setReadFeedItemIds(nextIds);
+    try {
+      localStorage.setItem(readFeedStorageKey, JSON.stringify([...nextIds]));
+    } catch (error) {
+      console.error("save read notification state error:", error);
+    }
+  };
+
+  const handleBulkMark = async () => {
+    if (checkedItems.length === 0 || bulkBusy) return;
+    const markAsRead = bulkAction === "read";
+    setBulkBusy(true);
+
+    // 1. Ticket + activity rows (stored locally)
+    const localItems = checkedItems.filter((f) => f.type !== "notification");
+    if (localItems.length > 0) {
+      const nextIds = new Set(readFeedItemIds);
+      localItems.forEach((f) => (markAsRead ? nextIds.add(f.id) : nextIds.delete(f.id)));
+      saveReadFeedIds(nextIds);
+    }
+
+    // 2. Real notifications (stored in Supabase)
+    const notifIds = checkedItems
+      .filter((f) => f.type === "notification")
+      .map((f) => f.item.notif_id);
+
+    if (notifIds.length > 0) {
+      if (markAsRead) notifIds.forEach((id) => storeReadNotification(userId, id));
+      else notifIds.forEach((id) => clearStoredReadNotification(userId, id));
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .update({ is_read: markAsRead })
+        .in("notif_id", notifIds)
+        .eq("user_id", userId)
+        .select("notif_id");
+
+      if (error) {
+        console.error("bulk mark staff notifications error:", error);
+      } else if (markAsRead && data?.length) {
+        data.forEach((row) => clearStoredReadNotification(userId, row.notif_id));
+      }
+      onRead?.();
+    }
+
+    setCheckedIds(new Set());
+    setBulkBusy(false);
+  };
+
   const openFeedItem = (feedItem) => {
     if (feedItem.type === "notification") {
       setSelectedNotification(feedItem.item);
@@ -1061,12 +1131,7 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
     } else {
       const nextReadIds = new Set(readFeedItemIds);
       nextReadIds.add(feedItem.id);
-      setReadFeedItemIds(nextReadIds);
-      try {
-        localStorage.setItem(readFeedStorageKey, JSON.stringify([...nextReadIds]));
-      } catch (error) {
-        console.error("save read notification state error:", error);
-      }
+      saveReadFeedIds(nextReadIds);
     }
 
     if (feedItem.type === "ticket") {
@@ -1117,35 +1182,78 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
             ) : feedItems.length === 0 ? (
               <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No notifications yet.</p>
             ) : (
-              feedItems.map((feedItem, i) => (
-                <button
-                  type="button"
-                  key={feedItem.id}
-                  onClick={() => openFeedItem(feedItem)}
-                  style={{ display: "flex", width: "100%", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none", borderRadius: 4, background: feedItem.isUnread ? "var(--maroon-050)" : "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
-                >
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    {feedItem.isUnread && (
-                      <span
-                        aria-label="Unread notification"
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: "#ff5a5f",
-                          boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                    <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
-                  </span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
-                    <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
-                  </span>
-                </button>
-              ))
+              <>
+                {/* Toolbar: select all + mark as read/unread */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "4px 8px 12px", borderBottom: "1px solid var(--line)", flexWrap: "wrap" }}>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    onChange={toggleAll}
+                    aria-label="Select all notifications"
+                    style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+                    onClick={handleBulkMark}
+                    disabled={checkedItems.length === 0 || bulkBusy}
+                  >
+                    {bulkBusy ? "Saving..." : bulkAction === "read" ? "Mark as read" : "Mark as unread"}
+                  </button>
+                  {checkedItems.length > 0 && (
+                    <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{checkedItems.length} selected</span>
+                  )}
+                </div>
+
+                {feedItems.map((feedItem, i) => (
+                  <div
+                    key={feedItem.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none",
+                      borderRadius: 4,
+                      background: feedItem.isUnread ? "var(--maroon-050)" : "transparent",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.has(feedItem.id)}
+                      onChange={() => toggleOne(feedItem.id)}
+                      aria-label={`Select ${feedItem.message.slice(0, 40)}`}
+                      style={{ width: 16, height: 16, margin: "0 4px 0 8px", flexShrink: 0, cursor: "pointer", accentColor: "var(--maroon-500)" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => openFeedItem(feedItem)}
+                      style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "12px 8px", border: "none", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer", fontWeight: feedItem.isUnread ? 700 : 400 }}
+                    >
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                        {feedItem.isUnread && (
+                          <span
+                            aria-label="Unread notification"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              background: "#ff5a5f",
+                              boxShadow: "0 0 0 2px rgba(255,90,95,0.18)",
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <span style={{ minWidth: 0, fontSize: 14 }}>{feedItem.message}</span>
+                      </span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        {feedItem.type === "ticket" && <StatusBadge status={toDisplayStatus(feedItem.item.status)} />}
+                        <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>{timeAgo(feedItem.createdAt)}</span>
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </section>
