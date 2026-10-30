@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
-import Navbar from "../components/Navbar";
+import Navbar2 from "../components/Navbar2";
 import "../styles/theme.css";
 
 const ROLE_ROUTES = {
@@ -22,7 +22,7 @@ export default function Unauthorized() {
 
   return (
     <div className="unauth-shell">
-      <Navbar />
+      <Navbar2 />
 
       <div className="unauth-stage">
         <div className="unauth-card">
