@@ -30,7 +30,7 @@ export default function Unauthorized() {
           <h1>Access restricted</h1>
           <p>
             {profile?.role
-              ? `Your account is registered as "${profile.role}", which doesn't have access to this page.`
+              ? `Your account is registered as ${profile.role}, which doesn't have access to this page.`
               : "You don't have permission to view this page."}
           </p>
 
