@@ -8,11 +8,7 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   server: {
     proxy: {
-      "/ml": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ml/, ""),
-      },
+      "/api": { target: "http://localhost:3001", changeOrigin: true },
     },
   },
 });

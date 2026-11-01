@@ -1,0 +1,13 @@
+{
+  "name": "spc-helpdesk-api",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@google/genai": "^2.23.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.2"
+  }
+}
