@@ -280,6 +280,79 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+const NOTIFICATIONS_PER_PAGE = 15;
+
+function usePagination(items, pageSize = NOTIFICATIONS_PER_PAGE) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  return {
+    pageItems: items.slice(startIndex, startIndex + pageSize),
+    currentPage,
+    totalPages,
+    startIndex,
+    pageSize,
+    total: items.length,
+    setPage,
+  };
+}
+
+function Pagination({ pg, noun = "item" }) {
+  const isMobile = useIsMobile();
+  const { currentPage, totalPages, startIndex, pageSize, total, setPage } = pg;
+
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const btnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+      <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+        Showing {startIndex + 1}–{Math.min(startIndex + pageSize, total)} of {total} {noun}{total === 1 ? "" : "s"}
+      </span>
+      {totalPages > 1 && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1} style={btnStyle(currentPage === 1, false)}>Prev</button>
+          {windowStart > 1 && (
+            <>
+              <button type="button" onClick={() => setPage(1)} style={btnStyle(false, false)}>1</button>
+              {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+            </>
+          )}
+          {pageNumbers.map((n) => (
+            <button key={n} type="button" onClick={() => setPage(n)} aria-current={n === currentPage ? "page" : undefined} style={btnStyle(false, n === currentPage)}>
+              {n}
+            </button>
+          ))}
+          {windowEnd < totalPages && (
+            <>
+              {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+              <button type="button" onClick={() => setPage(totalPages)} style={btnStyle(false, false)}>{totalPages}</button>
+            </>
+          )}
+          <button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages} style={btnStyle(currentPage === totalPages, false)}>Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Tracks open modals so Esc only closes the top-most one
 const modalStack = [];
 
@@ -1643,8 +1716,9 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
     })),
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const selectedItems = feedItems.filter((f) => selectedIds.has(f.id));
-  const allSelected = feedItems.length > 0 && selectedItems.length === feedItems.length;
+const pg = usePagination(feedItems, NOTIFICATIONS_PER_PAGE);
+const selectedItems = feedItems.filter((f) => selectedIds.has(f.id));
+const allSelected = pg.pageItems.length > 0 && pg.pageItems.every((f) => selectedIds.has(f.id));
   // If any selected item is unread -> offer "Mark as read", otherwise "Mark as unread"
   const bulkAction = selectedItems.some((f) => f.isUnread) ? "read" : "unread";
 
@@ -1657,9 +1731,13 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
     });
   };
 
-  const toggleAll = () => {
-    setSelectedIds(allSelected ? new Set() : new Set(feedItems.map((f) => f.id)));
-  };
+const toggleAll = () => {
+  setSelectedIds((prev) => {
+    const next = new Set(prev);
+    pg.pageItems.forEach((f) => (allSelected ? next.delete(f.id) : next.add(f.id)));
+    return next;
+  });
+};
 
   const saveReadTicketIds = (nextIds) => {
     setReadTicketIds(nextIds);
@@ -1771,14 +1849,14 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
               )}
             </div>
 
-            {feedItems.map((feedItem, i) => (
+            {pg.pageItems.map((feedItem, i) => (
               <div
                 key={feedItem.id}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 4,
-                  borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none",
+                  borderBottom: i < pg.pageItems.length - 1 ? "1px solid var(--line)" : "none",
                   borderRadius: 4,
                   background: feedItem.isUnread ? "var(--maroon-050)" : "transparent",
                 }}
@@ -1818,6 +1896,7 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
                 </button>
               </div>
             ))}
+            <Pagination pg={pg} noun="notification" />
           </>
         )}
       </div>

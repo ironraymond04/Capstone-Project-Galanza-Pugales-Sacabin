@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import useIsMobile from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
@@ -29,7 +29,7 @@ function formatTicketCode(ticketId) {
 }
 
 function toDisplayStatus(status) {
-  const map = { pending: "Open", in_progress: "In Progress", resolved: "Resolved", closed: "Closed" };
+  const map = { pending: "Open", in_progress: "In Progress", resolved: "Resolved", closed: "Closed", transferred: "Transferred" };
   return map[status] || status;
 }
 
@@ -389,10 +389,195 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+const NOTIFICATIONS_PER_PAGE = 15;
+
+function usePagination(items, pageSize = NOTIFICATIONS_PER_PAGE) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  return {
+    pageItems: items.slice(startIndex, startIndex + pageSize),
+    currentPage,
+    totalPages,
+    startIndex,
+    pageSize,
+    total: items.length,
+    setPage,
+  };
+}
+
+function Pagination({ pg, noun = "item" }) {
+  const isMobile = useIsMobile();
+  const { currentPage, totalPages, startIndex, pageSize, total, setPage } = pg;
+
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const btnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+      <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+        Showing {startIndex + 1}–{Math.min(startIndex + pageSize, total)} of {total} {noun}{total === 1 ? "" : "s"}
+      </span>
+      {totalPages > 1 && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1} style={btnStyle(currentPage === 1, false)}>Prev</button>
+          {windowStart > 1 && (
+            <>
+              <button type="button" onClick={() => setPage(1)} style={btnStyle(false, false)}>1</button>
+              {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+            </>
+          )}
+          {pageNumbers.map((n) => (
+            <button key={n} type="button" onClick={() => setPage(n)} aria-current={n === currentPage ? "page" : undefined} style={btnStyle(false, n === currentPage)}>
+              {n}
+            </button>
+          ))}
+          {windowEnd < totalPages && (
+            <>
+              {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+              <button type="button" onClick={() => setPage(totalPages)} style={btnStyle(false, false)}>{totalPages}</button>
+            </>
+          )}
+          <button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages} style={btnStyle(currentPage === totalPages, false)}>Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- sections ---------------- */
+
+function StatusFilterDropdown({ value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const current = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className="btn btn-ghost"
+        style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        Filter by: {current.label} ▾
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          aria-label="Filter tickets by status"
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            marginTop: 4,
+            minWidth: 190,
+            padding: 4,
+            listStyle: "none",
+            background: "var(--surface, #fff)",
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+            boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+            zIndex: 20,
+          }}
+        >
+          {options.map((o) => (
+            <li key={o.value} role="option" aria-selected={value === o.value}>
+              <button
+                type="button"
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  padding: "8px 10px",
+                  background: value === o.value ? "var(--maroon-050)" : "transparent",
+                  color: "var(--ink)",
+                  fontWeight: value === o.value ? 700 : 400,
+                  fontSize: 13,
+                  borderRadius: 4,
+                  textAlign: "left",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <span>{o.label}</span>
+                <span style={{ color: "var(--ink-soft)" }}>{o.count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const STATUS_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Open" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "transferred", label: "Transferred" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
+];
 
 function Overview({ queue, loading, profile, officeId }) {
   const isMobile = useIsMobile();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Search by ticket no. (accepts "TCK-0012", "tck0012", "0012" or "12")
+  const query = search.trim().toLowerCase();
+  const queryDigits = query.replace(/\D/g, "");
+  const matchesSearch = (t) => {
+    if (!query) return true;
+    const code = formatTicketCode(t.ticket_id).toLowerCase();
+    return code.includes(query) || Boolean(queryDigits && String(t.ticket_id).includes(queryDigits));
+  };
+
+  const filtered = queue.filter(
+    (t) => (statusFilter === "all" || t.status === statusFilter) && matchesSearch(t)
+  );
+
+  // Hooks must run before the early return below
+  const pg = usePagination(filtered, TICKETS_PER_PAGE);
 
   if (!officeId) {
     return (
@@ -416,6 +601,12 @@ function Overview({ queue, loading, profile, officeId }) {
     { label: "Resolved this week", value: queue.filter((t) => t.status === "resolved" && t.resolved_at && new Date(t.resolved_at) >= weekAgo).length },
   ];
 
+  const countFor = (value) =>
+    value === "all" ? queue.length : queue.filter((t) => t.status === value).length;
+
+  const filtersActive = Boolean(search) || statusFilter !== "all";
+  const activeStatusLabel = STATUS_FILTERS.find((f) => f.value === statusFilter)?.label || "";
+
   return (
     <>
       <PageHeader title={`Good day, ${profile?.name || "there"}`} subtitle="Here's your current ticket queue at the moment." />
@@ -428,27 +619,73 @@ function Overview({ queue, loading, profile, officeId }) {
         ))}
       </div>
       <div className="card">
-        <h3>Your queue</h3>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>Your queue</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: "1 1 360px", justifyContent: "flex-end", minWidth: 0 }}>
+          <StatusFilterDropdown
+          value={statusFilter}
+          options={STATUS_FILTERS.map((f) => ({ ...f, count: countFor(f.value) }))}
+            onChange={(v) => {
+          setStatusFilter(v);
+           pg.setPage(1);
+            }}
+/>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                pg.setPage(1);
+              }}
+              placeholder="Search by ticket no. (e.g. TCK-0012 or 12)"
+              aria-label="Search tickets by ticket number"
+              style={{ flex: "1 1 220px", minWidth: 0, maxWidth: 360, padding: "9px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}
+            />
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                  pg.setPage(1);
+                }}
+                style={{ padding: "8px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : queue.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets assigned to your office yet.</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            {search.trim()
+              ? `No tickets match "${search.trim()}"${statusFilter !== "all" ? ` in ${activeStatusLabel}` : ""}.`
+              : `No ${activeStatusLabel.toLowerCase()} tickets found.`}
+          </p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Concern</th><th>Priority</th><th>Status</th></tr></thead>
-              <tbody>
-                {queue.map((t) => (
-                  <tr key={t.ticket_id}>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
-                    <td><PriorityDot level={toDisplayPriority(t.priority)} /></td>
-                    <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead><tr><th>Ticket</th><th>Concern</th><th>Priority</th><th>Status</th></tr></thead>
+                <tbody>
+                  {pg.pageItems.map((t) => (
+                    <tr key={t.ticket_id}>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                      <td><PriorityDot level={toDisplayPriority(t.priority)} /></td>
+                      <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+            <Pagination pg={pg} noun="ticket" />
+          </>
         )}
       </div>
     </>
@@ -1445,8 +1682,9 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
 
   const feedLoading = loading || (hasOffice && (ticketsLoading || logsLoading));
 
-  const checkedItems = feedItems.filter((f) => checkedIds.has(f.id));
-  const allChecked = feedItems.length > 0 && checkedItems.length === feedItems.length;
+const pg = usePagination(feedItems, NOTIFICATIONS_PER_PAGE);
+const checkedItems = feedItems.filter((f) => checkedIds.has(f.id));
+const allChecked = pg.pageItems.length > 0 && pg.pageItems.every((f) => checkedIds.has(f.id));
   // Any unread item selected -> "Mark as read", otherwise "Mark as unread"
   const bulkAction = checkedItems.some((f) => f.isUnread) ? "read" : "unread";
 
@@ -1459,9 +1697,13 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
     });
   };
 
-  const toggleAll = () => {
-    setCheckedIds(allChecked ? new Set() : new Set(feedItems.map((f) => f.id)));
-  };
+const toggleAll = () => {
+  setCheckedIds((prev) => {
+    const next = new Set(prev);
+    pg.pageItems.forEach((f) => (allChecked ? next.delete(f.id) : next.add(f.id)));
+    return next;
+  });
+};
 
   const saveReadFeedIds = (nextIds) => {
     setReadFeedItemIds(nextIds);
@@ -1595,14 +1837,14 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
                   )}
                 </div>
 
-                {feedItems.map((feedItem, i) => (
+                {pg.pageItems.map((feedItem, i) => (
                   <div
                     key={feedItem.id}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 4,
-                      borderBottom: i < feedItems.length - 1 ? "1px solid var(--line)" : "none",
+                      borderBottom: i < pg.pageItems.length - 1 ? "1px solid var(--line)" : "none",
                       borderRadius: 4,
                       background: feedItem.isUnread ? "var(--maroon-050)" : "transparent",
                     }}
@@ -1642,6 +1884,7 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
                     </button>
                   </div>
                 ))}
+                <Pagination pg={pg} noun="notification" />
               </>
             )}
           </div>

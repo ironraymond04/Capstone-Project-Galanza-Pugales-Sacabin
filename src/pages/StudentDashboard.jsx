@@ -199,6 +199,7 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+const NOTIFICATIONS_PER_PAGE = 15;
 const TICKETS_PER_PAGE = 15;
 
 // Matches "TCK-0012", "tck0012", "0012" or "12"
@@ -251,7 +252,7 @@ function TicketSearchBar({ value, onChange }) {
   );
 }
 
-function Pagination({ pg }) {
+function Pagination({ pg, noun = "ticket" }) {
   const isMobile = useIsMobile();
   const { currentPage, totalPages, startIndex, pageSize, total, setPage } = pg;
 
@@ -278,7 +279,7 @@ function Pagination({ pg }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
       <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
-        Showing {startIndex + 1}–{Math.min(startIndex + pageSize, total)} of {total} ticket{total === 1 ? "" : "s"}
+      Showing {startIndex + 1}–{Math.min(startIndex + pageSize, total)} of {total} {noun}{total === 1 ? "" : "s"}
       </span>
       {totalPages > 1 && (
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
@@ -1301,8 +1302,9 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedNotification]);
 
+  const pg = usePagination(notifications, NOTIFICATIONS_PER_PAGE);
   const checkedItems = notifications.filter((n) => checkedIds.has(n.notif_id));
-  const allChecked = notifications.length > 0 && checkedItems.length === notifications.length;
+  const allChecked = pg.pageItems.length > 0 && pg.pageItems.every((n) => checkedIds.has(n.notif_id));
   // Any unread notification selected -> "Mark as read", otherwise "Mark as unread"
   const bulkAction = checkedItems.some((n) => !n.is_read) ? "read" : "unread";
 
@@ -1315,9 +1317,13 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
     });
   };
 
-  const toggleAll = () => {
-    setCheckedIds(allChecked ? new Set() : new Set(notifications.map((n) => n.notif_id)));
-  };
+const toggleAll = () => {
+  setCheckedIds((prev) => {
+    const next = new Set(prev);
+    pg.pageItems.forEach((n) => (allChecked ? next.delete(n.notif_id) : next.add(n.notif_id)));
+    return next;
+  });
+};
 
   const handleBulkMark = async () => {
     if (checkedItems.length === 0 || bulkBusy) return;
@@ -1400,7 +1406,7 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
               )}
             </div>
 
-            {notifications.map((n, i) => (
+            {pg.pageItems.map((n, i) => (
               <div
                 key={n.notif_id}
                 style={{
@@ -1409,7 +1415,7 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
                   gap: 4,
                   background: n.is_read ? "transparent" : "var(--maroon-050)",
                   borderRadius: 4,
-                  borderBottom: i < notifications.length - 1 ? "1px solid var(--line)" : "none",
+                  borderBottom: i < pg.pageItems.length - 1 ? "1px solid var(--line)" : "none",
                 }}
               >
                 <input
@@ -1458,6 +1464,7 @@ function Notifications({ session, notifications, loading, onRead, onViewFullTick
                 </button>
               </div>
             ))}
+            <Pagination pg={pg} noun="notification" />
           </>
         )}
       </div>
