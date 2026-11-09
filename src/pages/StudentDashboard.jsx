@@ -199,6 +199,124 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
+const TICKETS_PER_PAGE = 15;
+
+// Matches "TCK-0012", "tck0012", "0012" or "12"
+function matchesTicketNo(ticket, search) {
+  const query = search.trim().toLowerCase();
+  if (!query) return true;
+  const queryDigits = query.replace(/\D/g, "");
+  const code = formatTicketCode(ticket.ticket_id).toLowerCase();
+  return code.includes(query) || Boolean(queryDigits && String(ticket.ticket_id).includes(queryDigits));
+}
+
+function usePagination(items, pageSize = TICKETS_PER_PAGE) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  return {
+    pageItems: items.slice(startIndex, startIndex + pageSize),
+    currentPage,
+    totalPages,
+    startIndex,
+    pageSize,
+    total: items.length,
+    setPage,
+  };
+}
+
+function TicketSearchBar({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flex: "1 1 240px", minWidth: 0 }}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search by ticket no. (e.g. TCK-0012 or 12)"
+        aria-label="Search tickets by ticket number"
+        style={{ flex: 1, minWidth: 0, padding: "9px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}
+      />
+      {value && (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+          onClick={() => onChange("")}
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Pagination({ pg }) {
+  const isMobile = useIsMobile();
+  const { currentPage, totalPages, startIndex, pageSize, total, setPage } = pg;
+
+  // Small window of page numbers around the current page
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const btnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+      <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+        Showing {startIndex + 1}–{Math.min(startIndex + pageSize, total)} of {total} ticket{total === 1 ? "" : "s"}
+      </span>
+      {totalPages > 1 && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1} style={btnStyle(currentPage === 1, false)}>
+            Prev
+          </button>
+          {windowStart > 1 && (
+            <>
+              <button type="button" onClick={() => setPage(1)} style={btnStyle(false, false)}>1</button>
+              {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+            </>
+          )}
+          {pageNumbers.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setPage(n)}
+              aria-current={n === currentPage ? "page" : undefined}
+              style={btnStyle(false, n === currentPage)}
+            >
+              {n}
+            </button>
+          ))}
+          {windowEnd < totalPages && (
+            <>
+              {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+              <button type="button" onClick={() => setPage(totalPages)} style={btnStyle(false, false)}>{totalPages}</button>
+            </>
+          )}
+          <button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages} style={btnStyle(currentPage === totalPages, false)}>
+            Next
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Overview({ tickets, loading, profile, onSelect }) {
   const isMobile = useIsMobile();
 
@@ -280,6 +398,7 @@ const FILTER_OPTIONS = ["All", "Open", "In Progress", "Resolved", "Transferred",
 function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const filterRef = useRef(null);
 
@@ -311,74 +430,79 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
       ? tickets.length
       : tickets.filter((t) => toDisplayStatus(t.status) === option).length;
 
-  const filteredTickets =
-    filter === "All"
-      ? tickets
-      : tickets.filter((t) => toDisplayStatus(t.status) === filter);
+  const filteredTickets = tickets
+    .filter((t) => filter === "All" || toDisplayStatus(t.status) === filter)
+    .filter((t) => matchesTicketNo(t, search));
+
+  const pg = usePagination(filteredTickets);
 
   return (
     <>
       <PageHeader title="Your tickets" subtitle="This section displays the status of your ticket submitted." />
       <div className="card">
-        {/* Filter by */}
-        <div
-          ref={filterRef}
-          style={{ position: "relative", display: "flex", justifyContent: "flex-end", marginBottom: 12 }}
-        >
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-haspopup="listbox"
-            aria-expanded={menuOpen}
-          >
-            Filter by: {filter} ▾
-          </button>
+        {/* Search + Filter by */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+          <TicketSearchBar
+            value={search}
+            onChange={(v) => { setSearch(v); pg.setPage(1); }}
+          />
 
-          {menuOpen && (
-            <ul
-              role="listbox"
-              aria-label="Filter tickets by status"
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: 4,
-                minWidth: 190,
-                padding: 4,
-                listStyle: "none",
-                background: "var(--surface, #fff)",
-                border: "1px solid var(--line)",
-                borderRadius: 6,
-                boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
-                zIndex: 20,
-              }}
+          <div ref={filterRef} style={{ position: "relative" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={menuOpen}
             >
-              {FILTER_OPTIONS.map((option) => (
-                <li key={option} role="option" aria-selected={filter === option}>
-                  <button
-                    type="button"
-                    onClick={() => { setFilter(option); setMenuOpen(false); }}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "8px 10px",
-                      background: filter === option ? "var(--maroon-050)" : "transparent",
-                      color: "var(--ink)",
-                      fontWeight: filter === option ? 700 : 400,
-                      fontSize: 13,
-                      borderRadius: 4,
-                      textAlign: "left",
-                    }}
-                  >
-                    <span>{option}</span>
-                    <span style={{ color: "var(--ink-soft)" }}>{countFor(option)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+              Filter by: {filter} ▾
+            </button>
+
+            {menuOpen && (
+              <ul
+                role="listbox"
+                aria-label="Filter tickets by status"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: 4,
+                  minWidth: 190,
+                  padding: 4,
+                  listStyle: "none",
+                  background: "var(--surface, #fff)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 6,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                }}
+              >
+                {FILTER_OPTIONS.map((option) => (
+                  <li key={option} role="option" aria-selected={filter === option}>
+                    <button
+                      type="button"
+                      onClick={() => { setFilter(option); pg.setPage(1); setMenuOpen(false); }}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 10px",
+                        background: filter === option ? "var(--maroon-050)" : "transparent",
+                        color: "var(--ink)",
+                        fontWeight: filter === option ? 700 : 400,
+                        fontSize: 13,
+                        borderRadius: 4,
+                        textAlign: "left",
+                      }}
+                    >
+                      <span>{option}</span>
+                      <span style={{ color: "var(--ink-soft)" }}>{countFor(option)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -387,26 +511,31 @@ function CheckStatus({ tickets, loading, selectedTicketId, onTicketSelected }) {
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
         ) : filteredTickets.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
-            No {filter.toLowerCase()} tickets found.
+            {search.trim()
+              ? `No tickets match "${search.trim()}"${filter !== "All" ? ` in ${filter}` : ""}.`
+              : `No ${filter.toLowerCase()} tickets found.`}
           </p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead>
-                <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {filteredTickets.map((t) => (
-                  <tr key={t.ticket_id} onClick={() => { setSelectedTicket(t); onTicketSelected?.(t.ticket_id); }} style={{ cursor: "pointer" }}>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 60)}{t.concern_text.length > 60 ? "..." : ""}</td>
-                    <td>{t.offices?.office_name || "Unassigned"}</td>
-                    <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead>
+                  <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {pg.pageItems.map((t) => (
+                    <tr key={t.ticket_id} onClick={() => { setSelectedTicket(t); onTicketSelected?.(t.ticket_id); }} style={{ cursor: "pointer" }}>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 60)}{t.concern_text.length > 60 ? "..." : ""}</td>
+                      <td>{t.offices?.office_name || "Unassigned"}</td>
+                      <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+            <Pagination pg={pg} />
+          </>
         )}
       </div>
 
@@ -1016,6 +1145,7 @@ function History({ tickets, loading }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   const matchesYear = (t, year) =>
     year === "all" || new Date(t.created_at).getFullYear() === Number(year);
@@ -1045,24 +1175,40 @@ function History({ tickets, loading }) {
   ];
 
   const filteredTickets = tickets.filter(
-    (t) => matchesYear(t, yearFilter) && matchesMonth(t, monthFilter)
+    (t) => matchesYear(t, yearFilter) && matchesMonth(t, monthFilter) && matchesTicketNo(t, search)
   );
   const filtersActive = yearFilter !== "all" || monthFilter !== "all";
+
+  const pg = usePagination(filteredTickets);
 
   return (
     <>
       <PageHeader title="Full ticket history" subtitle="This section displays all the tickets you have submitted." />
       <div className="card">
-        {/* Filter by month / year */}
+        {/* Search + filter by month / year */}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <FilterDropdown label="Year" value={yearFilter} options={yearOptions} onChange={setYearFilter} />
-          <FilterDropdown label="Month" value={monthFilter} options={monthOptions} onChange={setMonthFilter} />
+          <TicketSearchBar
+            value={search}
+            onChange={(v) => { setSearch(v); pg.setPage(1); }}
+          />
+          <FilterDropdown
+            label="Year"
+            value={yearFilter}
+            options={yearOptions}
+            onChange={(v) => { setYearFilter(v); pg.setPage(1); }}
+          />
+          <FilterDropdown
+            label="Month"
+            value={monthFilter}
+            options={monthOptions}
+            onChange={(v) => { setMonthFilter(v); pg.setPage(1); }}
+          />
           {filtersActive && (
             <button
               type="button"
               className="btn btn-ghost"
               style={{ padding: "8px 14px", fontSize: 13 }}
-              onClick={() => { setYearFilter("all"); setMonthFilter("all"); }}
+              onClick={() => { setYearFilter("all"); setMonthFilter("all"); pg.setPage(1); }}
             >
               Clear filters
             </button>
@@ -1074,26 +1220,33 @@ function History({ tickets, loading }) {
         ) : tickets.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
         ) : filteredTickets.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets found for the selected month and year.</p>
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+            {search.trim()
+              ? `No tickets match "${search.trim()}" for the selected month and year.`
+              : "No tickets found for the selected month and year."}
+          </p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead>
-                <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th><th>Submitted</th></tr>
-              </thead>
-              <tbody>
-                {filteredTickets.map((t) => (
-                  <tr key={t.ticket_id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
-                    <td>{t.offices?.office_name || "Unassigned"}</td>
-                    <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                    <td>{formatDate(t.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead>
+                  <tr><th>Ticket</th><th>Concern</th><th>Office</th><th>Status</th><th>Submitted</th></tr>
+                </thead>
+                <tbody>
+                  {pg.pageItems.map((t) => (
+                    <tr key={t.ticket_id} onClick={() => setSelectedTicket(t)} style={{ cursor: "pointer" }}>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                      <td>{t.offices?.office_name || "Unassigned"}</td>
+                      <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                      <td>{formatDate(t.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+            <Pagination pg={pg} />
+          </>
         )}
       </div>
 
