@@ -455,9 +455,13 @@ function Overview({ queue, loading, profile, officeId }) {
   );
 }
 
+const TICKETS_PER_PAGE = 15;
+
 function Reports({ queue, loading, focusTicket, onClearFocus }) {
   const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const visibleModalTicket = modalTicket || focusTicket;
 
   const totalHandled = queue.filter((t) => t.status === "resolved" || t.status === "closed").length;
@@ -467,6 +471,42 @@ function Reports({ queue, loading, focusTicket, onClearFocus }) {
       ? (resolvedWithTimes.reduce((sum, t) => sum + (new Date(t.resolved_at) - new Date(t.created_at)) / 36e5, 0) / resolvedWithTimes.length).toFixed(1)
       : "—";
 
+  // Search by ticket no. (accepts "TCK-0012", "tck0012", "0012" or "12")
+  const query = search.trim().toLowerCase();
+  const queryDigits = query.replace(/\D/g, "");
+  const filtered = query
+    ? queue.filter((t) => {
+        const code = formatTicketCode(t.ticket_id).toLowerCase();
+        return code.includes(query) || (queryDigits && String(t.ticket_id).includes(queryDigits));
+      })
+    : queue;
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TICKETS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * TICKETS_PER_PAGE;
+  const pageTickets = filtered.slice(startIndex, startIndex + TICKETS_PER_PAGE);
+
+  // Show a small window of page numbers around the current page
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const pageBtnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+
   return (
     <>
       <PageHeader title="Submitted Tickets" subtitle="This section provides an overview of the submitted tickets." />
@@ -475,34 +515,118 @@ function Reports({ queue, loading, focusTicket, onClearFocus }) {
         <div className="card"><div style={{ fontSize: 24, fontFamily: "var(--font-display)" }}>{avgResolutionHrs === "—" ? "—" : `${avgResolutionHrs}h`}</div><div style={{ fontSize: 13, color: "var(--ink-soft)" }}>Avg. resolution time</div></div>
         <div className="card"><div style={{ fontSize: 24, fontFamily: "var(--font-display)" }}>—</div><div style={{ fontSize: 13, color: "var(--ink-soft)" }}>Satisfaction score</div></div>
       </div>
+
+      {/* Search bar */}
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by ticket no. (e.g. TCK-0012 or 12)"
+            aria-label="Search tickets by ticket number"
+            style={{ flex: 1, minWidth: 0, padding: "9px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+              }}
+              style={{ padding: "8px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : queue.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match "{search.trim()}".</p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Student</th><th>Status</th><th></th></tr></thead>
-              <tbody>
-                {queue.map((t) => (
-                  <tr key={t.ticket_id} onClick={() => setModalTicket(t)} style={{ cursor: "pointer" }}>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.profiles?.name || "Unknown"}</td>
-                    <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                    <td>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setModalTicket(t); }}
-                        style={{ padding: "5px 12px", fontSize: 12.5, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer" }}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead><tr><th>Ticket</th><th>Student</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {pageTickets.map((t) => (
+                    <tr key={t.ticket_id} onClick={() => setModalTicket(t)} style={{ cursor: "pointer" }}>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.profiles?.name || "Unknown"}</td>
+                      <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                      <td>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setModalTicket(t); }}
+                          style={{ padding: "5px 12px", fontSize: 12.5, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer" }}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+
+            {/* Pagination */}
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                Showing {startIndex + 1}–{Math.min(startIndex + TICKETS_PER_PAGE, filtered.length)} of {filtered.length} ticket{filtered.length === 1 ? "" : "s"}
+              </span>
+              {totalPages > 1 && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={pageBtnStyle(currentPage === 1, false)}
+                  >
+                    Prev
+                  </button>
+                  {windowStart > 1 && (
+                    <>
+                      <button type="button" onClick={() => setPage(1)} style={pageBtnStyle(false, false)}>1</button>
+                      {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                    </>
+                  )}
+                  {pageNumbers.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      aria-current={n === currentPage ? "page" : undefined}
+                      style={pageBtnStyle(false, n === currentPage)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  {windowEnd < totalPages && (
+                    <>
+                      {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                      <button type="button" onClick={() => setPage(totalPages)} style={pageBtnStyle(false, false)}>{totalPages}</button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    style={pageBtnStyle(currentPage === totalPages, false)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -701,7 +825,10 @@ function ActivityDetailModal({ activity, onClose, onViewTicket }) {
 }
 
 function UpdateStatus({ queue, loading, onUpdated }) {
+  const isMobile = useIsMobile();
   const [updatingId, setUpdatingId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const handleChange = async (ticketId, newStatus) => {
     setUpdatingId(ticketId);
@@ -713,39 +840,161 @@ function UpdateStatus({ queue, loading, onUpdated }) {
     onUpdated?.();
   };
 
+  // Search by ticket no. (accepts "TCK-0012", "tck0012", "0012" or "12")
+  const query = search.trim().toLowerCase();
+  const queryDigits = query.replace(/\D/g, "");
+  const filtered = query
+    ? queue.filter((t) => {
+        const code = formatTicketCode(t.ticket_id).toLowerCase();
+        return code.includes(query) || (queryDigits && String(t.ticket_id).includes(queryDigits));
+      })
+    : queue;
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TICKETS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * TICKETS_PER_PAGE;
+  const pageTickets = filtered.slice(startIndex, startIndex + TICKETS_PER_PAGE);
+
+  // Show a small window of page numbers around the current page
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const pageBtnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+
   return (
     <>
       <PageHeader title="Update ticket status" subtitle="This is where the ticket that you can update the status." />
+
+      {/* Search bar */}
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by ticket no. (e.g. TCK-0012 or 12)"
+            aria-label="Search tickets by ticket number"
+            style={{ flex: 1, minWidth: 0, padding: "9px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+              }}
+              style={{ padding: "8px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+        ) : queue.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match "{search.trim()}".</p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Concern</th><th>Status</th></tr></thead>
-              <tbody>
-                {queue.map((t) => (
-                  <tr key={t.ticket_id}>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
-                    <td>
-                      <select
-                        value={t.status}
-                        disabled={updatingId === t.ticket_id}
-                        onChange={(e) => handleChange(t.ticket_id, e.target.value)}
-                        style={{ width: 160, padding: "8px 10px", border: "1.5px solid var(--line)", borderRadius: 6 }}
-                      >
-                        <option value="pending">Open</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead><tr><th>Ticket</th><th>Concern</th><th>Status</th></tr></thead>
+                <tbody>
+                  {pageTickets.map((t) => (
+                    <tr key={t.ticket_id}>
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                      <td>
+                        <select
+                          value={t.status}
+                          disabled={updatingId === t.ticket_id}
+                          onChange={(e) => handleChange(t.ticket_id, e.target.value)}
+                          style={{ width: 160, padding: "8px 10px", border: "1.5px solid var(--line)", borderRadius: 6 }}
+                        >
+                          <option value="pending">Open</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+
+            {/* Pagination */}
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                Showing {startIndex + 1}–{Math.min(startIndex + TICKETS_PER_PAGE, filtered.length)} of {filtered.length} ticket{filtered.length === 1 ? "" : "s"}
+              </span>
+              {totalPages > 1 && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={pageBtnStyle(currentPage === 1, false)}
+                  >
+                    Prev
+                  </button>
+                  {windowStart > 1 && (
+                    <>
+                      <button type="button" onClick={() => setPage(1)} style={pageBtnStyle(false, false)}>1</button>
+                      {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                    </>
+                  )}
+                  {pageNumbers.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      aria-current={n === currentPage ? "page" : undefined}
+                      style={pageBtnStyle(false, n === currentPage)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  {windowEnd < totalPages && (
+                    <>
+                      {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                      <button type="button" onClick={() => setPage(totalPages)} style={pageBtnStyle(false, false)}>{totalPages}</button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    style={pageBtnStyle(currentPage === totalPages, false)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
     </>
@@ -922,41 +1171,166 @@ function FeedbackModal({ ticket, draft, setDraft, onCancel, onDone, onSubmit, se
 }
 
 function AutoAssignment({ queue, loading }) {
+  const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Search by ticket no. (accepts "TCK-0012", "tck0012", "0012" or "12")
+  const query = search.trim().toLowerCase();
+  const queryDigits = query.replace(/\D/g, "");
+  const filtered = query
+    ? queue.filter((t) => {
+        const code = formatTicketCode(t.ticket_id).toLowerCase();
+        return code.includes(query) || (queryDigits && String(t.ticket_id).includes(queryDigits));
+      })
+    : queue;
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TICKETS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * TICKETS_PER_PAGE;
+  const pageTickets = filtered.slice(startIndex, startIndex + TICKETS_PER_PAGE);
+
+  // Show a small window of page numbers around the current page
+  const windowSize = isMobile ? 3 : 5;
+  let windowStart = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  const windowEnd = Math.min(totalPages, windowStart + windowSize - 1);
+  windowStart = Math.max(1, windowEnd - windowSize + 1);
+  const pageNumbers = [];
+  for (let n = windowStart; n <= windowEnd; n++) pageNumbers.push(n);
+
+  const pageBtnStyle = (disabled, isActive) => ({
+    minWidth: 34,
+    padding: "6px 10px",
+    fontSize: 13,
+    borderRadius: 6,
+    border: "1.5px solid var(--line)",
+    background: isActive ? "var(--primary, #6b1d2c)" : "transparent",
+    color: isActive ? "#fff" : "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
 
   return (
     <>
       <PageHeader title="Assignment confidence" subtitle="This section shows the confidence level of each ticket assigned to offices." />
+
+      {/* Search bar */}
+      <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search by ticket no. (e.g. TCK-0012 or 12)"
+            aria-label="Search tickets by ticket number"
+            style={{ flex: 1, minWidth: 0, padding: "9px 12px", border: "1.5px solid var(--line)", borderRadius: 6, fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setPage(1);
+              }}
+              style={{ padding: "8px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "transparent", cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
+        ) : queue.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets yet.</p>
+        ) : filtered.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match "{search.trim()}".</p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead><tr><th>Ticket</th><th>Concern</th><th>AI confidence</th></tr></thead>
-              <tbody>
-                {queue.map((t) => (
-                  <tr
-                    key={t.ticket_id}
-                    onClick={() => setModalTicket(t)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        setModalTicket(t);
-                      }
-                    }}
-                    tabIndex={0}
-                    style={{ cursor: "pointer" }}
-                    aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead><tr><th>Ticket</th><th>Concern</th><th>AI confidence</th></tr></thead>
+                <tbody>
+                  {pageTickets.map((t) => (
+                    <tr
+                      key={t.ticket_id}
+                      onClick={() => setModalTicket(t)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setModalTicket(t);
+                        }
+                      }}
+                      tabIndex={0}
+                      style={{ cursor: "pointer" }}
+                      aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
+                    >
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                      <td><ConfidenceMeter pct={t.classification_confidence} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+
+            {/* Pagination */}
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, marginTop: 6, borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                Showing {startIndex + 1}–{Math.min(startIndex + TICKETS_PER_PAGE, filtered.length)} of {filtered.length} ticket{filtered.length === 1 ? "" : "s"}
+              </span>
+              {totalPages > 1 && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    style={pageBtnStyle(currentPage === 1, false)}
                   >
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
-                    <td><ConfidenceMeter pct={t.classification_confidence} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+                    Prev
+                  </button>
+                  {windowStart > 1 && (
+                    <>
+                      <button type="button" onClick={() => setPage(1)} style={pageBtnStyle(false, false)}>1</button>
+                      {windowStart > 2 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                    </>
+                  )}
+                  {pageNumbers.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setPage(n)}
+                      aria-current={n === currentPage ? "page" : undefined}
+                      style={pageBtnStyle(false, n === currentPage)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  {windowEnd < totalPages && (
+                    <>
+                      {windowEnd < totalPages - 1 && <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>…</span>}
+                      <button type="button" onClick={() => setPage(totalPages)} style={pageBtnStyle(false, false)}>{totalPages}</button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    style={pageBtnStyle(currentPage === totalPages, false)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
       {modalTicket && <TicketDetailModal ticket={modalTicket} onClose={() => setModalTicket(null)} />}
@@ -977,11 +1351,26 @@ function PriorityView({ queue, loading }) {
       {loading ? (
         <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, alignItems: "stretch" }}>
           {grouped.map((g) => (
-            <div key={g.level} className="card">
-              <PriorityDot level={g.level} />
-              <div style={{ marginTop: 10 }}>
+            <div key={g.level} className="card" style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <PriorityDot level={g.level} />
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+                  {g.tickets.length} ticket{g.tickets.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              {/* Fixed-height scrollable ticket list */}
+              <div
+                style={{
+                  marginTop: 10,
+                  height: isMobile ? 280 : 420,
+                  overflowY: "auto",
+                  paddingRight: 6,
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
                 {g.tickets.length === 0 && <p style={{ fontSize: 13 }}>None right now.</p>}
                 {g.tickets.map((t) => (
                   <div key={t.ticket_id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)", fontSize: 13 }}>
