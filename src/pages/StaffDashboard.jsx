@@ -1477,9 +1477,8 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
   const respondedTicketIds = new Set(
     logs.filter((l) => l.module === "Staff Response" && l.ticket_id).map((l) => l.ticket_id)
   );
-  const recentlyRouted = queue
-    .filter((t) => !respondedTicketIds.has(t.ticket_id))
-    .slice(0, 5);
+  const recentlyRouted = queue.filter((t) => !respondedTicketIds.has(t.ticket_id));
+  const pg = usePagination(recentlyRouted, TICKETS_PER_PAGE);
 
   const [modalTicket, setModalTicket] = useState(null);
   const [draft, setDraft] = useState("");
@@ -1544,21 +1543,24 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
         ) : recentlyRouted.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets routed to your office yet.</p>
         ) : (
-          recentlyRouted.map((t) => (
-            <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-                <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
-                <PriorityDot level={toDisplayPriority(t.priority)} />
-              </div>
-              <p style={{ fontSize: 14, margin: "4px 0 8px" }}>{t.concern_text.slice(0, 60)} - from {t.profiles?.name || "Unknown"}</p>
-              <button
-                onClick={() => openModal(t)}
-                style={{ padding: "6px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}
-              >
-                Respond
-              </button>
-            </div>
-          ))
+          <>
+    {pg.pageItems.map((t) => (
+      <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+          <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
+          <PriorityDot level={toDisplayPriority(t.priority)} />
+        </div>
+        <p style={{ fontSize: 14, margin: "4px 0 8px" }}>{t.concern_text.slice(0, 60)} - from {t.profiles?.name || "Unknown"}</p>
+        <button
+          onClick={() => openModal(t)}
+          style={{ padding: "6px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}
+        >
+          Respond
+        </button>
+      </div>
+    ))}
+    <Pagination pg={pg} noun="ticket" />
+  </>
         )}
       </div>
 
