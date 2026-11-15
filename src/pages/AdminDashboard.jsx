@@ -483,7 +483,7 @@ function SystemLogs({ logs, users, loading }) {
 
   return (
     <>
-      <PageHeader title="System logs" subtitle="Retrieved from the Logs data store." />
+      <PageHeader title="System logs" subtitle="Retrieved from the Logs database." />
       <div className="card">
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
@@ -839,7 +839,7 @@ function ManageUsers({ users, loading, onUpdated }) {
 
   return (
     <>
-      <PageHeader title="Users" subtitle="Saved to and retrieved from the User data store." />
+      <PageHeader title="Users" subtitle="Saved to and retrieved from the User database." />
       <div className="card">
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 16 }}>
           {/* Filter dropdown */}
@@ -1150,7 +1150,7 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
 
   return (
     <>
-      <PageHeader title="Offices" subtitle="Saved to and retrieved from the Offices data store." />
+      <PageHeader title="Offices" subtitle="Saved to and retrieved from the Offices database." />
       {loading ? (
         <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
       ) : (
