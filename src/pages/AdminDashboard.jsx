@@ -167,7 +167,7 @@ export default function AdminDashboard() {
       .from("logs")
       .select("*, profiles(name)")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(500);
     if (error) console.error("loadLogs error:", error);
     if (!error) setLogs(data || []);
     setLogsLoading(false);
@@ -280,9 +280,24 @@ function TableScroll({ children }) {
   return <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>;
 }
 
-const NOTIFICATIONS_PER_PAGE = 15;
+function SearchInput({ value, onChange, placeholder = "Search..." }) {
+  return (
+    <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 360 }}>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        style={{ ...inputStyle, padding: "8px 12px", fontSize: 13 }}
+      />
+    </div>
+  );
+}
 
-function usePagination(items, pageSize = NOTIFICATIONS_PER_PAGE) {
+const ITEMS_PER_PAGE = 15;
+
+function usePagination(items, pageSize = ITEMS_PER_PAGE) {
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -459,6 +474,7 @@ function Overview({ tickets, users, offices, loading, onSelect }) {
 
 function SystemLogs({ logs, users, loading }) {
   const [selectedLog, setSelectedLog] = useState(null);
+  const pg = usePagination(logs, ITEMS_PER_PAGE);
 
   const userMap = useMemo(
     () => new Map(users.map((u) => [String(u.user_id).toLowerCase(), u.name])),
@@ -474,19 +490,22 @@ function SystemLogs({ logs, users, loading }) {
         ) : logs.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No log entries yet.</p>
         ) : (
-          logs.map((l) => (
-            <button
-              key={l.log_id}
-              type="button"
-              onClick={() => setSelectedLog(l)}
-              style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: "1px solid var(--line)", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
-            >
-              <span style={{ fontSize: 14 }}>
-                <strong>{l.profiles?.name || "System"}</strong> - {replaceUserIds(l.action, userMap)}
-              </span>
-              <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{timeAgo(l.created_at)}</span>
-            </button>
-          ))
+          <>
+            {pg.pageItems.map((l) => (
+              <button
+                key={l.log_id}
+                type="button"
+                onClick={() => setSelectedLog(l)}
+                style={{ width: "100%", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6, padding: "12px 0", border: "none", borderBottom: "1px solid var(--line)", background: "transparent", color: "inherit", textAlign: "left", cursor: "pointer" }}
+              >
+                <span style={{ fontSize: 14 }}>
+                  <strong>{l.profiles?.name || "System"}</strong> - {replaceUserIds(l.action, userMap)}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{timeAgo(l.created_at)}</span>
+              </button>
+            ))}
+            <Pagination pg={pg} noun="log" />
+          </>
         )}
       </div>
 
@@ -528,6 +547,7 @@ const TICKET_FILTER_OPTIONS = ["All", "Open", "In Progress", "Resolved", "Transf
 
 function ManageTickets({ tickets, loading, offices, onUpdated }) {
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const filterRef = useRef(null);
@@ -559,10 +579,23 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
       ? tickets.length
       : tickets.filter((t) => filterMap[option].includes(t.status)).length;
 
-  const filtered =
-    filter === "All"
-      ? tickets
-      : tickets.filter((t) => filterMap[filter].includes(t.status));
+  const query = search.trim().toLowerCase();
+
+  const filtered = tickets.filter((t) => {
+    const matchesStatus = filter === "All" || filterMap[filter].includes(t.status);
+    if (!matchesStatus) return false;
+    if (!query) return true;
+
+    return [
+      formatTicketCode(t.ticket_id),
+      t.profiles?.name,
+      t.concern_text,
+      t.offices?.office_name || "Unassigned",
+      toDisplayStatus(t.status),
+    ].some((v) => String(v || "").toLowerCase().includes(query));
+  });
+
+  const pg = usePagination(filtered, ITEMS_PER_PAGE);
 
   return (
     <>
@@ -608,7 +641,7 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
                 <li key={option} role="option" aria-selected={filter === option}>
                   <button
                     type="button"
-                    onClick={() => { setFilter(option); setMenuOpen(false); }}
+                    onClick={() => { setFilter(option); pg.setPage(1); setMenuOpen(false); }}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -633,6 +666,12 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
           )}
         </div>
 
+        <SearchInput
+          value={search}
+          onChange={(v) => { setSearch(v); pg.setPage(1); }}
+          placeholder="Search ticket, name, concern, office..."
+        />
+
         <button
           type="button"
           className="btn btn-ghost"
@@ -648,45 +687,48 @@ function ManageTickets({ tickets, loading, offices, onUpdated }) {
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : filtered.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match this filter.</p>
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets match your search or filter.</p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead>
-                <tr>
-                  <th>Ticket</th>
-                  <th>Submitted by</th>
-                  <th>Concern</th>
-                  <th>Office</th>
-                  <th>AI confidence</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((t) => (
-                  <tr
-                    key={t.ticket_id}
-                    onClick={() => setSelectedTicket(t)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                    <td>{t.profiles?.name || "Unknown user"}</td>
-                    <td>
-                      {t.concern_text.slice(0, 50)}
-                      {t.concern_text.length > 50 ? "..." : ""}
-                    </td>
-                    <td>{t.offices?.office_name || "Unassigned"}</td>
-                    <td><ConfidenceMeter pct={t.classification_confidence} /></td>
-                    <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
-                    <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--ink-soft)" }}>
-                      {timeAgo(t.created_at)}
-                    </td>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead>
+                  <tr>
+                    <th>Ticket</th>
+                    <th>Submitted by</th>
+                    <th>Concern</th>
+                    <th>Office</th>
+                    <th>AI confidence</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableScroll>
+                </thead>
+                <tbody>
+                  {pg.pageItems.map((t) => (
+                    <tr
+                      key={t.ticket_id}
+                      onClick={() => setSelectedTicket(t)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.profiles?.name || "Unknown user"}</td>
+                      <td>
+                        {t.concern_text.slice(0, 50)}
+                        {t.concern_text.length > 50 ? "..." : ""}
+                      </td>
+                      <td>{t.offices?.office_name || "Unassigned"}</td>
+                      <td><ConfidenceMeter pct={t.classification_confidence} /></td>
+                      <td><StatusBadge status={toDisplayStatus(t.status)} /></td>
+                      <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--ink-soft)" }}>
+                        {timeAgo(t.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+            <Pagination pg={pg} noun="ticket" />
+          </>
         )}
       </div>
 
@@ -712,6 +754,7 @@ const FILTERS = [
 function ManageUsers({ users, loading, onUpdated }) {
   const { session } = useAuth();
   const [roleFilter, setRoleFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [actionError, setActionError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const filterRef = useRef(null);
@@ -774,74 +817,97 @@ function ManageUsers({ users, loading, onUpdated }) {
 
   const activeFilter = FILTERS.find((f) => f.key === roleFilter) || FILTERS[0];
 
+  const query = search.trim().toLowerCase();
+
   const filteredUsers = useMemo(
-    () => users.filter((u) => activeFilter.match(u.role)),
-    [users, activeFilter]
+    () =>
+      users.filter((u) => {
+        if (!activeFilter.match(u.role)) return false;
+        if (!query) return true;
+
+        return [
+          u.name,
+          u.email,
+          u.role === "staff" ? "Faculty & Staff" : u.role,
+          u.is_active !== false ? "Active" : "Suspended",
+        ].some((v) => String(v || "").toLowerCase().includes(query));
+      }),
+    [users, activeFilter, query]
   );
+
+  const pg = usePagination(filteredUsers, ITEMS_PER_PAGE);
 
   return (
     <>
       <PageHeader title="Users" subtitle="Saved to and retrieved from the User data store." />
       <div className="card">
-        {/* Filter dropdown */}
-        <div ref={filterRef} style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-haspopup="listbox"
-            aria-expanded={menuOpen}
-          >
-            Filter by: {activeFilter.label} ▾
-          </button>
-
-          {menuOpen && (
-            <ul
-              role="listbox"
-              aria-label="Filter users by role"
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                marginTop: 4,
-                minWidth: 200,
-                padding: 4,
-                listStyle: "none",
-                background: "var(--surface, #fff)",
-                border: "1px solid var(--line)",
-                borderRadius: 6,
-                boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
-                zIndex: 20,
-              }}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          {/* Filter dropdown */}
+          <div ref={filterRef} style={{ position: "relative", display: "inline-block" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={menuOpen}
             >
-              {FILTERS.map((f) => (
-                <li key={f.key} role="option" aria-selected={roleFilter === f.key}>
-                  <button
-                    type="button"
-                    onClick={() => { setRoleFilter(f.key); setMenuOpen(false); }}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "8px 10px",
-                      background: roleFilter === f.key ? "var(--maroon-050)" : "transparent",
-                      color: "var(--ink)",
-                      fontWeight: roleFilter === f.key ? 700 : 400,
-                      fontSize: 13,
-                      borderRadius: 4,
-                      textAlign: "left",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <span>{f.label}</span>
-                    <span style={{ color: "var(--ink-soft)" }}>{counts[f.key]}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+              Filter by: {activeFilter.label} ▾
+            </button>
+
+            {menuOpen && (
+              <ul
+                role="listbox"
+                aria-label="Filter users by role"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  marginTop: 4,
+                  minWidth: 200,
+                  padding: 4,
+                  listStyle: "none",
+                  background: "var(--surface, #fff)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 6,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                }}
+              >
+                {FILTERS.map((f) => (
+                  <li key={f.key} role="option" aria-selected={roleFilter === f.key}>
+                    <button
+                      type="button"
+                      onClick={() => { setRoleFilter(f.key); pg.setPage(1); setMenuOpen(false); }}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 10px",
+                        background: roleFilter === f.key ? "var(--maroon-050)" : "transparent",
+                        color: "var(--ink)",
+                        fontWeight: roleFilter === f.key ? 700 : 400,
+                        fontSize: 13,
+                        borderRadius: 4,
+                        textAlign: "left",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span>{f.label}</span>
+                      <span style={{ color: "var(--ink-soft)" }}>{counts[f.key]}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); pg.setPage(1); }}
+            placeholder="Search name, email, role..."
+          />
         </div>
 
         {actionError && (
@@ -851,40 +917,43 @@ function ManageUsers({ users, loading, onUpdated }) {
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : filteredUsers.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No users found for this filter.</p>
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No users match your search or filter.</p>
         ) : (
-          <TableScroll>
-            <table className="chd-table">
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
-              <tbody>
-                {filteredUsers.map((u) => {
-                  const isActive = u.is_active !== false;
-                  return (
-                    <tr key={u.user_id}>
-                      <td>{u.name}</td>
-                      <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
-                      <td style={{ textTransform: "capitalize" }}>{u.role === "staff" ? "Faculty & Staff" : u.role}</td>
-                      <td>
-                        <span className={isActive ? "badge badge-resolved" : "badge badge-transferred"}>
-                          {isActive ? "Active" : "Suspended"}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-ghost"
-                          style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
-                          onClick={() => toggleStatus(u.user_id, isActive)}
-                          disabled={u.user_id === session?.user?.id}
-                        >
-                          {isActive ? "Suspend" : "Reactivate"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableScroll>
+          <>
+            <TableScroll>
+              <table className="chd-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {pg.pageItems.map((u) => {
+                    const isActive = u.is_active !== false;
+                    return (
+                      <tr key={u.user_id}>
+                        <td>{u.name}</td>
+                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{u.email}</td>
+                        <td style={{ textTransform: "capitalize" }}>{u.role === "staff" ? "Faculty & Staff" : u.role}</td>
+                        <td>
+                          <span className={isActive ? "badge badge-resolved" : "badge badge-transferred"}>
+                            {isActive ? "Active" : "Suspended"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
+                            onClick={() => toggleStatus(u.user_id, isActive)}
+                            disabled={u.user_id === session?.user?.id}
+                          >
+                            {isActive ? "Suspend" : "Reactivate"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableScroll>
+            <Pagination pg={pg} noun="user" />
+          </>
         )}
       </div>
     </>
@@ -1716,9 +1785,9 @@ function Notifications({ userId, tickets, ticketsLoading, notifications, notific
     })),
   ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-const pg = usePagination(feedItems, NOTIFICATIONS_PER_PAGE);
-const selectedItems = feedItems.filter((f) => selectedIds.has(f.id));
-const allSelected = pg.pageItems.length > 0 && pg.pageItems.every((f) => selectedIds.has(f.id));
+  const pg = usePagination(feedItems, ITEMS_PER_PAGE);
+  const selectedItems = feedItems.filter((f) => selectedIds.has(f.id));
+  const allSelected = pg.pageItems.length > 0 && pg.pageItems.every((f) => selectedIds.has(f.id));
   // If any selected item is unread -> offer "Mark as read", otherwise "Mark as unread"
   const bulkAction = selectedItems.some((f) => f.isUnread) ? "read" : "unread";
 
@@ -1731,13 +1800,13 @@ const allSelected = pg.pageItems.length > 0 && pg.pageItems.every((f) => selecte
     });
   };
 
-const toggleAll = () => {
-  setSelectedIds((prev) => {
-    const next = new Set(prev);
-    pg.pageItems.forEach((f) => (allSelected ? next.delete(f.id) : next.add(f.id)));
-    return next;
-  });
-};
+  const toggleAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pg.pageItems.forEach((f) => (allSelected ? next.delete(f.id) : next.add(f.id)));
+      return next;
+    });
+  };
 
   const saveReadTicketIds = (nextIds) => {
     setReadTicketIds(nextIds);
