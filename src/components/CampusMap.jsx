@@ -37,7 +37,7 @@ const makeBuildings = () => [
   { name: "Canteen", floors: 1, vols: [R(740, 50, 1060, 215)], wall: "#e6cfae", roof: "gable", rc: MAR },
   { name: "Machine Shop", floors: 1, vols: [R(1340, 410, 1650, 500)], wall: "#ecd9b0", roof: "flat", rc: MAR },
   { name: "Clinic", floors: 1, vols: [R(405, 1285, 595, 1580)], wall: "#ffffff", roof: "gable", rc: MAR },
-  { name: "Guardhouse", floors: 1, vols: [R(930, 1880, 1090, 2000)], wall: "#e6cfae", roof: "flat", rc: MAR },
+  { name: "Guardhouse", floors: 1, vols: [R(1000, 1900, 1060, 1950)], wall: "#e6cfae", roof: "flat", rc: MAR },
   { name: "Covered Court", floors: 1, vols: [R(205, 445, 500, 740)], roof: "arc", rc: "#808080", rise: 7, rot: true },
   { name: "Stage", floors: 1, vols: [R(945, 545, 1090, 690)], roof: "arc", rc: TEAL, rise: 4.5 },
   { name: "Martial Arts Room", floors: 1, vols: [R(735, 570, 880, 690)], wall: "#e6cfae", roof: "gable", rc: MAR },
@@ -177,6 +177,93 @@ function createCampus({ mount, labelHost, onInfo, onInterior }) {
     box(.4, 2, .4, M(0x6b4a2f), x, 1, z); const f = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 0), M(0x4f7f3f));
     f.position.set(x, 3.6, z); f.castShadow = true; scene.add(f);
   });
+
+    // ---------- perimeter wall (follows the grass outline, 1 unit outside it) ----------
+  const WALL_COL = 0xd9d2c3, WALL_CAP = 0xa8a095, WH = 2.4, WT = .4;
+  const pw = (px, py) => [(px - 900) / S, (py - 1000) / S];   // pixel -> map units
+  function wallRun(a, b) {
+    const [x1, z1] = pw(...a), [x2, z2] = pw(...b);
+    const L = Math.hypot(x2 - x1, z2 - z1), g = new THREE.Group();
+    g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+    g.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
+    box(L, WH, WT, M(WALL_COL), 0, WH / 2, 0, g);                  // wall body
+    box(L, .15, WT + .2, M(WALL_CAP), 0, WH + .075, 0, g);         // cap
+    const n = Math.max(1, Math.round(L / 8));                      // pillars every ~8 units
+    for (let i = 0; i <= n; i++) box(.7, WH + .5, .7, M(WALL_CAP), -L / 2 + i * L / n, (WH + .5) / 2, 0, g);
+    scene.add(g);
+  }
+  const WALL_PATH = [
+    [130, 10], [1670, 10], [1670, 1320], [1150, 1320], [1150, 2030],
+    [1080, 2030],                                   // gate opening between x = 870 and x = 1080
+  ];
+  for (let i = 0; i < WALL_PATH.length - 1; i++) wallRun(WALL_PATH[i], WALL_PATH[i + 1]);
+  [[[870, 2030], [840, 2030]], [[840, 2030], [840, 1680]], [[840, 1680], [360, 1680]],
+   [[360, 1680], [360, 1320]], [[360, 1320], [130, 1320]], [[130, 1320], [130, 10]]]
+    .forEach(([a, b]) => wallRun(a, b));
+
+  // ---------- main gate (maroon + white, green accents, like the real SPC gate) ----------
+  const GM = 0x9a3340, GW = 0xf4efe6, GG = 0x2e7d4f, GGD = 0x1f5c39, HEDGE = 0x3f7a3a;
+  const gate = new THREE.Group();
+  const gc = pw(975, 2030);                         // center of the wall opening (x 870 to 1080)
+  gate.position.set(gc[0], 0, gc[1]);
+  scene.add(gate);
+
+  // end pillars
+  [-4.95, 4.95].forEach(px => {
+    box(.9, .35, .9, M(GW), px, .175, 0, gate);     // white plinth
+    box(.7, 3.0, .7, M(GM), px, 1.85, 0, gate);     // maroon pillar
+    box(.9, .25, .9, M(GW), px, 3.475, 0, gate);    // white cap
+  });
+
+  // center sign pillar (between the driveway and the walkway)
+  const CX = 1.25;
+  box(2.4, .5, .8, M(GW), CX, .25, 0, gate);        // white plinth
+  box(2.0, 4.1, .5, M(GM), CX, 2.55, 0, gate);      // maroon body
+  box(2.3, .3, .8, M(GW), CX, 4.75, 0, gate);       // white cap
+  box(1.9, .12, .6, M(GW), CX, 4.96, 0, gate);      // top trim
+  [-1, 1].forEach(s => box(2.4, .55, .45, M(HEDGE), CX, .275, s * .62, gate));   // hedge planters, both sides
+
+  // canvas helper for the seal and the name plate
+  const mkTex = (w, h, draw) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d')); return new THREE.CanvasTexture(c);
+  };
+  const sealTex = mkTex(256, 256, g => {
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(128, 128, 124, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#c0262d'; g.lineWidth = 14; g.beginPath(); g.arc(128, 128, 106, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#9a3340'; g.fillRect(120, 48, 16, 86); g.fillRect(96, 68, 64, 14);   // cross
+    g.font = 'bold 56px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('SPC', 128, 176);
+  });
+  const nameTex = mkTex(1024, 200, g => {
+    g.fillStyle = '#f4efe6'; g.fillRect(0, 0, 1024, 200);
+    g.strokeStyle = '#9a3340'; g.lineWidth = 8; g.strokeRect(6, 6, 1012, 188);
+    g.fillStyle = '#9a3340'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 84px system-ui, sans-serif'; g.fillText("ST. PETER'S COLLEGE", 512, 76);
+    g.font = 'bold 52px system-ui, sans-serif'; g.fillText('ILIGAN CITY', 512, 150);
+  });
+  [1, -1].forEach(s => {                             // same artwork on the street side and the campus side
+    const seal = new THREE.Mesh(new THREE.CircleGeometry(.75, 48), new THREE.MeshBasicMaterial({ map: sealTex, transparent: true }));
+    seal.position.set(CX, 2.6, s * .26);
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .35), new THREE.MeshBasicMaterial({ map: nameTex }));
+    plate.position.set(CX, 4.0, s * .26);
+    if (s < 0) { seal.rotation.y = Math.PI; plate.rotation.y = Math.PI; }
+    gate.add(seal, plate);
+  });
+
+  // green iron gate leaves (hinge x, direction, length, height, opening angle in radians)
+  function leaf(hx, d, len, h, rot) {
+    const lf = new THREE.Group(); lf.position.set(hx, 0, 0); lf.rotation.y = d * rot;   // rot = 0 means closed
+    box(len, .12, .08, M(GG), d * len / 2, .3 + h, 0, lf);         // top rail
+    box(len, .12, .08, M(GG), d * len / 2, .3, 0, lf);             // bottom rail
+    box(.12, h, .08, M(GG), d * .06, .3 + h / 2, 0, lf);           // hinge stile
+    box(.12, h, .08, M(GG), d * (len - .06), .3 + h / 2, 0, lf);   // free-end stile
+    for (let x = .3; x < len - .2; x += .25) box(.05, h - .1, .05, M(GGD), d * x, .3 + h / 2, 0, lf);   // bars
+    gate.add(lf);
+  }
+  leaf(-4.6, 1, 2.2, 1.6, 1.3);     // vehicle gate (left), swung open to the campus
+  leaf(4.6, -1, 2.1, 2.0, .9);      // pedestrian gate (right), half open so it clears the guardhouse roof
+
   const gq = R(930, 480, 1120, 1250), gl = LR(760, 305, 1065, 405);
   const GR = [{ name: 'Quadrangle', p: new THREE.Vector3(gq.x, 0, gq.z) }, { name: 'Student Lounge', p: new THREE.Vector3(gl.x, 0, gl.z) }];
   GR.forEach(q => label(q.name, q.p, null));
