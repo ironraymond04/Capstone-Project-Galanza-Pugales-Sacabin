@@ -1,9 +1,10 @@
 """Train the TF-IDF + One-vs-Rest Logistic Regression ticket router.
 
-    python train.py                      # uses data/tickets.csv
+    python train.py                      # data/tickets.csv + data/logbooks/*.csv
     python train.py --csv path/to/tickets.csv
+    python train.py --logbooks ""        # tickets.csv only
 """
-import argparse, json, warnings
+import argparse, json, re, warnings
 from pathlib import Path
 
 import joblib
@@ -18,9 +19,40 @@ from pipeline import build_pipeline, clean
 HERE = Path(__file__).parent
 warnings.filterwarnings("ignore", message="Number of classes in training fold")
 
+# Office logbooks: the file name decides the office (office_id from office_names.json).
+LOGBOOKS = {"CCS": 1, "CAS": 2, "BED": 13, "DRCW": 18}
+JUNK = re.compile(r"^(?:[-._\s]*|-+\s*do\s*-+|n/?a|none)$", re.I)
 
-def load(csv_path):
-    df = pd.read_csv(csv_path)
+
+def load_logbooks(folder):
+    """Read every logbook CSV in `folder`; the Purpose column becomes the concern text.
+    Visitor names are never read, so no personal data reaches the model."""
+    rows, report = [], []
+    for path in sorted(Path(folder).glob("*.csv")):
+        code = next((c for c in LOGBOOKS
+                     if re.search(rf"(?<![A-Za-z]){c}(?![A-Za-z])", path.stem, re.I)), None)
+        if code is None:
+            print(f"  skipped {path.name}: no CAS/CCS/BED/DRCW in the file name")
+            continue
+        df = pd.read_csv(path, encoding="utf-8-sig")
+        col = next((c for c in df.columns if c.strip().lower() == "purpose"), None)
+        if col is None:
+            print(f"  skipped {path.name}: no 'Purpose' column")
+            continue
+        text = df[col].dropna().astype(str).str.strip()
+        keep = text[~text.map(lambda t: bool(JUNK.match(t)))]
+        report.append((code, len(df), len(keep)))
+        rows += [{"concern_text": t, "assigned_office": LOGBOOKS[code]} for t in keep]
+    for code, total, kept in report:
+        print(f"  logbook {code:<5} -> office {LOGBOOKS[code]:>2}: {kept}/{total} rows have a usable purpose")
+    return pd.DataFrame(rows, columns=["concern_text", "assigned_office"])
+
+
+def load(csv_path, logbook_dir=None):
+    df = pd.read_csv(csv_path, encoding="utf-8-sig")
+    if logbook_dir and Path(logbook_dir).is_dir():
+        df = pd.concat([df[["concern_text", "assigned_office"]],
+                        load_logbooks(logbook_dir)], ignore_index=True)
     df = df.dropna(subset=["concern_text", "assigned_office"]).copy()
     df["office_id"] = df["assigned_office"].astype(int)
     df["text"] = df["concern_text"].astype(str)
@@ -33,11 +65,13 @@ def load(csv_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", default=str(HERE / "data" / "tickets.csv"))
+    ap.add_argument("--logbooks", default=str(HERE / "data" / "logbooks"),
+                    help="folder with CAS/CCS/BED/DRCW logbook CSVs ('' to skip)")
     ap.add_argument("--out", default=str(HERE / "model.joblib"))
     args = ap.parse_args()
 
     names = json.loads((HERE / "office_names.json").read_text())
-    df = load(args.csv)
+    df = load(args.csv, args.logbooks or None)
     X, y = df["text"], df["office_id"].values
     print(f"Training rows: {len(df)} | offices: {df.office_id.nunique()}")
 
