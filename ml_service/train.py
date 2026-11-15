@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", message="Number of classes in training fold")
 
 # Office logbooks: the file name decides the office (office_id from office_names.json).
 LOGBOOKS = {"CCS": 1, "CAS": 2, "BED": 13, "DRCW": 18}
-JUNK = re.compile(r"^(?:[-._\s]*|-+\s*do\s*-+|n/?a|none)$", re.I)
+JUNK = re.compile(r"^(?:[-._\s]*|-+\s*do\s*-+|n/?a|none|purpose)$", re.I)
 
 
 def load_logbooks(folder):
