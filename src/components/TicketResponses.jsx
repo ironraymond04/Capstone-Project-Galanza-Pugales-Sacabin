@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-export default function TicketResponses({ ticket }) {
+export default function TicketResponses({ ticket, onRespond, refreshKey = 0 }) {
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -35,7 +35,7 @@ export default function TicketResponses({ ticket }) {
 
     loadResponses();
     return () => { cancelled = true; };
-  }, [ticket?.ticket_id, ticket?.user_id]);
+  }, [ticket?.ticket_id, ticket?.user_id, refreshKey]);
 
   return (
     <section className="ticket-staff-responses" aria-live="polite">
@@ -58,6 +58,25 @@ export default function TicketResponses({ ticket }) {
             );
           })}
         </div>
+      )}
+
+      {onRespond && (
+        <button
+          type="button"
+          onClick={onRespond}
+          style={{
+            marginTop: 12,
+            padding: "6px 14px",
+            fontSize: 13,
+            borderRadius: 6,
+            border: "none",
+            background: "var(--primary, #6b1d2c)",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Respond
+        </button>
       )}
     </section>
   );

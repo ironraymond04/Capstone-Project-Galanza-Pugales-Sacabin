@@ -221,19 +221,31 @@ async function handleSwitchOffice(newOfficeId) {
           />
         </div>
         <div className="chd-content" style={isMobile ? { padding: "16px 14px" } : undefined}>
-          {active === "overview" && <Overview queue={queue} loading={queueLoading} profile={profile} officeId={officeId} />}
+          {active === "overview" && (
+            <Overview
+              queue={queue}
+              loading={queueLoading}
+              profile={profile}
+              officeId={officeId}
+              onLogged={loadLogs}
+              onUpdated={loadQueue}
+            />
+
+          )}
           {active === "reports" && (
             <Reports
               queue={queue}
               loading={queueLoading}
               focusTicket={queue.find((ticket) => ticket.ticket_id === focusTicketId)}
               onClearFocus={() => setFocusTicketId(null)}
+              onLogged={loadLogs}
+              onUpdated={loadQueue}
             />
           )}
           {active === "logs" && <ActivityLogs logs={logs} loading={logsLoading} onViewTicket={handleViewTicket} />}
-          {active === "status" && <UpdateStatus queue={queue} loading={queueLoading} onUpdated={loadQueue} />}
+          {active === "status" && <UpdateStatus queue={queue} loading={queueLoading} onUpdated={loadQueue} onLogged={loadLogs} />}
           {active === "routed" && (<RoutedTickets queue={queue} logs={logs} loading={queueLoading} staffUserId={session?.user?.id} officeId={officeId} onLogged={loadLogs}/>)}
-          {active === "assignment" && <AutoAssignment queue={queue} loading={queueLoading} />}
+          {active === "assignment" && <AutoAssignment queue={queue} loading={queueLoading} onLogged={loadLogs} onUpdated={loadQueue} />}
           {active === "priority" && <PriorityView queue={queue} loading={queueLoading} />}
           {active === "notifications" && (
             <Notifications
@@ -251,6 +263,8 @@ async function handleSwitchOffice(newOfficeId) {
               readFeedStorageKey={readFeedStorageKey}
               readFeedItemIds={readFeedItemIds}
               setReadFeedItemIds={setReadFeedItemIds}
+              onLogged={loadLogs}
+              onUpdated={loadQueue}
             />
           )}
         </div>
@@ -559,10 +573,11 @@ const STATUS_FILTERS = [
   { value: "closed", label: "Closed" },
 ];
 
-function Overview({ queue, loading, profile, officeId }) {
+function Overview({ queue, loading, profile, officeId, onLogged, onUpdated }) {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [modalTicket, setModalTicket] = useState(null);
 
   // Search by ticket no. (accepts "TCK-0012", "tck0012", "0012" or "12")
   const query = search.trim().toLowerCase();
@@ -623,14 +638,14 @@ function Overview({ queue, loading, profile, officeId }) {
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
           <h3 style={{ margin: 0 }}>Your queue</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", flex: "1 1 360px", justifyContent: "flex-end", minWidth: 0 }}>
-          <StatusFilterDropdown
-          value={statusFilter}
-          options={STATUS_FILTERS.map((f) => ({ ...f, count: countFor(f.value) }))}
-            onChange={(v) => {
-          setStatusFilter(v);
-           pg.setPage(1);
-            }}
-/>
+            <StatusFilterDropdown
+              value={statusFilter}
+              options={STATUS_FILTERS.map((f) => ({ ...f, count: countFor(f.value) }))}
+              onChange={(v) => {
+                setStatusFilter(v);
+                pg.setPage(1);
+              }}
+            />
             <input
               type="text"
               value={search}
@@ -675,7 +690,19 @@ function Overview({ queue, loading, profile, officeId }) {
                 <thead><tr><th>Ticket</th><th>Concern</th><th>Priority</th><th>Status</th></tr></thead>
                 <tbody>
                   {pg.pageItems.map((t) => (
-                    <tr key={t.ticket_id}>
+                    <tr
+                      key={t.ticket_id}
+                      onClick={() => setModalTicket(t)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setModalTicket(t);
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
+                      style={{ cursor: "pointer" }}
+                    >
                       <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
                       <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
                       <td><PriorityDot level={toDisplayPriority(t.priority)} /></td>
@@ -689,13 +716,23 @@ function Overview({ queue, loading, profile, officeId }) {
           </>
         )}
       </div>
+
+      {modalTicket && (
+        <TicketDetailModal
+          ticket={queue.find((t) => t.ticket_id === modalTicket.ticket_id) || modalTicket}
+          onClose={() => setModalTicket(null)}
+          allowRespond
+          onLogged={onLogged}
+          onUpdated={onUpdated}
+        />
+      )}
     </>
   );
 }
 
 const TICKETS_PER_PAGE = 15;
 
-function Reports({ queue, loading, focusTicket, onClearFocus }) {
+function Reports({ queue, loading, focusTicket, onClearFocus, onLogged, onUpdated }) {
   const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
   const [search, setSearch] = useState("");
@@ -818,21 +855,36 @@ function Reports({ queue, loading, focusTicket, onClearFocus }) {
       </div>
 
       {visibleModalTicket && (
-        <TicketDetailModal
-          ticket={visibleModalTicket}
-          onClose={() => {
-            setModalTicket(null);
-            onClearFocus();
-          }}
-        />
-      )}
+  <TicketDetailModal
+    ticket={queue.find((t) => t.ticket_id === visibleModalTicket.ticket_id) || visibleModalTicket}
+    onClose={() => {
+      setModalTicket(null);
+      onClearFocus();
+    }}
+    allowRespond
+    onLogged={onLogged}
+    onUpdated={onUpdated}
+  />
+)}
     </>
   );
 }
 
-function TicketDetailModal({ ticket, onClose }) {
+function TicketDetailModal({ ticket: ticketProp, onClose, allowRespond = false, onLogged, onUpdated }) {
   const { session, profile } = useAuth();
   const [responseSubmitted, setResponseSubmitted] = useState(false);
+  const [showRespond, setShowRespond] = useState(false);
+  const [responsesVersion, setResponsesVersion] = useState(0);
+  const [resolvedAt, setResolvedAt] = useState(null);
+
+  // Show "Resolved" immediately after responding, before the queue reloads
+  const ticket = resolvedAt
+    ? { ...ticketProp, status: "resolved", resolved_at: resolvedAt }
+    : ticketProp;
+
+  // Respond is only available while the ticket is still active
+  const canRespond = allowRespond && !["resolved", "closed"].includes(ticket.status);
+
   const rows = [
     { label: "Ticket ID", value: formatTicketCode(ticket.ticket_id) },
     { label: "Submitted by", value: ticket.profiles?.name || "Unknown" },
@@ -861,7 +913,11 @@ function TicketDetailModal({ ticket, onClose }) {
                   <span style={{ fontSize: 14, textAlign: "right" }}>{r.value}</span>
                 </div>
               ))}
-              <TicketResponses ticket={ticket} />
+              <TicketResponses
+                ticket={ticket}
+                refreshKey={responsesVersion}
+                onRespond={canRespond ? () => setShowRespond(true) : undefined}
+              />
             </div>
 
             <TicketThread
@@ -902,6 +958,19 @@ function TicketDetailModal({ ticket, onClose }) {
             </div>
           </div>
         </div>
+      )}
+      {showRespond && (
+        <RespondModal
+          ticket={ticket}
+          staffUserId={session?.user?.id}
+          onClose={() => setShowRespond(false)}
+          onSent={(at) => {
+            if (at) setResolvedAt(at);
+            setResponsesVersion((v) => v + 1);
+            onLogged?.();
+            onUpdated?.();
+          }}
+        />
       )}
     </>
   );
@@ -1007,20 +1076,20 @@ function ActivityLogs({ logs, loading, onViewTicket }) {
   const ticketCodes = [...new Set(logs.filter((l) => l.ticket_id).map((l) => formatTicketCode(l.ticket_id)))];
 
   // Each dropdown's counts respect the other dropdown's selection
-const activityOptions = ACTIVITY_TYPES.map((type) => ({
-  value: type,
-  label: type === "All Activities" ? "All" : type,
-  count: logs.filter((l) => matchesActivity(l, type) && matchesTicket(l, ticketFilter)).length,
-}));
+  const activityOptions = ACTIVITY_TYPES.map((type) => ({
+    value: type,
+    label: type === "All Activities" ? "All" : type,
+    count: logs.filter((l) => matchesActivity(l, type) && matchesTicket(l, ticketFilter)).length,
+  }));
 
-const ticketOptions = [
-  { value: "All Tickets", label: "All", count: logs.filter((l) => matchesActivity(l, activityFilter)).length },
-  ...ticketCodes.map((code) => ({
-    value: code,
-    label: code,
-    count: logs.filter((l) => matchesActivity(l, activityFilter) && matchesTicket(l, code)).length,
-  })),
-];
+  const ticketOptions = [
+    { value: "All Tickets", label: "All", count: logs.filter((l) => matchesActivity(l, activityFilter)).length },
+    ...ticketCodes.map((code) => ({
+      value: code,
+      label: code,
+      count: logs.filter((l) => matchesActivity(l, activityFilter) && matchesTicket(l, code)).length,
+    })),
+  ];
 
   const dateOptions = [
     { value: "Newest", label: "Newest" },
@@ -1242,38 +1311,38 @@ function TicketStatusDropdown({ value, onChange, disabled }) {
         >
           {TICKET_STATUS_OPTIONS.map((o) => (
             <li key={o.value} role="option" aria-selected={value === o.value}>
-<button
-  type="button"
-  onMouseEnter={() => setHovered(o.value)}
-  onMouseLeave={() => setHovered(null)}
-  onFocus={() => setHovered(o.value)}
-  onBlur={() => setHovered(null)}
-  onClick={() => {
-    setOpen(false);
-    setHovered(null);
-    if (o.value !== value) onChange(o.value);
-  }}
-  style={{
-    width: "100%",
-    padding: "8px 10px",
-    background:
-      value === o.value
-        ? "var(--maroon-050)"
-        : hovered === o.value
-          ? "rgba(128, 0, 32, 0.08)"
-          : "transparent",
-    color: "var(--ink)",
-    fontWeight: value === o.value ? 700 : 400,
-    fontSize: 13,
-    borderRadius: 4,
-    textAlign: "left",
-    border: "none",
-    cursor: "pointer",
-    transition: "background 0.12s ease",
-  }}
->
-  {o.label}
-</button>
+              <button
+                type="button"
+                onMouseEnter={() => setHovered(o.value)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(o.value)}
+                onBlur={() => setHovered(null)}
+                onClick={() => {
+                  setOpen(false);
+                  setHovered(null);
+                  if (o.value !== value) onChange(o.value);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  background:
+                    value === o.value
+                      ? "var(--maroon-050)"
+                      : hovered === o.value
+                        ? "rgba(128, 0, 32, 0.08)"
+                        : "transparent",
+                  color: "var(--ink)",
+                  fontWeight: value === o.value ? 700 : 400,
+                  fontSize: 13,
+                  borderRadius: 4,
+                  textAlign: "left",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "background 0.12s ease",
+                }}
+              >
+                {o.label}
+              </button>
             </li>
           ))}
         </ul>
@@ -1282,7 +1351,7 @@ function TicketStatusDropdown({ value, onChange, disabled }) {
   );
 }
 
-function UpdateStatus({ queue, loading, onUpdated }) {
+function UpdateStatus({ queue, loading, onUpdated, onLogged }) {
   const isMobile = useIsMobile();
   const [updatingId, setUpdatingId] = useState(null);
   const [search, setSearch] = useState("");
@@ -1383,29 +1452,29 @@ function UpdateStatus({ queue, loading, onUpdated }) {
                 <tbody>
                   {pageTickets.map((t) => (
                     <tr
-                    key={t.ticket_id}
-                    onClick={() => setModalTicket(t)}
-                    onKeyDown={(e) => {
-                      if (e.target !== e.currentTarget) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setModalTicket(t);
-                    }
-                 }}
-                 tabIndex={0}
-                 aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
-                 style={{ cursor: "pointer" }}
-                >
-                 <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
-                 <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
-                 <td onClick={(e) => e.stopPropagation()}>
-                 <TicketStatusDropdown
-                    value={t.status}
-                    disabled={updatingId === t.ticket_id}
-                    onChange={(v) => handleChange(t.ticket_id, v)}
-                />
-               </td>
-              </tr>
+                      key={t.ticket_id}
+                      onClick={() => setModalTicket(t)}
+                      onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setModalTicket(t);
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-label={`View details for ${formatTicketCode(t.ticket_id)}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</td>
+                      <td>{t.concern_text.slice(0, 50)}{t.concern_text.length > 50 ? "..." : ""}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <TicketStatusDropdown
+                          value={t.status}
+                          disabled={updatingId === t.ticket_id}
+                          onChange={(v) => handleChange(t.ticket_id, v)}
+                        />
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -1465,8 +1534,11 @@ function UpdateStatus({ queue, loading, onUpdated }) {
       </div>
       {modalTicket && (
         <TicketDetailModal
-        ticket={queue.find((t) => t.ticket_id === modalTicket.ticket_id) || modalTicket}
-        onClose={() => setModalTicket(null)}
+          ticket={queue.find((t) => t.ticket_id === modalTicket.ticket_id) || modalTicket}
+          onClose={() => setModalTicket(null)}
+          allowRespond
+          onLogged={onLogged}
+          onUpdated={onUpdated}
         />
       )}
     </>
@@ -1544,23 +1616,23 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No tickets routed to your office yet.</p>
         ) : (
           <>
-    {pg.pageItems.map((t) => (
-      <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
-          <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
-          <PriorityDot level={toDisplayPriority(t.priority)} />
-        </div>
-        <p style={{ fontSize: 14, margin: "4px 0 8px" }}>{t.concern_text.slice(0, 60)} - from {t.profiles?.name || "Unknown"}</p>
-        <button
-          onClick={() => openModal(t)}
-          style={{ padding: "6px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}
-        >
-          Respond
-        </button>
-      </div>
-    ))}
-    <Pagination pg={pg} noun="ticket" />
-  </>
+            {pg.pageItems.map((t) => (
+              <div key={t.ticket_id} style={{ padding: "14px 0", borderBottom: "1px solid var(--line)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 6 }}>
+                  <strong style={{ fontFamily: "var(--font-mono)" }}>{formatTicketCode(t.ticket_id)}</strong>
+                  <PriorityDot level={toDisplayPriority(t.priority)} />
+                </div>
+                <p style={{ fontSize: 14, margin: "4px 0 8px" }}>{t.concern_text.slice(0, 60)} - from {t.profiles?.name || "Unknown"}</p>
+                <button
+                  onClick={() => openModal(t)}
+                  style={{ padding: "6px 14px", fontSize: 13, borderRadius: 6, border: "1.5px solid var(--line)", background: "var(--primary, #6b1d2c)", color: "#fff", cursor: "pointer" }}
+                >
+                  Respond
+                </button>
+              </div>
+            ))}
+            <Pagination pg={pg} noun="ticket" />
+          </>
         )}
       </div>
 
@@ -1578,6 +1650,70 @@ function RoutedTickets({ queue, logs, loading, staffUserId, officeId, onLogged }
         />
       )}
     </>
+  );
+}
+
+/* Standalone respond modal: owns its own state + send logic so it can be
+   opened from anywhere (e.g. the "Respond" button in Staff & Faculty Response). */
+function RespondModal({ ticket, staffUserId, onClose, onSent }) {
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const submit = async () => {
+    if (!draft.trim()) return;
+    setSubmitError("");
+    setSending(true);
+
+    // 1. Deliver the response to the student
+    const { error: notifError } = await supabase.from("notifications").insert({
+      ticket_id: ticket.ticket_id,
+      user_id: ticket.user_id,
+      message: draft.trim(),
+    });
+    if (notifError) {
+      console.error("respond notification error:", notifError);
+      setSubmitError("Your response could not be delivered to the student. Please try again.");
+      setSending(false);
+      return;
+    }
+
+    // 2. Record it in the activity log
+    const { error: logError } = await supabase.from("logs").insert({
+      user_id: staffUserId,
+      office_id: ticket.assigned_office,
+      ticket_id: ticket.ticket_id,
+      action: `Responded to student on ${formatTicketCode(ticket.ticket_id)}`,
+      module: "Staff Response",
+    });
+    if (logError) console.error("respond log error:", logError);
+
+    // 3. Automatically mark the ticket as resolved
+    const resolvedAt = new Date().toISOString();
+    const { error: statusError } = await supabase
+      .from("tickets")
+      .update({ status: "resolved", resolved_at: resolvedAt })
+      .eq("ticket_id", ticket.ticket_id);
+    if (statusError) console.error("respond auto-resolve error:", statusError);
+
+    setSending(false);
+    onSent?.(statusError ? null : resolvedAt);
+    setSubmitted(true);
+  };
+
+  return (
+    <FeedbackModal
+      ticket={ticket}
+      draft={draft}
+      setDraft={setDraft}
+      onCancel={onClose}
+      onDone={onClose}
+      onSubmit={submit}
+      sending={sending}
+      submitted={submitted}
+      submitError={submitError}
+    />
   );
 }
 
@@ -1644,7 +1780,7 @@ function FeedbackModal({ ticket, draft, setDraft, onCancel, onDone, onSubmit, se
   );
 }
 
-function AutoAssignment({ queue, loading }) {
+function AutoAssignment({ queue, loading, onLogged, onUpdated }) {
   const isMobile = useIsMobile();
   const [modalTicket, setModalTicket] = useState(null);
   const [search, setSearch] = useState("");
@@ -1807,7 +1943,15 @@ function AutoAssignment({ queue, loading }) {
           </>
         )}
       </div>
-      {modalTicket && <TicketDetailModal ticket={modalTicket} onClose={() => setModalTicket(null)} />}
+      {modalTicket && (
+      <TicketDetailModal 
+      ticket={queue.find((t) => t.ticket_id === modalTicket.ticket_id) || modalTicket} 
+      onClose={() => setModalTicket(null)} 
+      allowRespond
+      onLogged={onLogged}
+      onUpdated={onUpdated}
+      />
+    )}
     </>
   );
 }
@@ -1860,7 +2004,7 @@ function PriorityView({ queue, loading }) {
   );
 }
 
-function Notifications({ userId, notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, hasOffice, surveys, surveysLoading, readFeedStorageKey, readFeedItemIds, setReadFeedItemIds }) {
+function Notifications({ userId, notifications, loading, onRead, tickets, ticketsLoading, logs, logsLoading, hasOffice, surveys, surveysLoading, readFeedStorageKey, readFeedItemIds, setReadFeedItemIds, onLogged, onUpdated }) {
   const isMobile = useIsMobile();
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
@@ -1919,9 +2063,9 @@ function Notifications({ userId, notifications, loading, onRead, tickets, ticket
 
   const feedLoading = loading || (hasOffice && (ticketsLoading || logsLoading));
 
-const pg = usePagination(feedItems, NOTIFICATIONS_PER_PAGE);
-const checkedItems = feedItems.filter((f) => checkedIds.has(f.id));
-const allChecked = pg.pageItems.length > 0 && pg.pageItems.every((f) => checkedIds.has(f.id));
+  const pg = usePagination(feedItems, NOTIFICATIONS_PER_PAGE);
+  const checkedItems = feedItems.filter((f) => checkedIds.has(f.id));
+  const allChecked = pg.pageItems.length > 0 && pg.pageItems.every((f) => checkedIds.has(f.id));
   // Any unread item selected -> "Mark as read", otherwise "Mark as unread"
   const bulkAction = checkedItems.some((f) => f.isUnread) ? "read" : "unread";
 
@@ -1934,13 +2078,13 @@ const allChecked = pg.pageItems.length > 0 && pg.pageItems.every((f) => checkedI
     });
   };
 
-const toggleAll = () => {
-  setCheckedIds((prev) => {
-    const next = new Set(prev);
-    pg.pageItems.forEach((f) => (allChecked ? next.delete(f.id) : next.add(f.id)));
-    return next;
-  });
-};
+  const toggleAll = () => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      pg.pageItems.forEach((f) => (allChecked ? next.delete(f.id) : next.add(f.id)));
+      return next;
+    });
+  };
 
   const saveReadFeedIds = (nextIds) => {
     setReadFeedItemIds(nextIds);
@@ -2128,7 +2272,15 @@ const toggleAll = () => {
         </section>
       </div>
 
-      {selectedTicket && <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />}
+      {selectedTicket && (
+      <TicketDetailModal
+      ticket={tickets.find((t) => t.ticket_id === selectedTicket.ticket_id) || selectedTicket}
+      onClose={() => setSelectedTicket(null)}
+      allowRespond
+      onLogged={onLogged}
+      onUpdated={onUpdated}
+      />
+      )}
       {selectedActivity && <ActivityDetailModal activity={selectedActivity} onClose={() => setSelectedActivity(null)} />}
       {selectedNotification && (
         <NotificationDetailModal notification={selectedNotification} onClose={() => setSelectedNotification(null)} />
