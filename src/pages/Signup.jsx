@@ -203,7 +203,7 @@ export default function Signup() {
         <section className="form-panel">
           <div className="form-card">
             <span className="eyebrow">Create account</span>
-            <h2>Join Campus Helpdesk</h2>
+            <h2>Join SPC Helpdesk</h2>
             <p className="form-lede">
               Set up your account to start submitting or managing tickets.
             </p>
