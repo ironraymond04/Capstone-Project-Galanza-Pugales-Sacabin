@@ -472,23 +472,150 @@ function Overview({ tickets, users, offices, loading, onSelect }) {
   );
 }
 
+const LOG_FILTERS = [
+  { key: "all", label: "All", match: () => true },
+  { key: "user", label: "User", match: (l) => !!l.user_id || !!l.profiles?.name },
+  { key: "system", label: "System", match: (l) => !l.user_id && !l.profiles?.name },
+];
+
 function SystemLogs({ logs, users, loading }) {
   const [selectedLog, setSelectedLog] = useState(null);
-  const pg = usePagination(logs, ITEMS_PER_PAGE);
+  const [logFilter, setLogFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const filterRef = useRef(null);
 
   const userMap = useMemo(
     () => new Map(users.map((u) => [String(u.user_id).toLowerCase(), u.name])),
     [users]
   );
 
+  // Close the dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  const counts = useMemo(() => {
+    const result = {};
+    LOG_FILTERS.forEach((f) => {
+      result[f.key] = logs.filter(f.match).length;
+    });
+    return result;
+  }, [logs]);
+
+  const activeFilter = LOG_FILTERS.find((f) => f.key === logFilter) || LOG_FILTERS[0];
+  const query = search.trim().toLowerCase();
+
+  const filteredLogs = useMemo(
+    () =>
+      logs.filter((l) => {
+        if (!activeFilter.match(l)) return false;
+        if (!query) return true;
+
+        const ticketCode = l.ticket_id != null ? formatTicketCode(l.ticket_id) : "";
+        return [
+          ticketCode,                      // e.g. TCK-0012
+          l.ticket_id,                     // e.g. 12
+          l.profiles?.name || "System",    // user name, or "System"
+          replaceUserIds(l.action, userMap),
+          replaceUserIds(l.description, userMap),
+          l.module,
+        ].some((v) => String(v ?? "").toLowerCase().includes(query));
+      }),
+    [logs, activeFilter, query, userMap]
+  );
+
+  const pg = usePagination(filteredLogs, ITEMS_PER_PAGE);
+
   return (
     <>
       <PageHeader title="System logs" subtitle="Retrieved from the Logs database." />
       <div className="card">
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          {/* Filter dropdown */}
+          <div ref={filterRef} style={{ position: "relative", display: "inline-block" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: "8px 14px", fontSize: 13, whiteSpace: "nowrap" }}
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={menuOpen}
+            >
+              Filter by: {activeFilter.label} ▾
+            </button>
+
+            {menuOpen && (
+              <ul
+                role="listbox"
+                aria-label="Filter logs by source"
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  marginTop: 4,
+                  minWidth: 190,
+                  padding: 4,
+                  listStyle: "none",
+                  background: "var(--surface, #fff)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 6,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  zIndex: 20,
+                }}
+              >
+                {LOG_FILTERS.map((f) => (
+                  <li key={f.key} role="option" aria-selected={logFilter === f.key}>
+                    <button
+                      type="button"
+                      onClick={() => { setLogFilter(f.key); pg.setPage(1); setMenuOpen(false); }}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 10px",
+                        background: logFilter === f.key ? "var(--maroon-050)" : "transparent",
+                        color: "var(--ink)",
+                        fontWeight: logFilter === f.key ? 700 : 400,
+                        fontSize: 13,
+                        borderRadius: 4,
+                        textAlign: "left",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span>{f.label}</span>
+                      <span style={{ color: "var(--ink-soft)" }}>{counts[f.key]}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); pg.setPage(1); }}
+            placeholder="Search ticket no., user, system..."
+          />
+        </div>
+
         {loading ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Loading...</p>
         ) : logs.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No log entries yet.</p>
+        ) : filteredLogs.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>No logs match your search or filter.</p>
         ) : (
           <>
             {pg.pageItems.map((l) => (
@@ -512,6 +639,12 @@ function SystemLogs({ logs, users, loading }) {
       {selectedLog && (
         <Modal title="System log details" onClose={() => setSelectedLog(null)} width={520}>
           <div style={{ display: "grid", gap: 12 }}>
+            {selectedLog.ticket_id != null && (
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Ticket</span>
+                <strong style={{ fontFamily: "var(--font-mono)", fontSize: 14 }}>{formatTicketCode(selectedLog.ticket_id)}</strong>
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
               <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>User</span>
               <span style={{ fontSize: 14, textAlign: "right" }}>{selectedLog.profiles?.name || "System"}</span>
