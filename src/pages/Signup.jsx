@@ -205,7 +205,7 @@ export default function Signup() {
             <span className="eyebrow">Create account</span>
             <h2>Join SPC Helpdesk</h2>
             <p className="form-lede">
-              Set up your account to start submitting or managing tickets.
+              Set up your account to start submitting or managing your tickets.
             </p>
 
             <form onSubmit={handleSubmit} noValidate>
