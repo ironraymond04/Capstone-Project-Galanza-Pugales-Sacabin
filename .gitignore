@@ -8,5 +8,5 @@ node_modules/
 # Build output
 dist/
 
-__pycache__/
-*.pyc
+ml_service/__pycache__/
+ml_service/*.pyc
