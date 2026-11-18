@@ -146,10 +146,16 @@ export default function StaffDashboard() {
 
 async function loadAssignedOffices() {
   if (!session?.user?.id) return;
+
+  // Offices the user heads, plus the office they were added to as a staff member
+  const filters = [`head_user_id.eq.${session.user.id}`];
+  if (profile?.office_id) filters.push(`office_id.eq.${profile.office_id}`);
+
   const { data, error } = await supabase
     .from("offices")
     .select("office_id, office_name")
-    .eq("head_user_id", session.user.id);
+    .or(filters.join(","))
+    .order("office_name");
   if (error) console.error("loadAssignedOffices error:", error);
   if (!error) setAssignedOffices(data || []);
 }
@@ -180,7 +186,7 @@ async function handleSwitchOffice(newOfficeId) {
   useEffect(() => {
     loadAssignedOffices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+  }, [session?.user?.id, profile?.office_id]);
 
   const handleViewTicket = (ticketId) => {
     setFocusTicketId(ticketId);
@@ -601,7 +607,7 @@ function Overview({ queue, loading, profile, officeId, onLogged, onUpdated }) {
         <PageHeader title={`Good day, ${profile?.name || "there"}`} subtitle="Your account isn't linked to an office yet." />
         <div className="card">
           <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
-            No office is assigned to your profile, so no tickets can be routed to you. Ask an admin to set your office in Manage Users.
+            No office is assigned to your profile, so no tickets can be routed to you. Ask an admin to add you to an office in Manage Offices.
           </p>
         </div>
       </>

@@ -9,6 +9,7 @@ import "../styles/theme.css";
 import TicketThread from "../components/TicketThread";
 import TicketResponses from "../components/TicketResponses";
 import { otherPredictedOffices } from "../lib/offices";
+import { downloadReportPdf } from "../lib/reportPdf";
 
 const NAV_ITEMS = [
   { id: "overview", label: "Dashboard", icon: "•" },
@@ -1198,6 +1199,173 @@ function OfficeForm({ staff, office, onCancel, onSubmit, submitting, submitError
   );
 }
 
+function OfficeStaffManager({ office, users, offices, onChanged }) {
+  const [selectedId, setSelectedId] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState("");
+
+  const headIds = new Set(offices.map((o) => o.head_user_id).filter(Boolean));
+
+  // Staff already linked to this office
+  const members = users.filter(
+    (u) =>
+      u.role === "staff" &&
+      (u.office_id === office.office_id || u.user_id === office.head_user_id)
+  );
+
+  // Active staff not in this office and not heading another office
+  const available = users.filter(
+    (u) =>
+      u.role === "staff" &&
+      u.is_active !== false &&
+      u.office_id !== office.office_id &&
+      !headIds.has(u.user_id)
+  );
+
+  const writeLog = async (action) => {
+    const { error: logError } = await supabase.from("logs").insert({
+      office_id: office.office_id,
+      action,
+      module: "Office Management",
+    });
+    if (logError) console.error("Log insert failed:", logError);
+  };
+
+  const handleAdd = async () => {
+    if (!selectedId) return;
+    setError("");
+    setBusyId("add");
+
+    const person = users.find((u) => u.user_id === selectedId);
+
+    const { data, error: updateError } = await supabase
+      .from("profiles")
+      .update({ office_id: office.office_id })
+      .eq("user_id", selectedId)
+      .select("user_id")
+      .maybeSingle();
+
+    if (updateError || !data) {
+      console.error("Add staff failed:", updateError || "No row updated (check RLS policies).");
+      setError(updateError?.message || "Could not add this staff member. Check your update permissions on profiles.");
+      setBusyId(null);
+      return;
+    }
+
+    await writeLog(`Admin added ${person?.name || selectedId} to ${office.office_name}`);
+    setSelectedId("");
+    setBusyId(null);
+    onChanged?.();
+  };
+
+  const handleRemove = async (person) => {
+    if (person.user_id === office.head_user_id) {
+      setError("You can't remove the office head. Change the head first, then remove them.");
+      return;
+    }
+    if (!window.confirm(`Remove ${person.name} from ${office.office_name}?`)) return;
+
+    setError("");
+    setBusyId(person.user_id);
+
+    const { data, error: updateError } = await supabase
+      .from("profiles")
+      .update({ office_id: null })
+      .eq("user_id", person.user_id)
+      .eq("office_id", office.office_id)
+      .select("user_id")
+      .maybeSingle();
+
+    if (updateError || !data) {
+      console.error("Remove staff failed:", updateError || "No row updated (check RLS policies).");
+      setError(updateError?.message || "Could not remove this staff member. Check your update permissions on profiles.");
+      setBusyId(null);
+      return;
+    }
+
+    await writeLog(`Admin removed ${person.name} from ${office.office_name}`);
+    setBusyId(null);
+    onChanged?.();
+  };
+
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+      <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>
+        Staff members <span style={{ fontWeight: 400, color: "var(--ink-soft)" }}>({members.length})</span>
+      </h4>
+
+      {members.length === 0 ? (
+        <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: "0 0 12px" }}>No staff members yet.</p>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          {members.map((m) => {
+            const isHead = m.user_id === office.head_user_id;
+            return (
+              <div
+                key={m.user_id}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line)" }}
+              >
+                <div style={{ minWidth: 0, fontSize: 13 }}>
+                  <div style={{ fontWeight: 600 }}>{m.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", wordBreak: "break-all" }}>{m.email}</div>
+                </div>
+                {isHead ? (
+                  <span className="badge badge-resolved">Head</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ padding: "5px 10px", fontSize: 12, whiteSpace: "nowrap", color: "var(--danger)" }}
+                    onClick={() => handleRemove(m)}
+                    disabled={busyId === m.user_id}
+                  >
+                    {busyId === m.user_id ? "Removing..." : "Remove"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <label style={labelStyle} htmlFor="office-add-staff">Add staff member</label>
+      {available.length === 0 ? (
+        <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
+          No more Faculty & Staff accounts available.
+        </p>
+      ) : (
+        <div style={{ display: "flex", gap: 8 }}>
+          <select
+            id="office-add-staff"
+            style={inputStyle}
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            <option value="">Select a staff member…</option>
+            {available.map((u) => (
+              <option key={u.user_id} value={u.user_id}>
+                {u.name} — {u.email}
+                {u.offices?.office_name ? ` (moves from ${u.offices.office_name})` : ""}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ padding: "8px 16px", fontSize: 13, whiteSpace: "nowrap" }}
+            onClick={handleAdd}
+            disabled={!selectedId || busyId === "add"}
+          >
+            {busyId === "add" ? "Adding..." : "+ Add"}
+          </button>
+        </div>
+      )}
+
+      {error && <p style={{ fontSize: 13, color: "var(--danger)", margin: "10px 0 0" }}>{error}</p>}
+    </div>
+  );
+}
+
 function ManageOffices({ offices, loading, users, onUpdated }) {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
@@ -1254,14 +1422,6 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
     }
 
     if (payload.head_user_id !== editingOffice.head_user_id) {
-      if (editingOffice.head_user_id) {
-        const { error: previousHeadError } = await supabase
-          .from("profiles")
-          .update({ office_id: null })
-          .eq("user_id", editingOffice.head_user_id)
-          .eq("office_id", editingOffice.office_id);
-        if (previousHeadError) console.error("Unlinking previous office head failed:", previousHeadError);
-      }
 
       const { error: newHeadError } = await supabase
         .from("profiles")
@@ -1291,7 +1451,7 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
           {offices.map((o) => (
             <div key={o.office_id} className="card">
               <h3 style={{ fontSize: 16 }}>{o.office_name}</h3>
-              <p style={{ fontSize: 13, margin: "4px 0" }}>Head: {o.head?.name || "Unassigned"}</p>
+              <p style={{ fontSize: 13, margin: "4px 0" }}> Staff: {users.filter((u) => u.role === "staff" && u.office_id === o.office_id).length}</p>
               <p style={{ fontSize: 13, margin: "4px 0" }}>Location: {o.location || "—"}</p>
               <p style={{ fontSize: 13, margin: "4px 0", wordBreak: "break-word" }}>
                 Email: {o.contact_email || "—"}
@@ -1307,17 +1467,28 @@ function ManageOffices({ offices, loading, users, onUpdated }) {
         </div>
       )}
 
-      {modalOpen && (
-        <Modal title={editingOffice ? "Edit office" : "Add office"} onClose={() => setModalOpen(false)}>
-          <OfficeForm
-            key={editingOffice?.office_id || "new-office"}
-            staff={staffOptions}
-            office={editingOffice}
-            onCancel={() => setModalOpen(false)}
-            onSubmit={editingOffice ? handleEditOffice : handleAddOffice}
-            submitting={submitting}
-            submitError={submitError}
-          />
+        {modalOpen && (
+        <Modal title={editingOffice ? "Edit office" : "Add office"} onClose={() => setModalOpen(false)} width={520}>
+          <div style={{ maxHeight: "75vh", overflowY: "auto", paddingRight: 4 }}>
+            <OfficeForm
+              key={editingOffice?.office_id || "new-office"}
+              staff={staffOptions}
+              office={editingOffice}
+              onCancel={() => setModalOpen(false)}
+              onSubmit={editingOffice ? handleEditOffice : handleAddOffice}
+              submitting={submitting}
+              submitError={submitError}
+            />
+
+            {editingOffice && (
+              <OfficeStaffManager
+                office={editingOffice}
+                users={users}
+                offices={offices}
+                onChanged={onUpdated}
+              />
+            )}
+          </div>
         </Modal>
       )}
     </>
@@ -1533,6 +1704,16 @@ function Analytics({ tickets, offices, loading }) {
     }
   }
 
+  function handlePrint() {
+  downloadReportPdf({
+    report,
+    generatedAt,
+    kpis,
+    statusCounts: stats.statusCounts,
+    filename: `SPC-Helpdesk-Analytics-Report-${(generatedAt || new Date()).toISOString().slice(0, 10)}.pdf`,
+  });
+}
+
   const kpis = [
     { label: "Tickets (30 days)", value: stats.last30 },
     { label: "Avg. resolution time", value: stats.avgResolutionHrs == null ? "—" : `${stats.avgResolutionHrs}h` },
@@ -1659,10 +1840,31 @@ function Analytics({ tickets, offices, loading }) {
                 ✦ AI report
               </SectionTitle>
               {report && (
-                <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={handleCopy}>
-                  {copied ? "Copied ✓" : "Copy report"}
-                </button>
-              )}
+  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={handleCopy}>
+      {copied ? "Copied ✓" : "Copy report"}
+    </button>
+    <button
+      type="button"
+      onClick={handlePrint}
+      style={{
+        padding: "6px 14px",
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#fff",
+        background: "#c0392b",
+        border: "1.5px solid #c0392b",
+        borderRadius: 6,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      🖨 Print Report
+    </button>
+  </div>
+)}
             </div>
 
             {reportError && <p style={{ fontSize: 13, color: "var(--danger)" }}>{reportError}</p>}
